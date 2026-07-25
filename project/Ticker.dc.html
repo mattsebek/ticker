@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@keyframes tkFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tkPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes tkSpin{to{transform:rotate(360deg)}}
+@keyframes tkAiPulse{0%{transform:scale(.85);opacity:.45}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}}
+@keyframes tkChartIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0% 0 0)}}
+@keyframes tkTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes tkChartSweep{0%{clip-path:inset(0 100% 0 0)}60%{clip-path:inset(0 0% 0 0)}100%{clip-path:inset(0 0% 0 0)}}
+@keyframes tkGridDrift{from{background-position:0 0}to{background-position:0 40px}}
+@keyframes tkNotifIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes obFlipUp{from{transform:translateY(34px)}to{transform:translateY(0)}}
+@keyframes obFlipDown{from{transform:translateY(-34px)}to{transform:translateY(0)}}
+a{color:#00A63C}
+a:hover{color:#008F33}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="./image-slot.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+</helmet>
+<div style="width:393px;height:852px;background:{{ theme.bg }};font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.06),0 24px 60px rgba(0,0,0,.14);color:{{ theme.text }};transition:background 200ms ease,color 200ms ease">
+
+  <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+  <div key="onboarding" style="position:absolute;inset:0;overflow:hidden;background:{{ theme.bg }}">
+
+    <sc-if value="{{ isObCarousel }}" hint-placeholder-val="{{ true }}">
+    <div onTouchStart="{{ obSwipeStart }}" onTouchEnd="{{ obSwipeEnd }}" onMouseDown="{{ obSwipeStart }}" onMouseUp="{{ obSwipeEnd }}" style="position:absolute;inset:0;display:flex;flex-direction:column;touch-action:pan-y;cursor:grab">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:#0B0F0C;overflow:hidden">
+
+        <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,200,5,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,5,.10) 1px,transparent 1px);background-size:40px 40px;animation:tkGridDrift 3s linear infinite"></div>
+        <svg width="100%" height="100%" viewBox="0 0 400 500" preserveAspectRatio="none" style="position:absolute;inset:0;opacity:.8">
+          <defs>
+            <linearGradient id="obChartFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00C805" stop-opacity=".35"></stop>
+              <stop offset="100%" stop-color="#00C805" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <g style="animation:tkChartSweep 2s ease-in-out infinite">
+          <path d="M 0,340 L 40,340 L 40,500 L 0,500 Z M 0,340 L 40,320 L 80,330 L 120,290 L 160,300 L 200,250 L 240,265 L 280,210 L 320,225 L 360,160 L 400,175 L 400,500 L 0,500 Z" fill="url(#obChartFill)"></path>
+          <polyline points="0,340 40,320 80,330 120,290 160,300 200,250 240,265 280,210 320,225 360,160 400,175" fill="none" stroke="#00C805" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          </g>
+        </svg>
+        <div style="position:absolute;top:14px;left:0;right:0;overflow:hidden;white-space:nowrap;opacity:.55">
+          <div style="display:inline-block;animation:tkTicker 14s linear infinite;font-family:monospace;font-size:12px;letter-spacing:.05em;color:#00C805">LIV +2.3%&nbsp;&nbsp;&nbsp;AVL +4.8%&nbsp;&nbsp;&nbsp;CHE -1.1%&nbsp;&nbsp;&nbsp;ARS +1.6%&nbsp;&nbsp;&nbsp;MCI +0.4%&nbsp;&nbsp;&nbsp;BRI +3.9%&nbsp;&nbsp;&nbsp;LIV +2.3%&nbsp;&nbsp;&nbsp;AVL +4.8%&nbsp;&nbsp;&nbsp;CHE -1.1%&nbsp;&nbsp;&nbsp;ARS +1.6%&nbsp;&nbsp;&nbsp;MCI +0.4%&nbsp;&nbsp;&nbsp;BRI +3.9%</div>
+        </div>
+
+        <div style="width:280px;height:{{ obCardHeight }};background:{{ theme.card }};border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.4);padding:20px;box-sizing:border-box;overflow:hidden;position:relative;z-index:1;animation:tkNotifIn .5s ease-out both" key="{{ obSlide.headline }}">
+
+          <sc-if value="{{ isOb0 }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:11px;color:{{ theme.textSecondary }};margin-bottom:4px">Portfolio value</div>
+          <div style="font-size:26px;font-weight:700;margin-bottom:2px;transition:color .3s">{{ obPortfolioValueStr }}</div>
+          <div style="font-size:12px;font-weight:600;color:{{ GREEN }};margin-bottom:14px">{{ obPortfolioPctStr }} today</div>
+          <div style="display:flex;align-items:center;padding:9px 0;border-top:1px solid {{ theme.border }}">
+            <div style="display:flex;align-items:center;gap:8px;width:100px;flex-shrink:0"><div style="width:26px;height:26px;border-radius:8px;background:#C8102E;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">LIV</div><span style="font-size:13px;font-weight:500">Liverpool</span></div>
+            <div style="flex:1;display:flex;justify-content:center"><svg width="34" height="16" viewBox="0 0 34 16"><polyline points="0,11 6,9 12,10 18,6 24,7 34,2" fill="none" stroke="{{ GREEN }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <span style="font-size:13px;font-weight:600;color:{{ GREEN }};width:48px;text-align:right">{{ obPct1Str }}</span>
+          </div>
+          <div style="display:flex;align-items:center;padding:9px 0;border-top:1px solid {{ theme.border }}">
+            <div style="display:flex;align-items:center;gap:8px;width:100px;flex-shrink:0"><div style="width:26px;height:26px;border-radius:8px;background:#670E36;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">AVL</div><span style="font-size:13px;font-weight:500">Aston Villa</span></div>
+            <div style="flex:1;display:flex;justify-content:center"><svg width="34" height="16" viewBox="0 0 34 16"><polyline points="0,12 6,10 12,11 18,5 24,4 34,1" fill="none" stroke="{{ GREEN }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <span style="font-size:13px;font-weight:600;color:{{ GREEN }};width:48px;text-align:right">{{ obPct2Str }}</span>
+          </div>
+          <div style="display:flex;align-items:center;padding:9px 0;border-top:1px solid {{ theme.border }}">
+            <div style="display:flex;align-items:center;gap:8px;width:100px;flex-shrink:0"><div style="width:26px;height:26px;border-radius:8px;background:#132257;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">CHE</div><span style="font-size:13px;font-weight:500">Chelsea</span></div>
+            <div style="flex:1;display:flex;justify-content:center"><svg width="34" height="16" viewBox="0 0 34 16"><polyline points="0,3 6,5 12,4 18,9 24,8 34,13" fill="none" stroke="{{ RED }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <span style="font-size:13px;font-weight:600;color:{{ RED }};width:48px;text-align:right">{{ obPct3Str }}</span>
+          </div>
+          <div style="display:flex;align-items:center;padding:9px 0;border-top:1px solid {{ theme.border }}">
+            <div style="display:flex;align-items:center;gap:8px;width:100px;flex-shrink:0"><div style="width:26px;height:26px;border-radius:8px;background:#EF0107;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">ARS</div><span style="font-size:13px;font-weight:500">Arsenal</span></div>
+            <div style="flex:1;display:flex;justify-content:center"><svg width="34" height="16" viewBox="0 0 34 16"><polyline points="0,10 6,11 12,8 18,9 24,5 34,4" fill="none" stroke="{{ GREEN }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <span style="font-size:13px;font-weight:600;color:{{ GREEN }};width:48px;text-align:right">{{ obPct4Str }}</span>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isOb1 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:600;color:{{ theme.textSecondary }}">Ticker</div>
+            <div style="font-size:11px;color:{{ theme.textSecondary }}">now</div>
+          </div>
+          <div style="background:{{ theme.accentTint }};border-radius:16px;padding:14px;margin-bottom:10px;opacity:0;animation:tkNotifIn .5s .2s ease-out both">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.03em;color:{{ theme.accent }};margin-bottom:6px">&#128680; SHORT SQUEEZE</div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Brighton just exceeded expectations.</div>
+            <div style="font-size:11px;color:{{ theme.textSecondary }};line-height:1.4">Bears in shambles. &#128128;&#128200;</div>
+          </div>
+          <div style="background:{{ theme.card }};border:1px solid {{ theme.border }};border-radius:16px;padding:14px;margin-bottom:10px;opacity:0;animation:tkNotifIn .5s 1.1s ease-out both">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.03em;color:{{ theme.textSecondary }};margin-bottom:6px">&#128200; PRICE ALERT</div>
+            <div style="font-size:13px;font-weight:600">Villa is up 4.8% this week.</div>
+          </div>
+          <div style="background:{{ theme.card }};border:1px solid {{ theme.border }};border-radius:16px;padding:14px;opacity:0;animation:tkNotifIn .5s 2s ease-out both">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.03em;color:{{ theme.textSecondary }};margin-bottom:6px">&#129504; AI BRIEFING</div>
+            <div style="font-size:13px;font-weight:600">Your portfolio moved {{ obPortfolioPctStr }} today.</div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isOb2 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;font-weight:600;margin-bottom:14px">League Standings</div>
+          <div style="position:relative;height:288px">
+          <sc-for list="{{ obStandingsView }}" as="row" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid {{ theme.border }};background:{{ row.rowBg }};border-radius:8px;padding-left:6px;padding-right:6px;{{ row.rowStyle }}">
+            <div style="width:16px;font-size:12px;font-weight:600;color:{{ theme.textSecondary }}">{{ row.rank }}</div>
+            <div style="flex:1;font-size:13px;font-weight:{{ row.nameWeight }};color:{{ row.nameColor }}">{{ row.name }}</div>
+            <div style="width:14px;font-size:12px;font-weight:700;color:{{ row.arrowColor }}">{{ row.arrow }}</div>
+            <div style="font-size:13px;font-weight:{{ row.nameWeight }};color:{{ row.nameColor }};width:56px;text-align:right">{{ row.value }}</div>
+          </div>
+          </sc-for>
+          </div>
+          </sc-if>
+
+        </div>
+      </div>
+      <div style="background:{{ theme.bg }};padding:34px 28px 24px;min-height:33%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:300;letter-spacing:-.01em;line-height:1.15;margin-bottom:4px">{{ obSlide.headline }}</div>
+        <div style="font-size:16px;line-height:1.6;color:{{ theme.textSecondary }};margin-bottom:10px">{{ obSlide.body }}</div>
+        <sc-if value="{{ isOb0 }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ nextCarousel }}" style="font-size:15px;font-weight:600;color:{{ theme.text }};cursor:pointer;margin-bottom:8px">Swipe to learn more &rarr;</div>
+        </sc-if>
+        <div style="display:flex;gap:6px;justify-content:center;margin:16px 0 20px">
+          <sc-for list="{{ obDotsView }}" as="d" hint-placeholder-count="4">
+          <div onClick="{{ d.onSelect }}" style="width:7px;height:7px;border-radius:50%;background:{{ d.color }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div onClick="{{ goLogin }}" style="flex:1;text-align:center;padding:15px;border-radius:100px;border:1px solid {{ theme.border }};font-size:15px;font-weight:600;cursor:pointer" style-active="transform:scale(0.98)">Log in</div>
+          <div onClick="{{ startSignup }}" style="flex:1;text-align:center;padding:15px;border-radius:100px;background:{{ theme.accent }};color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-active="transform:scale(0.98)">Sign up</div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isObForm }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:16px 24px 28px">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0 24px">
+        <div onClick="{{ obBack }}" style="font-size:20px;cursor:pointer;color:{{ theme.text }};width:28px">&#8592;</div>
+        <div style="flex:1;height:3px;background:{{ theme.border }};border-radius:2px;overflow:hidden"><div style="height:100%;background:{{ theme.accent }};width:{{ obProgressPct }}"></div></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div style="width:56px;height:56px;border-radius:16px;background:{{ theme.accentTint }};display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ theme.accent }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <sc-if value="{{ isObName }}" hint-placeholder-val="{{ true }}">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path>
+            </sc-if>
+            <sc-if value="{{ isObEmail }}" hint-placeholder-val="{{ false }}">
+            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+            <polyline points="3,7 12,13 21,7"></polyline>
+            </sc-if>
+            <sc-if value="{{ isObBirthday }}" hint-placeholder-val="{{ false }}">
+            <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+            <line x1="8" y1="3" x2="8" y2="7"></line>
+            <line x1="16" y1="3" x2="16" y2="7"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+            </sc-if>
+          </svg>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:{{ theme.accent }};text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">{{ obFormStepStr }}</div>
+        <div style="font-size:28px;font-weight:600;letter-spacing:-.01em;margin-bottom:24px">{{ obFormQuestion }}</div>
+        <sc-if value="{{ isObName }}" hint-placeholder-val="{{ true }}">
+        <input value="{{ obName }}" onChange="{{ setObName }}" onKeyDown="{{ obKeyDown }}" placeholder="Full name" autoFocus="true" style="font-size:22px;font-weight:500;border:none;border-bottom:2px solid {{ theme.border }};background:transparent;color:{{ theme.text }};padding:8px 0;outline:none;font-family:inherit" style-focus="border-bottom-color:{{ theme.accent }}"></input>
+        </sc-if>
+        <sc-if value="{{ isObEmail }}" hint-placeholder-val="{{ false }}">
+        <input value="{{ obEmail }}" onChange="{{ setObEmail }}" onKeyDown="{{ obKeyDown }}" placeholder="name@email.com" type="email" autoFocus="true" style="font-size:22px;font-weight:500;border:none;border-bottom:2px solid {{ theme.border }};background:transparent;color:{{ theme.text }};padding:8px 0;outline:none;font-family:inherit" style-focus="border-bottom-color:{{ theme.accent }}"></input>
+        </sc-if>
+        <sc-if value="{{ isObBirthday }}" hint-placeholder-val="{{ false }}">
+        <input value="{{ obBirthday }}" onChange="{{ setObBirthday }}" onKeyDown="{{ obKeyDown }}" type="date" autoFocus="true" style="font-size:22px;font-weight:500;border:none;border-bottom:2px solid {{ theme.border }};background:transparent;color:{{ theme.text }};padding:8px 0;outline:none;font-family:inherit" style-focus="border-bottom-color:{{ theme.accent }}"></input>
+        </sc-if>
+        <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:12px">{{ obFormHint }}</div>
+      </div>
+      <div onClick="{{ obContinue }}" style="text-align:center;padding:16px;border-radius:100px;background:{{ obContinueEnabled }};color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-active="transform:scale(0.98)">Continue</div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isObClubs }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:16px 24px 0">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0 16px">
+        <div onClick="{{ obBack }}" style="width:36px;height:36px;border-radius:50%;background:{{ theme.card }};display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;color:{{ theme.text }}" style-active="opacity:0.5">&#8249;</div>
+      </div>
+      <div style="font-size:24px;font-weight:500;letter-spacing:-.01em;margin-bottom:4px;font-family:'Newsreader',serif">Build your portfolio</div>
+      <div style="font-size:14px;color:{{ theme.textSecondary }};margin-bottom:16px">Pick 4 clubs to start trading.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:{{ theme.card }};border-radius:14px;padding:14px 16px;margin-bottom:8px">
+        <div style="font-size:13px;color:{{ theme.textSecondary }}">Remaining balance</div>
+        <div style="font-size:19px;font-weight:600;color:{{ obRemainingColor }}">{{ obRemainingStr }}</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding-bottom:96px">
+        <sc-for list="{{ clubsForSelect }}" as="c" hint-placeholder-count="20">
+        <div onClick="{{ c.onToggle }}" style="display:flex;align-items:center;gap:12px;padding:12px 8px;border-bottom:1px solid {{ theme.borderLight }};cursor:pointer;opacity:{{ c.rowOpacity }}">
+          <div style="width:36px;height:36px;border-radius:9px;background:{{ c.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ c.code }}</div>
+          <div style="flex:1;font-size:15px;font-weight:500">{{ c.name }}</div>
+          <div style="font-size:15px;font-weight:600;margin-right:10px;font-variant-numeric:tabular-nums">{{ c.priceStr }}</div>
+          <div style="width:22px;height:22px;border-radius:50%;border:2px solid {{ c.checkBorder }};background:{{ c.checkBg }};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">{{ c.checkMark }}</div>
+        </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;padding:16px 24px 28px;background:{{ theme.bg }};box-shadow:0 -8px 24px rgba(0,0,0,0.12);display:flex;justify-content:center">
+      <div onClick="{{ obClubsContinue }}" style="display:inline-block;text-align:center;padding:16px 40px;border-radius:100px;background:{{ obClubsContinueBg }};color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-active="transform:scale(0.98)">{{ obClubsContinueLabel }}</div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isObDone }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;text-align:center">
+      <div style="width:88px;height:88px;border-radius:50%;background:{{ theme.accentTint }};display:flex;align-items:center;justify-content:center;font-size:40px;color:{{ theme.accent }};margin-bottom:28px;animation:tkPop 400ms ease-out">&#10003;</div>
+      <div style="font-size:26px;font-weight:600;margin-bottom:12px">Welcome aboard, {{ obFirstName }}</div>
+      <div style="font-size:15px;color:{{ theme.textSecondary }};line-height:1.6;margin-bottom:36px">You have {{ obRemainingStr }} cash left. Your 4 clubs are locked in - start trading the market to maximize <span style="color:#00C805">point production</span> and <span style="color:#00C805">portfolio value</span>.</div>
+      <div onClick="{{ finishOnboarding }}" style="display:inline-block;margin:0 auto;text-align:center;padding:18px 40px;border-radius:100px;background:{{ theme.accent }};color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-active="transform:scale(0.98)">Let's Go</div>
+    </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTabScreen }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;inset:0;bottom:84px;overflow-y:auto;-webkit-overflow-scrolling:touch">
+
+    <sc-if value="{{ isPortfolio }}" hint-placeholder-val="{{ true }}">
+    <div key="portfolio" style="animation:tkFade 250ms ease-out;padding:24px 24px 40px">
+      <div style="font-size:13px;color:{{ theme.textSecondary }};font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">Portfolio</div>
+      <div style="font-size:34px;font-weight:500;letter-spacing:-.01em;line-height:1.1;font-family:'Newsreader',serif">{{ heroValueStr }}</div>
+      <div style="display:flex;gap:16px;margin-top:8px">
+        <div style="font-size:13px;font-weight:400;color:{{ weekColor }}">{{ weekStr }} week</div>
+        <div style="font-size:13px;font-weight:400;color:{{ seasonColor }}">{{ seasonStr }} season</div>
+      </div>
+      <div style="margin-top:20px">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div onClick="{{ setChartRange7D }}" style="font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;background:{{ range7Bg }};color:{{ range7Color }};cursor:pointer">7D</div>
+          <div onClick="{{ setChartRange30D }}" style="font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;background:{{ rangeC30Bg }};color:{{ rangeC30Color }};cursor:pointer">30D</div>
+          <div onClick="{{ setChartRangeYTD }}" style="font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;background:{{ rangeYTDBg }};color:{{ rangeYTDColor }};cursor:pointer">YTD</div>
+        </div>
+        <div key="{{ chartRange }}" style="position:relative;margin:0 -24px;animation:tkChartIn 550ms cubic-bezier(.2,.7,.2,1)">
+          <svg width="393" height="120" viewBox="0 0 393 120" style="display:block;overflow:visible;cursor:crosshair" onMouseMove="{{ onPortfolioChartMove }}" onMouseLeave="{{ onPortfolioChartLeave }}">
+            <defs>
+              <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="{{ portfolioChartColor }}" stop-opacity="0.28"></stop>
+                <stop offset="100%" stop-color="{{ portfolioChartColor }}" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <path d="{{ portfolioChartArea }}" fill="url(#portfolioGrad)" stroke="none"></path>
+            <polyline points="{{ portfolioChartPoints }}" fill="none" stroke="{{ portfolioChartColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <sc-if value="{{ hasChartHover }}" hint-placeholder-val="{{ false }}">
+            <line x1="{{ chartHoverCx }}" y1="0" x2="{{ chartHoverCx }}" y2="120" stroke="{{ theme.border }}" stroke-width="1" stroke-dasharray="3,3"></line>
+            <circle cx="{{ chartHoverCx }}" cy="{{ chartHoverCy }}" r="4" fill="{{ theme.accent }}" stroke="{{ theme.bg }}" stroke-width="2"></circle>
+            </sc-if>
+          </svg>
+          <sc-if value="{{ hasChartHover }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:{{ chartHoverLeft }}px;top:{{ chartHoverTop }}px;background:{{ theme.elevated }};box-shadow:{{ theme.elevatedShadow }};border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;color:{{ theme.text }};pointer-events:none;white-space:nowrap">{{ chartHoverValueStr }}</div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;background:{{ theme.elevated }};box-shadow:{{ theme.elevatedShadow }};border-radius:20px;padding:18px 20px 22px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">
+          <div onClick="{{ prevGw }}" style="width:20px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:{{ theme.text }};opacity:{{ canPrevGw }}">‹</div>
+          <div style="font-size:12px;color:{{ theme.text }};font-weight:500;letter-spacing:.04em">{{ gwNumberStr }}</div>
+          <div onClick="{{ nextGw }}" style="width:20px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:{{ theme.text }};opacity:{{ canNextGw }}">›</div>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:24px;font-weight:600;letter-spacing:-.01em;color:{{ theme.text }}">{{ leagueAvgGwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px">Average</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:34px;font-weight:700;letter-spacing:-.01em;color:{{ theme.accent }}">{{ gwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px;display:flex;align-items:center;justify-content:center;gap:3px">Points<span style="color:{{ theme.accent }};font-size:11px">→</span></div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:24px;font-weight:600;letter-spacing:-.01em;color:{{ theme.text }}">{{ bestGwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px;display:flex;align-items:center;justify-content:center;gap:3px">Best<span style="color:{{ theme.accent }};font-size:11px">→</span></div>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ showBrief }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:16px;background:{{ theme.card }};border-radius:20px;padding:20px;position:relative;overflow:hidden;max-height:400px;transition:max-height 320ms ease,opacity 280ms ease,margin-top 320ms ease,padding 320ms ease">
+        <div onClick="{{ dismissBrief }}" style="position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ theme.textSecondary }};font-size:14px;line-height:1">✕</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="width:7px;height:7px;border-radius:50%;background:{{ theme.accent }}"></div>
+          <div style="font-size:11px;font-weight:500;color:{{ theme.accent }};letter-spacing:.04em;text-transform:uppercase">Morning Brief</div>
+        </div>
+        <div style="font-size:13px;line-height:1.6;font-weight:400;color:{{ theme.text }};padding-right:16px">{{ morningBriefText }} <b><i>Recommendation:</i></b> {{ morningBriefRecommendation }}</div>
+      </div>
+      </sc-if>
+
+      <div style="margin-top:28px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:19px;font-weight:600">My Clubs</div>
+        <div style="display:flex;gap:6px">
+          <div onClick="{{ setClubsRangeGw }}" style="font-size:12px;font-weight:500;padding:4px 11px;border-radius:20px;background:{{ clubsRangeGwBg }};color:{{ clubsRangeGwColor }};cursor:pointer">GW</div>
+          <div onClick="{{ setClubsRangeYear }}" style="font-size:12px;font-weight:500;padding:4px 11px;border-radius:20px;background:{{ clubsRangeYearBg }};color:{{ clubsRangeYearColor }};cursor:pointer">YTD</div>
+        </div>
+      </div>
+      <sc-for list="{{ holdingsView }}" as="h" hint-placeholder-count="4">
+      <div onClick="{{ h.onOpen }}" style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid {{ theme.border }};cursor:pointer" style-active="transform:scale(0.98)">
+        <div style="width:40px;height:40px;border-radius:10px;background:{{ h.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">{{ h.code }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:450">{{ h.name }}</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+            <div style="font-size:12px;font-weight:350;color:{{ theme.textSecondary }}">{{ h.fixtureText }}</div>
+            <sc-if value="{{ h.isArrowUp }}" hint-placeholder-val="{{ true }}">
+            <svg width="9" height="9" viewBox="0 0 10 10" style="flex-shrink:0"><polygon points="5,1 9,8 1,8" fill="{{ h.fixtureArrowColor }}"></polygon></svg>
+            </sc-if>
+            <sc-if value="{{ h.isArrowDown }}" hint-placeholder-val="{{ false }}">
+            <svg width="9" height="9" viewBox="0 0 10 10" style="flex-shrink:0"><polygon points="1,2 9,2 5,9" fill="{{ h.fixtureArrowColor }}"></polygon></svg>
+            </sc-if>
+            <sc-if value="{{ h.isArrowFlat }}" hint-placeholder-val="{{ false }}">
+            <svg width="9" height="9" viewBox="0 0 10 10" style="flex-shrink:0"><rect x="1" y="4" width="8" height="2" rx="1" fill="{{ h.fixtureArrowColor }}"></rect></svg>
+            </sc-if>
+          </div>
+        </div>
+        <svg width="52" height="20" viewBox="0 0 52 20" style="flex-shrink:0">
+          <polyline points="{{ h.sparkSmall }}" fill="none" stroke="{{ h.trendColor }}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+        <div style="text-align:right;flex-shrink:0;width:72px">
+          <div style="font-size:11px;font-weight:600;color:{{ theme.accent }};margin-bottom:2px">{{ h.gwPtsStr }}</div>
+          <div style="font-size:15px;font-weight:500">{{ h.priceStr }}</div>
+          <div style="font-size:13px;font-weight:500;color:{{ h.weeklyColor }}">{{ h.weeklyStr }}</div>
+        </div>
+        <div style="color:{{ theme.chevron }};font-size:15px;flex-shrink:0">&#8250;</div>
+      </div>
+      </sc-for>
+
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:28px;margin-bottom:14px">
+        <div style="font-size:19px;font-weight:600">Upcoming fixtures</div>
+        <div style="font-size:10px;font-weight:500;color:{{ theme.textSecondary }};text-transform:uppercase;letter-spacing:.03em">Projected Points</div>
+      </div>
+      <sc-for list="{{ upcomingFixturesView }}" as="f" hint-placeholder-count="4">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid {{ theme.border }}">
+        <div style="width:40px;height:40px;border-radius:10px;background:{{ f.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">{{ f.code }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:450">{{ f.name }}</div>
+          <div style="font-size:12px;font-weight:350;color:{{ theme.textSecondary }};margin-top:3px">{{ f.matchText }}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:15px;font-weight:500;color:{{ theme.accent }}">{{ f.projPtsStr }}</div>
+        </div>
+      </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isMarket }}" hint-placeholder-val="{{ false }}">
+    <div key="market" style="animation:tkFade 250ms ease-out;padding:24px 24px 24px">
+      <div style="font-size:32px;font-weight:300;letter-spacing:-.01em;margin-bottom:18px;font-family:'Newsreader',serif">Market</div>
+
+      <div style="position:relative;margin-bottom:24px">
+        <div style="position:absolute;left:13px;top:0;bottom:0;display:flex;align-items:center;pointer-events:none">
+          <svg width="16" height="16" viewBox="0 0 22 22" fill="none" stroke="{{ theme.textSecondary }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="9.5" r="6.5"></circle><line x1="19" y1="19" x2="14.2" y2="14.2"></line></svg>
+        </div>
+        <input value="{{ marketSearch }}" onChange="{{ setMarketSearch }}" placeholder="Search club or symbol" style="width:100%;box-sizing:border-box;background:{{ theme.card }};border:1px solid {{ theme.border }};border-radius:14px;padding:13px 38px 13px 38px;font-size:15px;color:{{ theme.text }}" />
+        <sc-if value="{{ isMarketSearching }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ clearMarketSearch }}" style="position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="{{ theme.textSecondary }}" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"></line><line x1="14" y1="4" x2="4" y2="14"></line></svg>
+        </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ isMarketSearching }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <sc-for list="{{ marketSearchResultsView }}" as="c" hint-placeholder-count="3">
+        <div onClick="{{ c.onOpen }}" style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid {{ theme.border }};cursor:pointer" style-active="transform:scale(0.98)">
+          <div style="width:36px;height:36px;border-radius:9px;background:{{ c.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">{{ c.code }}</div>
+          <div style="flex:1;font-size:15px;font-weight:500">{{ c.name }}<div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:2px">{{ c.code }}</div></div>
+          <div style="text-align:right;width:60px;flex-shrink:0"><div style="font-size:15px;font-weight:500">{{ c.priceStr }}</div><div style="font-size:13px;font-weight:500;color:{{ c.dailyColor }}">{{ c.dailyStr }}</div></div>
+        </div>
+        </sc-for>
+        <sc-if value="{{ marketSearchEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:32px 4px;text-align:center;color:{{ theme.textSecondary }};font-size:14px">No clubs match "{{ marketSearch }}"</div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isMarketDiscovery }}" hint-placeholder-val="{{ true }}">
+      <div>
+      <div style="font-size:19px;font-weight:600;margin-bottom:10px">Top Movers</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+        <sc-for list="{{ topMoversView }}" as="p" hint-placeholder-count="6">
+        <div onClick="{{ p.onOpen }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid {{ theme.border }};border-radius:100px;padding:11px 14px;cursor:pointer" style-active="transform:scale(0.97)">
+          <span style="font-size:13px;font-weight:700;color:{{ theme.text }}">{{ p.code }}</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:{{ p.arrowColor }}">{{ p.arrow }} {{ p.valueStr }}</span>
+        </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:19px;font-weight:600">Top Point Earners</div>
+        <div style="display:flex;gap:6px">
+          <div onClick="{{ setEarnersRangeGw }}" style="font-size:12px;font-weight:500;padding:4px 11px;border-radius:20px;background:{{ earnersRangeGwBg }};color:{{ earnersRangeGwColor }};cursor:pointer">GW</div>
+          <div onClick="{{ setEarnersRangeYtd }}" style="font-size:12px;font-weight:500;padding:4px 11px;border-radius:20px;background:{{ earnersRangeYtdBg }};color:{{ earnersRangeYtdColor }};cursor:pointer">YTD</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+        <sc-for list="{{ highestPointEarnersView }}" as="p" hint-placeholder-count="6">
+        <div onClick="{{ p.onOpen }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid {{ theme.border }};border-radius:100px;padding:11px 14px;cursor:pointer" style-active="transform:scale(0.97)">
+          <span style="font-size:13px;font-weight:700;color:{{ theme.text }}">{{ p.code }}</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:{{ p.arrowColor }}">{{ p.arrow }} {{ p.valueStr }}</span>
+        </div>
+        </sc-for>
+      </div>
+
+      <div style="font-size:19px;font-weight:600;margin-bottom:10px">Market News</div>
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden">
+        <sc-for list="{{ marketNewsView }}" as="n" hint-placeholder-count="3">
+        <div onClick="{{ n.onOpen }}" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid {{ theme.borderLight }};cursor:pointer" style-active="transform:scale(0.98)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:400;line-height:1.35">{{ n.headline }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:6px">{{ n.timeStr }}</div>
+          </div>
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="{{ theme.textSecondary }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1,1 7,7 1,13"></polyline></svg>
+        </div>
+        </sc-for>
+      </div>
+      </div>
+      </sc-if>
+
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isCompetitions }}" hint-placeholder-val="{{ false }}">
+    <div key="competitions" style="animation:tkFade 250ms ease-out;padding:24px">
+      <div style="font-size:32px;font-weight:300;letter-spacing:-.01em;margin-bottom:22px;font-family:'Newsreader',serif">Competitions</div>
+      <div style="margin-bottom:16px;background:{{ theme.elevated }};box-shadow:{{ theme.elevatedShadow }};border-radius:20px;padding:18px 20px 22px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">
+          <div onClick="{{ prevGw }}" style="width:20px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:{{ theme.text }};opacity:{{ canPrevGw }}">‹</div>
+          <div style="font-size:12px;color:{{ theme.text }};font-weight:500;letter-spacing:.04em">{{ gwNumberStr }}</div>
+          <div onClick="{{ nextGw }}" style="width:20px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:{{ theme.text }};opacity:{{ canNextGw }}">›</div>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:24px;font-weight:600;letter-spacing:-.01em;color:{{ theme.text }}">{{ leagueAvgGwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px">Average</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:34px;font-weight:700;letter-spacing:-.01em;color:{{ theme.accent }}">{{ gwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px;display:flex;align-items:center;justify-content:center;gap:3px">Points<span style="color:{{ theme.accent }};font-size:11px">→</span></div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:24px;font-weight:600;letter-spacing:-.01em;color:{{ theme.text }}">{{ bestGwPtsStr }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:4px;display:flex;align-items:center;justify-content:center;gap:3px">Best<span style="color:{{ theme.accent }};font-size:11px">→</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:19px;font-weight:600;margin-bottom:10px;margin-top:24px">Your Leagues</div>
+      <div style="background:{{ theme.card }};border-radius:20px;overflow:hidden;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid {{ theme.borderLight }}">
+          <div style="font-size:11px;font-weight:600;color:{{ theme.textSecondary }};letter-spacing:.04em;text-transform:uppercase">Name</div>
+          <div style="font-size:11px;font-weight:600;color:{{ theme.textSecondary }};letter-spacing:.04em;text-transform:uppercase">Rank</div>
+        </div>
+        <sc-for list="{{ yourLeaguesView }}" as="lg" hint-placeholder-count="5">
+        <div onClick="{{ lg.onOpen }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid {{ theme.borderLight }};cursor:pointer" style-active="transform:scale(0.98)">
+          <div style="font-size:13px;font-weight:400">{{ lg.name }}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:12px;font-weight:700;color:{{ theme.text }}">{{ lg.rankStr }}</div>
+            <div style="font-size:14px;font-weight:500;color:{{ theme.chevron }}">&#8250;</div>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:24px">
+        <div onClick="{{ joinLeague }}" style="flex:1;text-align:center;padding:14px;border-radius:14px;background:{{ theme.card }};font-size:14px;font-weight:600;color:{{ theme.text }};cursor:pointer" style-active="opacity:0.6">Join League</div>
+        <div onClick="{{ createLeague }}" style="flex:1;text-align:center;padding:14px;border-radius:14px;background:{{ theme.accent }};font-size:14px;font-weight:600;color:#fff;cursor:pointer" style-active="transform:scale(0.97)">Create League</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+    <div key="profile" style="animation:tkFade 250ms ease-out;padding:24px">
+      <div style="font-size:32px;font-weight:300;letter-spacing:-.01em;margin-bottom:22px;font-family:'Newsreader',serif">Profile</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:26px">
+        <div style="width:56px;height:56px;border-radius:50%;background:{{ theme.accentTint }};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:{{ theme.accent }};flex-shrink:0">{{ profileInitial }}</div>
+        <div>
+          <div style="font-size:19px;font-weight:600">{{ profileName }}</div>
+          <div style="font-size:13px;color:{{ theme.textSecondary }};margin-top:2px">{{ profileJoinDateStr }}</div>
+        </div>
+      </div>
+      <div style="background:{{ theme.card }};border-radius:20px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;padding:16px;border-bottom:1px solid {{ theme.borderLight }};font-size:15px;font-weight:400"><span>Competitions</span><span style="color:{{ theme.textSecondary }}">3</span></div>
+        <div style="display:flex;justify-content:space-between;padding:16px;border-bottom:1px solid {{ theme.borderLight }};font-size:15px;font-weight:400"><span>Notifications</span><span style="color:{{ theme.textSecondary }}">On</span></div>
+        <div onClick="{{ toggleAppearance }}" style="display:flex;justify-content:space-between;padding:16px;border-bottom:1px solid {{ theme.borderLight }};font-size:15px;font-weight:400;cursor:pointer"><span>Appearance</span><span style="color:{{ theme.textSecondary }}">{{ appearanceLabel }}</span></div>
+        <div onClick="{{ goRules }}" style="display:flex;justify-content:space-between;padding:16px;font-size:15px;font-weight:400;cursor:pointer" style-active="opacity:0.6"><span>Rules</span><span style="color:{{ theme.chevron }}">&#8250;</span></div>
+      </div>
+      <div onClick="{{ logOut }}" style="margin-top:20px;background:{{ theme.card }};border-radius:20px;padding:16px;text-align:center;font-size:15px;font-weight:500;color:#E0393E;cursor:pointer">Log Out</div>
+    </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isLeagueDetail }}" hint-placeholder-val="{{ false }}">
+  <div key="league" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px 8px">
+      <div onClick="{{ closeLeague }}" style="display:flex;align-items:center;gap:2px;cursor:pointer;font-size:17px;font-weight:400;color:{{ theme.accent }}" style-active="opacity:0.5"><span style="font-size:22px;font-weight:500;margin-top:-1px">&#8249;</span>Compete</div>
+    </div>
+    <div style="padding:8px 24px 32px">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:20px;font-family:'Newsreader',serif">{{ selectedLeagueName }}</div>
+      <div style="background:{{ theme.card }};border-radius:20px;overflow:hidden;margin-bottom:16px">
+        <div style="display:flex;align-items:center;padding:14px 16px;font-size:11px;font-weight:600;color:{{ theme.textSecondary }};letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid {{ theme.borderLight }}">
+          <div style="width:28px">Pos</div>
+          <div style="flex:1">Manager</div>
+          <div onClick="{{ setLeagueSortPortfolio }}" style="width:80px;text-align:center;cursor:pointer">Portfolio</div>
+          <div onClick="{{ setLeagueSortPoints }}" style="width:64px;text-align:center;cursor:pointer">Points</div>
+        </div>
+        <sc-for list="{{ leagueTableView }}" as="r" hint-placeholder-count="8">
+        <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid {{ theme.borderLight }};background:{{ r.rowBg }}">
+          <div style="width:28px;font-size:13px;font-weight:{{ r.nameWeight }};color:{{ theme.text }}">{{ r.rank }}</div>
+          <div style="flex:1;font-size:13px;font-weight:{{ r.nameWeight }};color:{{ theme.text }}">{{ r.name }}</div>
+          <div style="width:80px;text-align:center;font-size:12px;font-weight:500;color:{{ theme.textSecondary }}">{{ r.portfolio }}</div>
+          <div style="width:64px;text-align:center;font-size:12px;font-weight:700">{{ r.season }}</div>
+        </div>
+        </sc-for>
+      </div>
+      <div style="text-align:center;font-size:12px;color:{{ theme.textSecondary }};margin-bottom:16px">Commissioner: <span style="font-weight:600;color:{{ theme.text }}">Marcus</span></div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isJoinLeague }}" hint-placeholder-val="{{ false }}">
+  <div key="joinleague" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px 8px">
+      <div onClick="{{ closeJoinLeague }}" style="display:flex;align-items:center;gap:2px;cursor:pointer;font-size:17px;font-weight:400;color:{{ theme.accent }}" style-active="opacity:0.5"><span style="font-size:22px;font-weight:500;margin-top:-1px">&#8249;</span>Compete</div>
+    </div>
+    <div style="padding:8px 24px 40px">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px;font-family:'Newsreader',serif">Join a League</div>
+      <div style="font-size:14px;color:{{ theme.textSecondary }};line-height:1.5;margin-bottom:20px">Enter a private code or pick a public league to join.</div>
+
+      <div style="position:relative;margin-bottom:8px">
+        <input value="{{ joinCode }}" onChange="{{ setJoinCode }}" placeholder="Enter private league code" style="width:100%;box-sizing:border-box;background:{{ theme.card }};border:1px solid {{ theme.border }};border-radius:14px;padding:13px 38px 13px 16px;font-size:15px;color:{{ theme.text }}" />
+        <sc-if value="{{ joinCode }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ clearJoinCode }}" style="position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="{{ theme.textSecondary }}" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"></line><line x1="14" y1="4" x2="4" y2="14"></line></svg>
+        </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ joinCodeError }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:13px;color:#E0393E;margin-bottom:16px">No private league found for that code.</div>
+      </sc-if>
+
+      <sc-if value="{{ foundPrivateLeagueView }}" hint-placeholder-val="{{ false }}">
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden;margin-bottom:24px">
+        <div onClick="{{ foundPrivateLeagueView.onSelect }}" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer" style-active="transform:scale(0.98)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="{{ theme.accent }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="8" width="10" height="7" rx="1.5"></rect><path d="M6.5 8V5.5a2.5 2.5 0 0 1 5 0V8"></path></svg>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600">{{ foundPrivateLeagueView.name }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:3px">{{ foundPrivateLeagueView.membersStr }}</div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:{{ theme.accent }}">Join</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <div style="font-size:16px;font-weight:600;margin-bottom:10px;margin-top:28px">Public Leagues</div>
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden">
+        <sc-for list="{{ publicLeaguesView }}" as="pl" hint-placeholder-count="4">
+        <div onClick="{{ pl.onSelect }}" style="display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid {{ theme.borderLight }};cursor:pointer" style-active="transform:scale(0.98)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500">{{ pl.name }}</div>
+            <div style="font-size:12px;color:{{ theme.textSecondary }};margin-top:3px">{{ pl.membersStr }}</div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:{{ theme.accent }}">Join</div>
+        </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isJoinModalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeJoinModal }}" style="position:absolute;inset:0;z-index:30;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:tkFade 200ms ease-out">
+    <div onClick="{{ stopPropagation }}" style="width:calc(100% - 64px);max-width:340px;background:{{ theme.bg }};border-radius:24px;padding:28px 24px 24px;text-align:center">
+      <div style="font-size:19px;font-weight:600;margin-bottom:8px">Join {{ joinModalLeague.name }}?</div>
+      <div style="font-size:14px;color:{{ theme.textSecondary }};line-height:1.5;margin-bottom:24px">You'll appear in this league's standings and it will be added to Your Leagues.</div>
+      <div onClick="{{ confirmJoinLeague }}" style="background:{{ theme.accent }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:14px;border-radius:100px;cursor:pointer;margin-bottom:10px" style-active="transform:scale(0.98)">Join League</div>
+      <div onClick="{{ closeJoinModal }}" style="text-align:center;font-size:15px;font-weight:500;color:{{ theme.textSecondary }};padding:10px;cursor:pointer" style-active="opacity:0.6">Cancel</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isWelcomeOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:40;background:{{ theme.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;animation:tkFade 250ms ease-out">
+    <div style="font-size:56px;margin-bottom:16px">&#127881;</div>
+    <div style="font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:10px;font-family:'Newsreader',serif">Welcome to<br/>{{ welcomeLeagueName }}!</div>
+    <div style="font-size:14px;color:{{ theme.textSecondary }};line-height:1.5;margin-bottom:32px">You're officially trading.<br/>Try not to panic-sell after one bad Gameweek.</div>
+    <div onClick="{{ closeWelcome }}" style="background:{{ theme.accent }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:14px 40px;border-radius:100px;cursor:pointer" style-active="transform:scale(0.98)">Let's Go</div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isClubDetail }}" hint-placeholder-val="{{ false }}">
+  <div key="detail" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px 8px">
+      <div onClick="{{ closeClub }}" style="display:flex;align-items:center;gap:2px;cursor:pointer;font-size:17px;font-weight:400;color:{{ theme.accent }}" style-active="opacity:0.5"><span style="font-size:22px;font-weight:500;margin-top:-1px">&#8249;</span>{{ detailBackLabel }}</div>
+    </div>
+    <div style="padding:8px 24px 24px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:12px;background:{{ detail.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">{{ detail.code }}</div>
+        <div>
+          <div style="font-size:16px;font-weight:500;margin-bottom:6px">{{ detail.name }}</div>
+          <div style="font-size:28px;font-weight:500;letter-spacing:-.01em;line-height:1.1;font-family:'Newsreader',serif">{{ detail.priceStr }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px">
+        <div style="font-size:13px;font-weight:400;color:{{ theme.accent }}">{{ detail.gwPtsStr }} this week</div>
+        <div style="font-size:13px;font-weight:300;color:{{ detail.dailyColor }}">{{ detail.dailyStr }} today</div>
+      </div>
+
+      <div style="font-size:16px;font-weight:600;margin:22px 0 8px">Form</div>
+      <div style="display:flex;gap:8px">
+      <sc-for list="{{ detail.formView }}" as="fm" hint-placeholder-count="5">
+        <div style="width:32px;height:32px;border-radius:9px;background:{{ fm.bg }};color:{{ fm.color }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">{{ fm.label }}</div>
+      </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 8px">
+        <div style="font-size:16px;font-weight:600">Upcoming Fixtures</div>
+        <div style="font-size:10px;font-weight:500;color:{{ theme.textSecondary }};text-transform:uppercase;letter-spacing:.03em;margin-right:5px">Projected Points</div>
+      </div>
+      <div style="background:{{ theme.card }};border-radius:20px;overflow:hidden">
+      <sc-for list="{{ detail.fixturesView }}" as="fx" hint-placeholder-count="2">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid {{ theme.borderLight }}">
+          <div style="font-size:13px;font-weight:400">{{ fx.matchText }}</div>
+          <div style="font-size:13px;font-weight:600;color:{{ theme.accent }}">{{ fx.projPtsStr }}</div>
+        </div>
+      </sc-for>
+      </div>
+
+      <div style="height:16px"></div>
+    </div>
+    <div style="position:sticky;bottom:0;left:0;right:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:{{ theme.card }};padding:16px 24px 28px">
+        <div>
+          <div style="font-size:13px;font-weight:400;color:{{ theme.textSecondary }}">League Ownership</div>
+          <div style="font-size:19px;font-weight:600;margin-top:2px">{{ detail.ownershipPctStr }}%</div>
+        </div>
+        <div onClick="{{ openTrading }}" style="background:{{ theme.accent }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:13px 40px;border-radius:100px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.18);white-space:nowrap" style-active="transform:scale(0.98)">{{ detail.tradeButtonLabel }}</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTrading }}" hint-placeholder-val="{{ false }}">
+  <div key="trading" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px 8px">
+      <div style="font-size:19px;font-weight:600">{{ tradeHeaderLabel }}</div>
+      <div onClick="{{ backFromTrading }}" style="width:32px;height:32px;border-radius:50%;background:{{ theme.card }};display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="opacity:0.6">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="{{ theme.text }}" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="13" y2="13"></line><line x1="13" y1="1" x2="1" y2="13"></line></svg>
+      </div>
+    </div>
+
+    <sc-if value="{{ isTradeDone }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:60px 24px;text-align:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:{{ theme.accentTint }};display:flex;align-items:center;justify-content:center;margin:0 auto 20px;animation:tkPop 400ms ease-out">
+        <svg width="32" height="32" viewBox="0 0 32 32"><path d="M6 17 L13 24 L26 8" fill="none" stroke="{{ theme.accent }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div style="font-size:19px;font-weight:600;margin-bottom:8px">Trade Complete</div>
+      <div style="font-size:15px;font-weight:400;color:{{ theme.textSecondary }};line-height:1.6;margin-bottom:26px">{{ successText }}</div>
+      <div onClick="{{ backToPortfolio }}" style="background:{{ theme.accent }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:16px;border-radius:14px;cursor:pointer" style-active="transform:scale(0.98)">Back to Portfolio</div>
+    </div>
+    </sc-if>
+
+
+    <sc-if value="{{ isTradeConfirming }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:100px 24px;text-align:center">
+      <div style="width:56px;height:56px;border-radius:50%;border:4px solid {{ theme.spinnerTrack }};border-top-color:{{ theme.accent }};margin:0 auto;animation:tkSpin 800ms linear infinite"></div>
+      <div style="font-size:15px;font-weight:400;color:{{ theme.textSecondary }};margin-top:20px">Executing trade&hellip;</div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isTradeActive }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:8px 24px 24px">
+      <div style="display:flex;gap:12px;align-items:stretch">
+        <sc-if value="{{ hasTradeOut }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;background:{{ theme.card }};border-radius:16px;padding:16px;text-align:center">
+          <div style="font-size:13px;color:{{ theme.textSecondary }};margin-bottom:8px">{{ tradeOutLabel }}</div>
+          <div style="width:44px;height:44px;border-radius:11px;background:{{ tradeOut.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;margin:0 auto 8px">{{ tradeOut.code }}</div>
+          <div style="font-size:15px;font-weight:500">{{ tradeOut.name }}</div>
+          <div style="font-size:15px;font-weight:600;margin-top:4px">{{ tradeOut.priceStr }}</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ noTradeOut }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;border:2px dashed {{ theme.border }};border-radius:16px;padding:16px;text-align:center;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:13px;color:{{ theme.textSecondary }}">Pick below</div>
+        </div>
+        </sc-if>
+        <div style="align-self:center;font-size:20px;color:{{ theme.chevron }}">&#8594;</div>
+        <sc-if value="{{ hasTradeIn }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;background:{{ theme.accentTint }};border-radius:16px;padding:16px;text-align:center">
+          <div style="font-size:13px;color:{{ theme.accent }};margin-bottom:8px">{{ tradeInLabel }}</div>
+          <div style="width:44px;height:44px;border-radius:11px;background:{{ tradeIn.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;margin:0 auto 8px">{{ tradeIn.code }}</div>
+          <div style="font-size:15px;font-weight:500">{{ tradeIn.name }}</div>
+          <div style="font-size:15px;font-weight:600;margin-top:4px">{{ tradeIn.priceStr }}</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ noTradeIn }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;border:2px dashed {{ theme.border }};border-radius:16px;padding:16px;text-align:center;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:13px;color:{{ theme.textSecondary }}">Pick below</div>
+        </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ hasTradeOut }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:14px;background:{{ theme.card }};border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:{{ theme.textSecondary }}">Purchase price</span><span style="font-weight:600">{{ releaseBuyPriceStr }}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:{{ theme.textSecondary }}">Average points/GW</span><span style="font-weight:600">{{ releaseAvgPtsStr }}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:{{ theme.textSecondary }}">Total return</span><span style="font-weight:600;color:{{ releaseGainLossColor }}">{{ releasePLStr }} ({{ releasePLPctStr }})</span></div>
+      </div>
+      </sc-if>
+
+      <div style="margin-top:20px;background:{{ theme.card }};border-radius:20px;padding:20px">
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:400">
+          <span>Budget impact</span><span style="font-weight:600;color:{{ budgetColor }}">{{ budgetDisplayStr }}</span>
+        </div>
+        <sc-if value="{{ hasTradeOut }}" hint-placeholder-val="{{ false }}">
+        <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;margin-top:10px;padding-top:10px;border-top:1px solid {{ theme.border }}">
+          <div style="width:7px;height:7px;border-radius:50%;background:{{ theme.accent }}"></div>
+          <div style="font-size:12px;font-weight:500;color:{{ theme.accent }};letter-spacing:.04em;text-transform:uppercase">AI Explanation</div>
+        </div>
+        <div style="font-size:13px;line-height:1.6;font-weight:400">{{ aiExplanationText }}</div>
+        </div>
+        </sc-if>
+      </div>
+      <div onClick="{{ confirmTrade }}" style="margin-top:16px;background:{{ confirmBg }};opacity:{{ confirmOpacity }};pointer-events:{{ confirmPointerEvents }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:16px;border-radius:14px;cursor:pointer" style-active="transform:scale(0.98)">{{ confirmButtonLabel }}</div>
+      </sc-if>
+
+      <div style="font-size:19px;font-weight:600;margin:26px 0 8px">{{ candidatesHeading }}</div>
+      <sc-for list="{{ candidatesView }}" as="cd" hint-placeholder-count="6">
+      <div onClick="{{ cd.onSelect }}" style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid {{ theme.border }};cursor:pointer;background:{{ cd.rowBg }};opacity:{{ cd.rowOpacity }}" style-active="transform:scale(0.98)">
+        <div style="width:36px;height:36px;border-radius:9px;background:{{ cd.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">{{ cd.code }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:15px;font-weight:500">{{ cd.name }}</div>
+            <div style="display:flex;gap:3px">
+            <sc-for list="{{ cd.formChipsView }}" as="fc" hint-placeholder-count="3">
+              <div style="width:16px;height:16px;border-radius:4px;background:{{ fc.bg }};color:{{ fc.color }};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ fc.label }}</div>
+            </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;margin-top:6px">
+          <sc-for list="{{ cd.fixturesView }}" as="fx" hint-placeholder-count="3">
+            <div style="padding:3px 7px;border-radius:5px;font-size:10px;font-weight:500;background:{{ fx.bg }};color:{{ fx.color }};white-space:nowrap">{{ fx.label }}</div>
+          </sc-for>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0"><div style="font-size:15px;font-weight:500">{{ cd.priceStr }}</div><div style="font-size:13px;font-weight:500;color:{{ cd.weeklyColor }}">{{ cd.weeklyStr }}</div></div>
+      </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isAi }}" hint-placeholder-val="{{ false }}">
+  <div key="ai" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out;padding:24px">
+    <div onClick="{{ closeAi }}" style="position:absolute;top:16px;right:20px;width:32px;height:32px;border-radius:50%;background:{{ theme.card }};display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2" style-active="opacity:0.6">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="{{ theme.text }}" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="13" y2="13"></line><line x1="13" y1="1" x2="1" y2="13"></line></svg>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+      <div style="width:7px;height:7px;border-radius:50%;background:{{ theme.accent }}"></div>
+      <div style="font-size:11px;font-weight:600;color:{{ theme.accent }};letter-spacing:.06em;text-transform:uppercase">AI Briefing</div>
+    </div>
+    <div style="font-size:32px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px;font-family:'Newsreader',serif">Good morning</div>
+    <div style="font-size:13px;color:{{ theme.textSecondary }};margin-bottom:4px">Matchday 24 &middot; Today</div>
+    <div style="font-size:14px;font-weight:500;margin-bottom:24px">Your 4 clubs are <span style="color:{{ weekColor }};font-weight:600">{{ weekStr }}</span> this week</div>
+
+    <sc-for list="{{ briefCardsView }}" as="bc" hint-placeholder-count="5">
+    <div style="background:{{ theme.card }};border-radius:18px;padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:{{ theme.accent }};text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">{{ bc.label }}</div>
+      <div style="font-size:14px;line-height:1.55;font-weight:400;color:{{ theme.text }}">{{ bc.text }}</div>
+    </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isRules }}" hint-placeholder-val="{{ false }}">
+  <div key="rules" style="position:absolute;inset:0;overflow-y:auto;background:{{ theme.bg }};animation:tkFade 250ms ease-out">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 24px 8px">
+      <div onClick="{{ closeRules }}" style="display:flex;align-items:center;gap:2px;cursor:pointer;font-size:17px;font-weight:400;color:{{ theme.accent }}" style-active="opacity:0.5"><span style="font-size:22px;font-weight:500;margin-top:-1px">&#8249;</span>Profile</div>
+    </div>
+    <div style="padding:8px 24px 40px">
+      <div style="font-size:32px;font-weight:300;letter-spacing:-.01em;margin-bottom:6px;font-family:'Newsreader',serif">Rules of the Game</div>
+      <div style="font-size:14px;color:{{ theme.textSecondary }};line-height:1.6;margin-bottom:24px">Ticker is a fantasy Premier League game where you choose clubs, not players. Build a portfolio of four clubs, earn points from their real-world performances, and trade as their market values rise and fall.</div>
+
+      <div style="background:{{ theme.accentTint }};border-radius:16px;padding:16px 18px;margin-bottom:28px;font-size:14px;font-style:italic;color:{{ theme.text }};line-height:1.5">Score the most fantasy points while building the smartest football portfolio.</div>
+
+      <div style="font-size:20px;font-weight:600;margin-bottom:10px">1. Selecting Your Initial Portfolio</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:12px">Every manager begins with <b>$100.00</b> in available cash. Use it to purchase exactly <b>four Premier League clubs</b> before the first Gameweek deadline. The combined purchase price of your four clubs may not exceed your available cash.</div>
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Arsenal</span><span style="font-weight:600">$30.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Aston Villa</span><span style="font-weight:600">$25.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Brighton</span><span style="font-weight:600">$23.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Bournemouth</span><span style="font-weight:600">$18.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;font-weight:600;border-bottom:1px solid {{ theme.borderLight }}"><span>Total Invested</span><span>$96.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;font-weight:600;color:{{ theme.accent }}"><span>Cash Remaining</span><span>$4.00</span></div>
+      </div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Your initial portfolio must contain exactly four different clubs, no duplicates, and a total purchase price of $100.00 or less. The same club may be owned by multiple managers.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Every club has an opening market value reflecting expected performance, schedule strength, recent form, and market expectations. After the season begins, values rise or fall based on real-world results — a club's current value may differ from what you paid.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:28px">You may make unlimited changes before the first Gameweek deadline. Once it passes, your portfolio is confirmed and standard trading rules apply.</div>
+
+      <div style="font-size:20px;font-weight:600;margin-bottom:10px">2. Scoring</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:12px">League standings are determined by <b>fantasy points</b>, not portfolio value. Every club earns points based on its real Premier League results. Portfolio value affects future spending power but does not directly add points.</div>
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Win</span><span style="font-weight:600;color:{{ theme.accent }}">+5</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Draw</span><span style="font-weight:600;color:{{ theme.accent }}">+2</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Loss</span><span style="font-weight:600">0</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Each goal scored</span><span style="font-weight:600;color:{{ theme.accent }}">+1</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px"><span>Clean sheet</span><span style="font-weight:600;color:{{ theme.accent }}">+2</span></div>
+      </div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Your Gameweek score is the combined total earned by every club you owned when its match locked. Points accumulate all season — the manager with the most total fantasy points at the end wins the league.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">When a club plays more than once in a Gameweek, points from every eligible match are added together. When it has no eligible match, it earns zero.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:28px">A postponed match does not score until officially played. If a match is abandoned, points remain pending until the Premier League confirms a result. Ticker may adjust scores when an official statistic is corrected after the final whistle.</div>
+
+      <div style="font-size:20px;font-weight:600;margin-bottom:10px">3. Trading</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">After selecting your initial portfolio, you may buy and sell clubs through the market to sell clubs whose outlook has weakened, buy clubs you believe are undervalued, respond to schedule and form changes, and reposition for future Gameweeks.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">You may make <b>unlimited trades before each Gameweek deadline</b>, provided every transaction follows the portfolio and cash rules. At the deadline, your portfolio locks: you must own exactly four different clubs, your cash may remain above $0.00, and locked clubs are eligible to earn points from their upcoming matches. Trades submitted after the deadline apply only once the market reopens.</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px;margin-top:18px">Buying Power</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">You may only purchase a club using available cash — cash already held plus proceeds from selling a club. You may not borrow, use margin, or let your cash balance go negative.</div>
+      <div style="background:{{ theme.card }};border-radius:16px;padding:16px;margin-bottom:14px;font-size:13px;line-height:1.9">
+        <div style="display:flex;justify-content:space-between"><span style="color:{{ theme.textSecondary }}">Sale proceeds</span><span style="font-weight:600">$30.00</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:{{ theme.textSecondary }}">Existing cash</span><span style="font-weight:600">$5.00</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:{{ theme.accent }};font-weight:600">New buying power</span><span style="font-weight:700;color:{{ theme.accent }}">$35.00</span></div>
+      </div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">The replacement club is not limited to the value of the club you sold — it's limited only by your total available cash.</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px;margin-top:18px">Selling &amp; Buying</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">When you sell a club, you receive its current market value, not your original purchase price. A purchase completes at the club's displayed execution price — Ticker verifies you have enough cash, don't already own the club, the market is open, and the transaction follows all portfolio rules.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">You may temporarily own fewer than four clubs while trading, but must own exactly four when the Gameweek deadline arrives, and never more than four at one time.</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px;margin-top:18px">Portfolio Value</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:12px">Your total account value is the current value of owned clubs plus available cash. It measures your football investments and does not replace fantasy points as the primary league score.</div>
+      <div style="background:{{ theme.card }};border-radius:16px;overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Liverpool</span><span style="font-weight:600">$30.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Aston Villa</span><span style="font-weight:600">$27.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Brighton</span><span style="font-weight:600">$25.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Bournemouth</span><span style="font-weight:600">$23.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;border-bottom:1px solid {{ theme.borderLight }}"><span>Cash</span><span style="font-weight:600">$5.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:13px;font-weight:600;color:{{ theme.accent }}"><span>Total Portfolio Value</span><span>$110.00</span></div>
+      </div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Unspent cash stays in your account. It doesn't earn points or change value, but holding it may help you buy later without selling more of your portfolio.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Trading closes at the published Gameweek deadline. Once it passes, clubs are locked for scoring until the Gameweek is complete and the market reopens. Ticker may also temporarily lock an individual club to process a live match, a completed result, points, a price update, or a postponed/suspended/abandoned match. A transaction submitted while a club is locked will not complete.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Club prices may rise or fall based on match results, goals, clean sheets, form, upcoming schedule, market expectations, and buying/selling activity. Ticker determines all official prices — external odds, projections, or third-party valuations are not executable Ticker prices.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:28px">Trades are processed as two separate actions — sell a club for cash, then use available cash to buy another. You are not directly exchanging one club for another; leftover cash stays in your balance.</div>
+
+      <div style="font-size:20px;font-weight:600;margin-bottom:10px">4. Fantasy Points vs. Portfolio Value</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:8px">Fantasy points determine your position in the league standings, earned through the real-world performances of clubs you own. Portfolio value determines your financial flexibility — it rises or falls with your clubs' market value and determines which clubs you can afford in future trades.</div>
+      <div style="font-size:14px;line-height:1.7;color:{{ theme.text }};margin-bottom:20px">A manager may have the most valuable portfolio without the most fantasy points, and vice versa.</div>
+      <div style="background:{{ theme.accentTint }};border-radius:16px;padding:16px 18px;font-size:14px;font-style:italic;color:{{ theme.text }};line-height:1.5">Pick clubs that can score today without sacrificing the value you may need tomorrow.</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTabScreen }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;left:0;right:0;bottom:0;height:84px;background:{{ theme.bg }};border-top:1px solid {{ theme.border }};display:flex;padding-top:8px">
+    <div onClick="{{ goPortfolio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ navPortfolioColor }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="16" height="11" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="3" y1="12" x2="19" y2="12"></line></svg>
+      <div style="font-size:11px;font-weight:500;color:{{ navPortfolioColor }}">Portfolio</div>
+    </div>
+    <div onClick="{{ goMarket }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ navMarketColor }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,16 8,10 12,13 19,4"></polyline><polyline points="13,4 19,4 19,10"></polyline></svg>
+      <div style="font-size:11px;font-weight:500;color:{{ navMarketColor }}">Market</div>
+    </div>
+    <div onClick="{{ goCompetitions }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ navCompetitionsColor }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h10v2a5 5 0 0 1-5 5 5 5 0 0 1-5-5V3z"></path><path d="M6 4H3v1a4 4 0 0 0 4 4"></path><path d="M16 4h3v1a4 4 0 0 1-4 4"></path><line x1="11" y1="10" x2="11" y2="15"></line><line x1="8" y1="18" x2="14" y2="18"></line><line x1="9.5" y1="15" x2="12.5" y2="15"></line></svg>
+      <div style="font-size:11px;font-weight:500;color:{{ navCompetitionsColor }}">Compete</div>
+    </div>
+    <div onClick="{{ goProfile }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ navProfileColor }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="8" r="4"></circle><path d="M3 20c0-6 16-6 16 0"></path></svg>
+      <div style="font-size:11px;font-weight:500;color:{{ navProfileColor }}">Profile</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTabScreen }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;right:18px;bottom:116px;width:58px;height:58px;z-index:5">
+    <div style="position:absolute;inset:0;border-radius:50%;background:{{ navAiFabBg }};opacity:.35;animation:tkAiPulse 2400ms ease-out infinite"></div>
+    <div onClick="{{ goAi }}" style="position:absolute;inset:3px;border-radius:50%;background:{{ navAiFabBg }};display:flex;align-items:center;justify-content:center;box-shadow:{{ navAiFabShadow }};cursor:pointer" style-active="transform:scale(0.92)">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M12 2 L14.4 9.6 L22 12 L14.4 14.4 L12 22 L9.6 14.4 L2 12 L9.6 9.6 Z" fill="#fff"></path>
+        <circle cx="18.5" cy="5.5" r="2" fill="#fff" opacity=".85"></circle>
+      </svg>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isOverlayOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeClubOverlay }}" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:flex-end;animation:tkFade 200ms ease-out">
+    <div onClick="{{ stopPropagation }}" style="width:100%;max-height:88%;overflow-y:auto;background:{{ theme.bg }};border-radius:24px 24px 0 0;padding:20px 24px 0;position:relative">
+      <div onClick="{{ closeClubOverlay }}" style="position:absolute;top:16px;right:20px;width:32px;height:32px;border-radius:50%;background:{{ theme.card }};display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1" style-active="opacity:0.6">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="{{ theme.text }}" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="13" y2="13"></line><line x1="13" y1="1" x2="1" y2="13"></line></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding-right:40px">
+        <div style="width:52px;height:52px;border-radius:12px;background:{{ detail.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">{{ detail.code }}</div>
+        <div>
+          <div style="font-size:16px;font-weight:500;margin-bottom:6px">{{ detail.name }}</div>
+          <div style="font-size:28px;font-weight:500;letter-spacing:-.01em;line-height:1.1;font-family:'Newsreader',serif">{{ detail.priceStr }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px">
+        <div style="font-size:13px;font-weight:400;color:{{ theme.accent }}">{{ detail.gwPtsStr }} this week</div>
+        <div style="font-size:13px;font-weight:300;color:{{ detail.dailyColor }}">{{ detail.dailyStr }} today</div>
+      </div>
+
+      <div style="font-size:16px;font-weight:600;margin:22px 0 8px">Form</div>
+      <div style="display:flex;gap:8px">
+      <sc-for list="{{ detail.formView }}" as="fm" hint-placeholder-count="5">
+        <div style="width:32px;height:32px;border-radius:9px;background:{{ fm.bg }};color:{{ fm.color }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">{{ fm.label }}</div>
+      </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 8px">
+        <div style="font-size:16px;font-weight:600">Upcoming Fixtures</div>
+        <div style="font-size:10px;font-weight:500;color:{{ theme.textSecondary }};text-transform:uppercase;letter-spacing:.03em;margin-right:5px">Projected Points</div>
+      </div>
+      <div style="background:{{ theme.card }};border-radius:20px;overflow:hidden">
+      <sc-for list="{{ detail.fixturesView }}" as="fx" hint-placeholder-count="2">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid {{ theme.borderLight }}">
+          <div style="font-size:13px;font-weight:400">{{ fx.matchText }}</div>
+          <div style="font-size:13px;font-weight:600;color:{{ theme.accent }}">{{ fx.projPtsStr }}</div>
+        </div>
+      </sc-for>
+      </div>
+
+      <div style="height:16px"></div>
+      <div style="position:sticky;bottom:0;left:-24px;right:-24px;margin:0 -24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:{{ theme.card }};padding:16px 24px 24px">
+          <div>
+            <div style="font-size:13px;font-weight:400;color:{{ theme.textSecondary }}">League Ownership</div>
+            <div style="font-size:19px;font-weight:600;margin-top:2px">{{ detail.ownershipPctStr }}%</div>
+          </div>
+          <div onClick="{{ overlayTrade }}" style="background:{{ theme.accent }};color:#fff;text-align:center;font-size:15px;font-weight:600;padding:13px 40px;border-radius:100px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.18);white-space:nowrap" style-active="transform:scale(0.98)">{{ detail.tradeButtonLabel }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:393,&quot;height&quot;:852},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dark&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;tsType&quot;:&quot;'light'|'dark'&quot;}}">
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296}}
+function genSeries(seed,len,base,slope,vol){const rng=mulberry32(seed);let v=base;const arr=[];for(let i=0;i<len;i++){v=v+slope+(rng()-0.5)*vol;if(v<8)v=8;arr.push(Math.round(v*100)/100)}return arr}
+function sparkPath(arr,w,h,pad){pad=pad||2;const min=Math.min.apply(null,arr),max=Math.max.apply(null,arr);const range=(max-min)||1;const step=(w-pad*2)/(arr.length-1);return arr.map(function(v,i){const x=pad+i*step;const y=pad+(h-pad*2)*(1-(v-min)/range);return x.toFixed(1)+','+y.toFixed(1)}).join(' ')}
+function sparkPointAt(arr,w,h,pad,idx){pad=pad||2;const min=Math.min.apply(null,arr),max=Math.max.apply(null,arr);const range=(max-min)||1;const step=(w-pad*2)/(arr.length-1);const v=arr[idx];return {x:pad+idx*step,y:pad+(h-pad*2)*(1-(v-min)/range)}}
+function edgeSparkPath(arr,w,h,padY){padY=padY||0;const min=Math.min.apply(null,arr),max=Math.max.apply(null,arr);const range=(max-min)||1;const step=w/(arr.length-1);return arr.map(function(v,i){const x=i*step;const y=padY+(h-padY*2)*(1-(v-min)/range);return x.toFixed(1)+','+y.toFixed(1)}).join(' ')}
+function edgeSparkAreaPath(arr,w,h,padY){const line=edgeSparkPath(arr,w,h,padY);return 'M '+line.replace(/ /g,' L ')+' L '+w.toFixed(1)+','+h+' L 0,'+h+' Z'}
+function edgeSparkPointAt(arr,w,h,padY,idx){padY=padY||0;const min=Math.min.apply(null,arr),max=Math.max.apply(null,arr);const range=(max-min)||1;const step=w/(arr.length-1);const v=arr[idx];return {x:idx*step,y:padY+(h-padY*2)*(1-(v-min)/range)}}
+function fmtMoney(v){return '$'+v.toFixed(2)}
+const KICKOFF_SLOTS=['Sat 12:30 PM','Sat 3:00 PM','Sat 5:30 PM','Sun 2:00 PM','Sun 4:30 PM','Mon 8:00 PM'];
+function kickoffFor(base,idx){return KICKOFF_SLOTS[Math.floor(base+idx*2)%KICKOFF_SLOTS.length]}
+function fmtPct(v){return (v>=0?'+':'')+v.toFixed(1)+'%'}
+const GREEN='#00C805',RED='#E0393E',GRAY='#8E8E93',ACCENT='#00C805';
+function colorForPct(v){return v>0?GREEN:(v<0?RED:GRAY)}
+const DIFF_COLOR={Easy:GREEN,Medium:GRAY,Hard:RED};
+const DIFF_DOT={Easy:GREEN,Medium:'#F0A202',Hard:RED};
+
+const LIGHT_THEME={bg:'#FFFFFF',card:'#F7F8F7',text:'#17181A',textSecondary:'#8A8F98',border:'#EAEBEC',borderLight:'#F1F2F2',chevron:'#C7C7CC',accent:ACCENT,accentTint:'#E6F9E8',redTint:'#FDECEC',rowHighlight:'#F1FBF2',spinnerTrack:'#EAEBEC',navInactive:'#C7C7CC',elevated:'#FFFFFF',elevatedShadow:'0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06)',aiGradient:'linear-gradient(135deg,#3DDC3B,#00A63C)',aiGlow:'0 4px 10px rgba(0,198,5,.28), 0 10px 26px rgba(0,150,20,.32)'};
+const DARK_THEME={bg:'#000000',card:'#151718',text:'#F5F6F5',textSecondary:'#8E9296',border:'#2A2C2E',borderLight:'#222425',chevron:'#4E5256',accent:ACCENT,accentTint:'#0E2712',redTint:'#3A1417',rowHighlight:'#0C2410',spinnerTrack:'#2A2C2E',navInactive:'#54585B',elevated:'#1C1E1F',elevatedShadow:'0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45)',aiGradient:'linear-gradient(135deg,#3DDC3B,#00A63C)',aiGlow:'0 4px 12px rgba(0,200,5,.4), 0 10px 30px rgba(0,0,0,.5)'};
+
+const CLUBS_BASE=[
+{id:'LIV',name:'Liverpool',code:'LIV',color:'#C8102E',base:29.5,slope:0.35,vol:1.8,ownership:34.2,
+ fixtures:[{opp:'Everton',home:true,diff:'Easy',md:'MD 24'},{opp:'Arsenal',home:false,diff:'Hard',md:'MD 25'},{opp:'Newcastle',home:true,diff:'Medium',md:'MD 26'}],
+ form:['W','W','D','W','W'],
+ news:{h:"Consecutive clean sheets and a settled midfield have lifted Liverpool's underlying numbers.",m:'Value trend · 3 min read'}},
+{id:'MCI',name:'Man City',code:'MCI',color:'#6CABDD',base:31,slope:0.15,vol:2.0,ownership:29.8,
+ fixtures:[{opp:'Brighton',home:true,diff:'Easy',md:'MD 24'},{opp:'Chelsea',home:false,diff:'Medium',md:'MD 25'},{opp:'Tottenham',home:true,diff:'Easy',md:'MD 26'}],
+ form:['D','W','W','L','W'],
+ news:{h:"Squad depth continues to insulate City's value from fixture congestion.",m:'Value trend · 2 min read'}},
+{id:'ARS',name:'Arsenal',code:'ARS',color:'#EF0107',base:27.5,slope:-0.10,vol:1.6,ownership:27.4,
+ fixtures:[{opp:'Liverpool',home:true,diff:'Hard',md:'MD 25'},{opp:'West Ham',home:false,diff:'Medium',md:'MD 26'},{opp:'Everton',home:true,diff:'Easy',md:'MD 27'}],
+ form:['L','D','W','W','D'],
+ news:{h:"A stretch of draws has cooled sentiment despite Arsenal's defensive record.",m:'Market sentiment · 2 min read'}},
+{id:'NEW',name:'Newcastle',code:'NEW',color:'#1B1B1B',base:19,slope:0.22,vol:1.4,ownership:18.6,
+ fixtures:[{opp:'Crystal Palace',home:false,diff:'Easy',md:'MD 24'},{opp:'Man Utd',home:true,diff:'Medium',md:'MD 25'},{opp:'Brighton',home:false,diff:'Medium',md:'MD 26'}],
+ form:['W','W','L','W','D'],
+ news:{h:"Newcastle's home form is quietly building a case for a value re-rating.",m:'Value trend · 3 min read'}},
+{id:'CHE',name:'Chelsea',code:'CHE',color:'#034694',base:21,slope:-0.28,vol:2.2,ownership:21.3,
+ fixtures:[{opp:'Man City',home:true,diff:'Hard',md:'MD 25'},{opp:'Everton',home:false,diff:'Easy',md:'MD 26'},{opp:'Fulham',home:true,diff:'Easy',md:'MD 27'}],
+ form:['L','L','D','W','L'],
+ news:{h:"Chelsea's inconsistency in front of goal is weighing on manager confidence.",m:'Market sentiment · 2 min read'}},
+{id:'TOT',name:'Tottenham',code:'TOT',color:'#132257',base:20,slope:-0.05,vol:1.7,ownership:19.5,
+ fixtures:[{opp:'Aston Villa',home:false,diff:'Medium',md:'MD 24'},{opp:'Brighton',home:true,diff:'Easy',md:'MD 25'},{opp:'Man Utd',home:false,diff:'Medium',md:'MD 26'}],
+ form:['D','L','W','D','L'],
+ news:{h:"Tottenham's underlying data suggests the table doesn't yet reflect their performances.",m:'Analysis · 4 min read'}},
+{id:'MUN',name:'Man Utd',code:'MUN',color:'#DA291C',base:18,slope:-0.32,vol:2.4,ownership:24.1,
+ fixtures:[{opp:'Newcastle',home:false,diff:'Medium',md:'MD 25'},{opp:'Fulham',home:true,diff:'Easy',md:'MD 26'},{opp:'Tottenham',home:true,diff:'Hard',md:'MD 27'}],
+ form:['L','L','D','L','W'],
+ news:{h:"United's defensive record remains the club's most pressing concern.",m:'Market sentiment · 3 min read'}},
+{id:'AVL',name:'Aston Villa',code:'AVL',color:'#670E36',base:17,slope:0.18,vol:1.3,ownership:15.2,
+ fixtures:[{opp:'Tottenham',home:true,diff:'Medium',md:'MD 24'},{opp:'Bournemouth',home:false,diff:'Easy',md:'MD 25'},{opp:'Wolves',home:true,diff:'Easy',md:'MD 26'}],
+ form:['W','D','W','W','L'],
+ news:{h:"Villa's set-piece efficiency has become a repeatable source of value.",m:'Value trend · 2 min read'}},
+{id:'BHA',name:'Brighton',code:'BHA',color:'#0057B8',base:14.5,slope:0.12,vol:1.1,ownership:12.8,
+ fixtures:[{opp:'Man City',home:false,diff:'Hard',md:'MD 24'},{opp:'Wolves',home:true,diff:'Easy',md:'MD 25'},{opp:'Crystal Palace',home:false,diff:'Medium',md:'MD 26'}],
+ form:['W','L','D','W','W'],
+ news:{h:"Brighton's academy pipeline continues to add long-term value beyond results.",m:'Analysis · 3 min read'}},
+{id:'WHU',name:'West Ham',code:'WHU',color:'#7A263A',base:13.5,slope:-0.08,vol:1.2,ownership:11.4,
+ fixtures:[{opp:'Arsenal',home:true,diff:'Hard',md:'MD 25'},{opp:'Brentford',home:false,diff:'Medium',md:'MD 26'},{opp:'Everton',home:true,diff:'Easy',md:'MD 27'}],
+ form:['D','D','L','W','D'],
+ news:{h:"West Ham's away form has been the main drag on an otherwise steady season.",m:'Market sentiment · 2 min read'}},
+{id:'EVE',name:'Everton',code:'EVE',color:'#003399',base:12,slope:0.06,vol:1.0,ownership:8.9,
+ fixtures:[{opp:'Liverpool',home:false,diff:'Hard',md:'MD 24'},{opp:'Chelsea',home:true,diff:'Medium',md:'MD 26'},{opp:'West Ham',home:false,diff:'Easy',md:'MD 27'}],
+ form:['L','W','D','D','W'],
+ news:{h:"Everton's resilience under pressure is starting to show up in the numbers.",m:'Value trend · 2 min read'}},
+{id:'CRY',name:'Crystal Palace',code:'CRY',color:'#1B458F',base:11,slope:-0.04,vol:1.0,ownership:7.6,
+ fixtures:[{opp:'Newcastle',home:true,diff:'Medium',md:'MD 24'},{opp:'Southampton',home:false,diff:'Easy',md:'MD 25'},{opp:'Brighton',home:true,diff:'Hard',md:'MD 26'}],
+ form:['D','L','W','L','D'],
+ news:{h:"Palace's counter-attacking data points to untapped upside.",m:'Analysis · 3 min read'}},
+{id:'WOL',name:'Wolves',code:'WOL',color:'#FDB913',base:8.5,slope:0.05,vol:1.0,ownership:9.4,
+ fixtures:[{opp:'Brighton',home:false,diff:'Medium',md:'MD 24'},{opp:'Fulham',home:true,diff:'Easy',md:'MD 25'},{opp:'Aston Villa',home:false,diff:'Hard',md:'MD 26'}],
+ form:['D','W','L','D','W'],
+ news:{h:"Wolves' counter press is generating more chances than the table shows.",m:'Analysis · 2 min read'}},
+{id:'BOU',name:'Bournemouth',code:'BOU',color:'#B50E12',base:7.5,slope:0.10,vol:1.0,ownership:8.2,
+ fixtures:[{opp:'Aston Villa',home:true,diff:'Hard',md:'MD 24'},{opp:'Brentford',home:false,diff:'Medium',md:'MD 25'},{opp:'Ipswich',home:true,diff:'Easy',md:'MD 26'}],
+ form:['W','W','D','L','W'],
+ news:{h:"Bournemouth's underlying numbers keep outperforming the scoreline.",m:'Value trend · 2 min read'}},
+{id:'FUL',name:'Fulham',code:'FUL',color:'#000000',base:9.5,slope:-0.02,vol:0.9,ownership:10.1,
+ fixtures:[{opp:'Man Utd',home:false,diff:'Hard',md:'MD 25'},{opp:'Wolves',home:false,diff:'Medium',md:'MD 26'},{opp:'Southampton',home:true,diff:'Easy',md:'MD 27'}],
+ form:['D','D','L','W','D'],
+ news:{h:"Fulham remain steady but short on the fixtures that move a price.",m:'Market sentiment · 2 min read'}},
+{id:'BRE',name:'Brentford',code:'BRE',color:'#E30613',base:6.5,slope:0.08,vol:1.1,ownership:7.3,
+ fixtures:[{opp:'West Ham',home:true,diff:'Medium',md:'MD 24'},{opp:'Bournemouth',home:true,diff:'Easy',md:'MD 25'},{opp:'Chelsea',home:false,diff:'Hard',md:'MD 26'}],
+ form:['W','L','W','D','W'],
+ news:{h:"Brentford's set-piece threat is quietly adding value each week.",m:'Value trend · 2 min read'}},
+{id:'NFO',name:'Nottingham Forest',code:'NFO',color:'#DD0000',base:10.5,slope:0.15,vol:1.2,ownership:11.8,
+ fixtures:[{opp:'Ipswich',home:true,diff:'Easy',md:'MD 24'},{opp:'Leicester',home:false,diff:'Medium',md:'MD 25'},{opp:'Southampton',home:true,diff:'Easy',md:'MD 26'}],
+ form:['W','W','W','D','L'],
+ news:{h:"Forest's form has been the surprise story of the market this month.",m:'Analysis · 3 min read'}},
+{id:'SOU',name:'Southampton',code:'SOU',color:'#D71920',base:4.5,slope:-0.15,vol:1.3,ownership:5.2,
+ fixtures:[{opp:'Leicester',home:false,diff:'Medium',md:'MD 24'},{opp:'Ipswich',home:true,diff:'Easy',md:'MD 25'},{opp:'Nottingham Forest',home:false,diff:'Hard',md:'MD 26'}],
+ form:['L','D','L','L','W'],
+ news:{h:"Southampton's value remains under pressure after a slow start.",m:'Market sentiment · 2 min read'}},
+{id:'LEI',name:'Leicester',code:'LEI',color:'#003090',base:5.5,slope:-0.10,vol:1.2,ownership:6.4,
+ fixtures:[{opp:'Southampton',home:true,diff:'Easy',md:'MD 24'},{opp:'Nottingham Forest',home:true,diff:'Medium',md:'MD 25'},{opp:'Ipswich',home:false,diff:'Easy',md:'MD 26'}],
+ form:['D','L','D','W','L'],
+ news:{h:"Leicester's defensive record continues to hold their price back.",m:'Market sentiment · 2 min read'}},
+{id:'IPS',name:'Ipswich',code:'IPS',color:'#1D4C9B',base:4,slope:-0.18,vol:1.4,ownership:4.6,
+ fixtures:[{opp:'Nottingham Forest',home:false,diff:'Hard',md:'MD 24'},{opp:'Southampton',home:false,diff:'Medium',md:'MD 25'},{opp:'Leicester',home:true,diff:'Hard',md:'MD 26'}],
+ form:['L','L','D','L','L'],
+ news:{h:"Ipswich's return to the top flight remains a work in progress.",m:'Analysis · 3 min read'}}
+];
+
+class Component extends DCLogic {
+  state = {tab:'portfolio', screen:'onboarding', obCarouselIndex:0, obStage:'carousel', obName:'', obEmail:'', obBirthday:'', obSelectedClubIds:[], selectedClubId:null, selectedLeagueName:null, joinedLeagues:[], joinCode:'', joinModalLeague:null, welcomeLeagueName:'', gwOffset:0, tradeOutId:null, tradeInId:null, tradeStep:'select', detailRange:null, animT:0, holdingsIds:['LIV','MCI','NEW','CHE'], portfolioHoverIdx:null, chartRange:'30D', priceTick:0, marketSearch:''};
+
+  componentWillUnmount(){
+    if(this._priceInterval) clearInterval(this._priceInterval);
+  }
+
+  onPortfolioChartMove=(e)=>{
+    const rect=e.currentTarget.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const w=393,len=this._portfolioSeriesLen||30;
+    let idx=Math.round((x/w)*(len-1));
+    idx=Math.max(0,Math.min(len-1,idx));
+    this.setState({portfolioHoverIdx:idx});
+  };
+  onPortfolioChartLeave=()=>this.setState({portfolioHoverIdx:null});
+  setChartRange7D=()=>this.setState({chartRange:'7D',portfolioHoverIdx:null});
+  setChartRange30D=()=>this.setState({chartRange:'30D',portfolioHoverIdx:null});
+  setChartRangeYTD=()=>this.setState({chartRange:'YTD',portfolioHoverIdx:null});
+  dismissBrief=()=>this.setState({briefDismissed:true});
+
+  constructor(props){
+    super(props);
+    this.clubs = CLUBS_BASE.map((c,i)=>{
+      const seed=i*97+13;
+      const series=genSeries(seed,60,c.base,c.slope,c.vol);
+      const len=series.length;
+      const price=series[len-1];
+      const daily=((series[len-1]/series[len-2])-1)*100;
+      const weekly=((series[len-1]/series[len-7])-1)*100;
+      const ownershipDelta=Math.round(((i%2===0?1:-1)*(0.3+(i%3)*0.1)*c.ownership)*10)/10;
+      const rngPts=mulberry32(seed+5000);
+      const gwPts=Math.round(2+rngPts()*22);
+      const seasonPts=Math.round(70+rngPts()*150);
+      return Object.assign({},c,{series,price,daily,weekly,ownershipDelta,gwPts,seasonPts});
+    });
+    this.state.detailRange = this.props.defaultChartRange || '30D';
+  }
+
+  componentDidMount(){
+    const start=performance.now(), dur=900;
+    const tick=(t)=>{
+      const p=Math.min(1,(t-start)/dur);
+      const eased=1-Math.pow(1-p,3);
+      this.setState({animT:eased});
+      if(p<1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    this._priceInterval = setInterval(()=>this.setState(s=>({priceTick:(s.priceTick||0)+1})), 900);
+  }
+
+  getClub(id){ return this.clubs.find(c=>c.id===id); }
+
+  goLogin=()=>this.setState({screen:'tab'});
+  startSignup=()=>this.setState({obStage:'name'});
+  scheduleRankFlip=(i)=>{
+    clearTimeout(this._rankFlipTimer);
+    if(i===2) this._rankFlipTimer=setTimeout(()=>this.setState({obRankFlipped:true}),1100);
+  };
+  setObCarousel=(i)=>{this.setState({obCarouselIndex:i, obRankFlipped:false}); this.scheduleRankFlip(i);};
+  nextCarousel=()=>this.setState(s=>{const i=Math.min(2,s.obCarouselIndex+1); this.scheduleRankFlip(i); return {obCarouselIndex:i, obRankFlipped:false};});
+  obSwipeStart=(e)=>{this._obSwipeX=(e.touches?e.touches[0].clientX:e.clientX);};
+  obSwipeEnd=(e)=>{
+    if(this._obSwipeX==null) return;
+    const endX=(e.changedTouches?e.changedTouches[0].clientX:e.clientX);
+    const dx=endX-this._obSwipeX; this._obSwipeX=null;
+    if(Math.abs(dx)<40) return;
+    const cur=this.state.obCarouselIndex||0;
+    const next=dx<0? Math.min(2,cur+1) : Math.max(0,cur-1);
+    if(next!==cur){ this.scheduleRankFlip(next); this.setState({obCarouselIndex:next, obRankFlipped:false}); }
+  };
+  setObName=(e)=>this.setState({obName:e.target.value});
+  setObEmail=(e)=>this.setState({obEmail:e.target.value});
+  setObBirthday=(e)=>this.setState({obBirthday:e.target.value});
+  obBack=()=>this.setState(s=>({obStage: s.obStage==='name'?'carousel': s.obStage==='email'?'name': s.obStage==='birthday'?'email':'birthday'}));
+  obContinue=()=>{
+    const s=this.state;
+    if(s.obStage==='name' && s.obName.trim()) this.setState({obStage:'email'});
+    else if(s.obStage==='email' && /\S+@\S+\.\S+/.test(s.obEmail)) this.setState({obStage:'birthday'});
+    else if(s.obStage==='birthday' && s.obBirthday) this.setState({obStage:'clubs'});
+  };
+  obKeyDown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); this.obContinue(); } };
+  toggleObClub=(id)=>this.setState(s=>{
+    const cur=s.obSelectedClubIds||[];
+    if(cur.includes(id)) return {obSelectedClubIds:cur.filter(x=>x!==id)};
+    if(cur.length>=4) return {};
+    return {obSelectedClubIds:[...cur,id]};
+  });
+  obClubsContinue=()=>{
+    const ids=this.state.obSelectedClubIds||[];
+    const remaining = 100 - this.clubs.filter(c=>ids.includes(c.id)).reduce((sum,c)=>sum+c.price,0);
+    if(ids.length===4 && remaining>=0) this.setState({obStage:'done', holdingsIds:ids, cash:remaining});
+    // clicking while disabled is a no-op
+  };
+  finishOnboarding=()=>this.setState({screen:'tab'});
+  goPortfolio=()=>this.setState({tab:'portfolio',screen:'tab'});
+  goMarket=()=>this.setState({tab:'market',screen:'tab'});
+  goCompetitions=()=>this.setState({tab:'competitions',screen:'tab'});
+  goAi=()=>this.setState({screen:'ai'});
+  closeAi=()=>this.setState({screen:'tab'});
+  goProfile=()=>this.setState({tab:'profile',screen:'tab'});
+
+  openClub(id){ this.setState({screen:'clubDetail', selectedClubId:id, detailRange:this.props.defaultChartRange || '30D'}); }
+  closeClub=()=>this.setState({screen:'tab'});
+  openClubOverlay=(id)=>this.setState({overlayClubId:id, detailRange:this.props.defaultChartRange || '30D'});
+  closeClubOverlay=()=>this.setState({overlayClubId:null});
+  stopPropagation=(e)=>e.stopPropagation();
+  overlayTrade=()=>{
+    const id=this.state.overlayClubId;
+    this.setState({overlayClubId:null, selectedClubId:id}, ()=>this.openTrading());
+  };
+  openLeague=(name)=>this.setState({screen:'leagueDetail',selectedLeagueName:name});
+  joinLeague=()=>this.setState({screen:'joinLeague', joinCode:''});
+  closeJoinLeague=()=>this.setState({screen:'tab', joinCode:''});
+  setJoinCode=(e)=>this.setState({joinCode:e.target.value});
+  clearJoinCode=()=>this.setState({joinCode:''});
+  openJoinModal=(lg)=>this.setState({joinModalLeague:lg});
+  closeJoinModal=()=>this.setState({joinModalLeague:null});
+  confirmJoinLeague=()=>{
+    const lg = this.state.joinModalLeague;
+    if(!lg) return;
+    this.setState(s=>({
+      joinModalLeague:null,
+      welcomeLeagueName: lg.name,
+      joinedLeagues: s.joinedLeagues.concat([{name:lg.name, rankStr:'-'}])
+    }));
+  };
+  closeWelcome=()=>this.setState({welcomeLeagueName:'', screen:'tab', tab:'competitions'});
+  createLeague=()=>{};
+  setLeagueSortPortfolio=()=>this.setState({leagueSortKey:'portfolio'});
+  setLeagueSortPoints=()=>this.setState({leagueSortKey:'season'});
+  closeLeague=()=>this.setState({screen:'tab'});
+  goRules=()=>this.setState({screen:'rules'});
+  closeRules=()=>this.setState({screen:'tab',tab:'profile'});
+  toggleAppearance=()=>this.setState(s=>({themeOverride:(s.themeOverride||this.props.theme)==='dark'?'light':'dark'}));
+  logOut=()=>this.setState({tab:'portfolio',screen:'tab',themeOverride:null});
+  prevGw=()=>this.setState(s=>({gwOffset:Math.max(-11,(s.gwOffset||0)-1)}));
+  nextGw=()=>this.setState(s=>({gwOffset:Math.min(0,(s.gwOffset||0)+1)}));
+  openTrading=()=>{
+    const id=this.state.selectedClubId;
+    const owned=this.state.holdingsIds.includes(id);
+    this.setState(owned
+      ? {screen:'trading', tradeMode:'trade', tradeOutId:id, tradeInId:null, tradeStep:'select'}
+      : {screen:'trading', tradeMode:'buy', tradeOutId:null, tradeInId:id, tradeStep:'select'});
+  };
+  backFromTrading=()=>this.setState({screen:'tab', tradeOutId:null, tradeInId:null, tradeStep:'select'});
+
+  setClubsRangeGw=()=>this.setState({clubsRange:'gw'});
+  setClubsRangeYear=()=>this.setState({clubsRange:'year'});
+
+  setRange7D=()=>this.setState({detailRange:'7D'});
+  setRange30D=()=>this.setState({detailRange:'30D'});
+  setRangeYTD=()=>this.setState({detailRange:'YTD'});
+
+  confirmTrade=()=>{
+    this.setState({tradeStep:'confirming'});
+    const delay=this.props.tradeConfirmDelayMs||900;
+    setTimeout(()=>{
+      this.setState(s=>{
+        const outClub=this.getClub(s.tradeOutId), inClub=this.getClub(s.tradeInId);
+        const newCash = (s.cash||0) + (outClub?outClub.price:0) - (inClub?inClub.price:0);
+        if(newCash<0) return {};
+        return {
+          holdingsIds:s.holdingsIds.map(id=>id===s.tradeOutId?s.tradeInId:id),
+          cash:newCash,
+          tradeStep:'done'
+        };
+      });
+    },delay);
+  };
+  backToPortfolio=()=>this.setState({tab:'portfolio',screen:'tab',tradeStep:'select',tradeOutId:null,tradeInId:null,selectedClubId:null});
+
+  setMarketSearch=(e)=>this.setState({marketSearch:e.target.value});
+  clearMarketSearch=()=>this.setState({marketSearch:''});
+  setEarnersRangeGw=()=>this.setState({earnersRange:'gw'});
+  setEarnersRangeYtd=()=>this.setState({earnersRange:'ytd'});
+  buildRowView(c,T,isYear){
+    const showSpark=this.props.showSparklines!==false;
+    const DIFF_BG_T={Easy:T.accentTint,Medium:T.card,Hard:T.redTint};
+    const seasonPct = ((c.series[c.series.length-1]/c.series[0])-1)*100;
+    const periodPct = isYear? seasonPct : c.weekly;
+    return {
+      id:c.id,name:c.name,code:c.code,color:c.color,
+      priceStr: isYear? fmtMoney(c.series[0]) : fmtMoney(c.price),
+      dailyStr:fmtPct(c.daily),dailyColor:colorForPct(c.daily),
+      weeklyStr:fmtPct(periodPct),weeklyColor:colorForPct(periodPct),
+      ownershipStr:c.ownership.toFixed(1)+'%',
+      sparkSmall: showSpark? sparkPath(c.series.slice(-20),52,20):'',
+      trendColor: colorForPct(periodPct),
+      gwPtsStr: (isYear? c.seasonPts : c.gwPts)+' pts',
+      onOpen:()=>this.openClubOverlay(c.id),
+      fixtureText: (c.fixtures[0].home?'vs ':'@ ')+c.fixtures[0].opp,
+      fixtureColor: DIFF_COLOR[c.fixtures[0].diff],
+      fixtureBg: DIFF_BG_T[c.fixtures[0].diff],
+      fixtureArrowColor: DIFF_DOT[c.fixtures[0].diff],
+      isArrowUp: c.fixtures[0].diff==='Easy', isArrowDown: c.fixtures[0].diff==='Hard', isArrowFlat: c.fixtures[0].diff==='Medium',
+      formChipsView: c.form.slice(-3).map((r,i)=>({key:i,label:r,color:r==='W'?'#fff':r==='L'?'#fff':T.textSecondary,bg:r==='W'?GREEN:r==='L'?RED:T.border}))
+    };
+  }
+
+  renderVals(){
+    const s=this.state;
+    const activeTheme = s.themeOverride || this.props.theme;
+    const T = activeTheme==='dark' ? DARK_THEME : LIGHT_THEME;
+    const DIFF_BG_T={Easy:T.accentTint,Medium:T.card,Hard:T.redTint};
+    const isTabScreen = s.screen==='tab';
+    const isOnboarding = s.screen==='onboarding';
+    const isObCarousel = isOnboarding && s.obStage==='carousel';
+    const isObForm = isOnboarding && (s.obStage==='name'||s.obStage==='email'||s.obStage==='birthday');
+    const isObClubs = isOnboarding && s.obStage==='clubs';
+    const isObName = s.obStage==='name';
+    const isObEmail = s.obStage==='email';
+    const isObBirthday = s.obStage==='birthday';
+    const isObDone = isOnboarding && s.obStage==='done';
+    const OB_SLIDES=[
+      {bg:'#CFEAD1',shapeColor:'#0A8F3C',glyphColor:'#fff',glyph:'T',headline:'Welcome to Ticker',body:'Fantasy Premier League meets the stock market. Buy clubs, spot value, and outsmart the league one trade at a time.'},
+      {bg:'#D7E3FB',shapeColor:'#3B63D9',glyphColor:'#fff',glyph:'£',headline:'Buy Low. Sell High. Win Big. \u{1F680}\u{1F311}',body:'Every club earns game week points and earns value based on performance, fixtures and market sentiment. Find tomorrow\u2019s winners before everyone else does.'},
+      {bg:'#DED2F9',shapeColor:'#5B34A8',glyphColor:'#fff',glyph:'\u2191\u2193',headline:React.createElement(React.Fragment,null,'Beat the Market.',React.createElement('br'),'Beat Your Friends.'),body:'You\u2019re building the smartest football portfolio in your league. Some people play fantasy. You\u2019re playing the market.'}
+    ];
+    const obSlide = OB_SLIDES[s.obCarouselIndex||0];
+    const isOb0 = (s.obCarouselIndex||0)===0;
+    const isOb1 = (s.obCarouselIndex||0)===1;
+    const isOb2 = (s.obCarouselIndex||0)===2;
+    const obTick = s.priceTick||0;
+    const jit=(base,seed)=>base+Math.sin((obTick+seed)*1.6)*0.35;
+    const obPortfolioValueStr = '$'+(104.82+Math.sin(obTick*0.4)*1.35+Math.sin(obTick*0.9+1)*0.4).toFixed(2);
+    const obPortfolioPctStr = fmtPct(jit(4.8,0));
+    const obPct1Str = fmtPct(jit(2.3,1));
+    const obPct2Str = fmtPct(jit(4.8,2));
+    const obPct3Str = fmtPct(jit(-1.1,3));
+    const obPct4Str = fmtPct(jit(1.6,4));
+    const obCardHeight = isOb0? '300px' : isOb1? '330px' : '365px';
+    const rowH=32;
+    const LIGHT_GREEN_BG = 'rgba(0,200,5,0.14)';
+    const obStandingsRaw = [
+      {name:'Sam', rank1: 1, arrow:'', arrowColor:'transparent', value:'$118.40'},
+      {name:'Priya', rank1: 2, arrow:'\u25BC', arrowColor:RED, value:'$111.05'},
+      {name:'Jordan', rank1: 3, arrow:'', arrowColor:'transparent', value:'$106.92'},
+      {name:'Marcus', rank1: 4, arrow:'\u25BC', arrowColor:RED, value:'$98.60'},
+      {name:'You', rank1: 5, arrow:'\u25B2', arrowColor:GREEN, value:'$95.15'},
+      {name:'Nina', rank1: 6, arrow:'', arrowColor:'transparent', value:'$91.80'},
+      {name:'Theo', rank1: 7, arrow:'', arrowColor:'transparent', value:'$88.30'},
+      {name:'Dev', rank1: 8, arrow:'\u25BC', arrowColor:RED, value:'$84.05'},
+      {name:'Alex', rank1: 9, arrow:'\u25BC', arrowColor:RED, value:'$79.10'}
+    ];
+    const flipped = !!s.obRankFlipped;
+    const obStandingsView = obStandingsRaw.map((r,i)=>{
+      let rank = r.rank1;
+      if(r.name==='You') rank = flipped? 1 : 5;
+      else if(r.rank1<=4) rank = flipped? r.rank1+1 : r.rank1;
+      const valueLadder = ['$123.50','$118.40','$111.05','$106.92','$98.60','$91.80','$88.30','$84.05','$79.10'];
+      const value = valueLadder[rank-1];
+      return {
+        key:i, rank, name:r.name, value, arrow:r.arrow, arrowColor:r.arrowColor,
+        rowBg: r.name==='You'? LIGHT_GREEN_BG : 'transparent',
+        nameWeight: r.name==='You'? 700 : 500,
+        nameColor: r.name==='You'? T.text : T.textSecondary,
+        rowStyle: 'position:absolute;left:0;right:0;top:'+((rank-1)*rowH)+'px;transition:top .6s ease-in-out'
+      };
+    });
+    const obDotsView = OB_SLIDES.map((sl,i)=>({key:i,color:(s.obCarouselIndex||0)===i?T.text:T.border,onSelect:()=>this.setObCarousel(i)}));
+    const OB_FORM_META={
+      name:{question:'What\'s your name?',hint:'Used to personalize your Ticker experience.',iconPath:'M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.6 0-9.6 1.8-9.6 5.4v2.2h19.2v-2.2c0-3.6-6-5.4-9.6-5.4z',label:'Account'},
+      email:{question:'What\'s your email?',hint:'We\'ll use this to secure your account.',iconPath:'M3 6h18a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1zm1.4 2L12 13.2 19.6 8H4.4z',label:'Account'},
+      birthday:{question:'When were you born?',hint:'You must be old enough to use Ticker in your region.',iconPath:'M7 2.4v2.2M17 2.4v2.2M3 9.4h18M5 5.4h14a2 2 0 012 2V19a2 2 0 01-2 2H5a2 2 0 01-2-2V7.4a2 2 0 012-2z',label:'Account'}
+    };
+    const obFormQuestion = OB_FORM_META[s.obStage]? OB_FORM_META[s.obStage].question : '';
+    const obFormHint = OB_FORM_META[s.obStage]? OB_FORM_META[s.obStage].hint : '';
+    const obFormIconPath = OB_FORM_META[s.obStage]? OB_FORM_META[s.obStage].iconPath : '';
+    const obProgressPct = s.obStage==='name'?'33%':s.obStage==='email'?'66%':s.obStage==='birthday'?'100%':'0%';
+    const obFormStepStr = s.obStage==='name'?'Step 1 of 3':s.obStage==='email'?'Step 2 of 3':s.obStage==='birthday'?'Step 3 of 3':'';
+    const obValid = s.obStage==='name'? !!s.obName.trim() : s.obStage==='email'? /\S+@\S+\.\S+/.test(s.obEmail) : s.obStage==='birthday'? !!s.obBirthday : false;
+    const obContinueEnabled = obValid ? T.accent : T.border;
+    const obFirstName = (s.obName||'').trim().split(' ')[0] || 'there';
+    const profileName = (s.obName||'').trim() || 'Alex Morgan';
+    const profileInitial = profileName.trim().charAt(0).toUpperCase();
+    const profileJoinDateStr = 'Joined '+new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const obSelectedClubIds = s.obSelectedClubIds||[];
+    const priceTick = s.priceTick||0;
+    const clubsForSelect = this.clubs.slice().sort((a,b)=>b.price-a.price).map((c,i)=>{
+      const selected = obSelectedClubIds.includes(c.id);
+      const disabled = !selected && obSelectedClubIds.length>=4;
+      return {
+        id:c.id,name:c.name,code:c.code,color:c.color,
+        priceStr:fmtMoney(c.price),
+        rowOpacity: disabled? 0.4:1,
+        checkBorder: selected? T.accent:T.border, checkBg: selected? T.accent:'transparent', checkMark: selected? '\u2713':'',
+        onToggle:()=>this.toggleObClub(c.id)
+      };
+    });
+    const obRemaining = 100 - this.clubs.filter(c=>obSelectedClubIds.includes(c.id)).reduce((sum,c)=>sum+c.price,0);
+    const obRemainingStr = fmtMoney(obRemaining);
+    const obRemainingColor = obRemaining<0 ? RED : T.text;
+    const obClubsCanContinue = obSelectedClubIds.length===4 && obRemaining>=0;
+    const obClubsContinueBg = obClubsCanContinue? T.accent : T.border;
+    const obClubsContinueLabel = 'Continue ('+obSelectedClubIds.length+'/4)';
+    const isClubDetail = s.screen==='clubDetail';
+    const isTrading = s.screen==='trading';
+    const isLeagueDetail = s.screen==='leagueDetail';
+    const isRules = s.screen==='rules';
+    const isAiScreen = s.screen==='ai';
+
+    const navColor=(t)=>t===s.tab && isTabScreen ? T.accent : T.navInactive;
+
+    const holdings = s.holdingsIds.map(id=>this.getClub(id));
+    const clubsRange = s.clubsRange||'gw';
+    const isClubsYear = clubsRange==='year';
+    const holdingsView = holdings.map(c=>this.buildRowView(c,T,isClubsYear));
+    const clubsRangeGwBg=isClubsYear?T.card:T.accent, clubsRangeGwColor=isClubsYear?T.text:'#fff';
+    const clubsRangeYearBg=isClubsYear?T.accent:T.card, clubsRangeYearColor=isClubsYear?'#fff':T.text;
+
+    const heroTotalTarget = holdings.reduce((a,c)=>a+c.price,0);
+    const heroValueStr = fmtMoney(heroTotalTarget*(0.85+0.15*(s.animT||0)));
+    const weekPctBase = holdings.reduce((a,c)=>a+c.weekly,0)/holdings.length;
+    const weekPct = -Math.abs(weekPctBase);
+    const seasonPct = holdings.reduce((a,c)=>a+((c.series[c.series.length-1]/c.series[0])-1)*100,0)/holdings.length;
+
+    const portfolioSeries=[];
+    const len=holdings[0].series.length;
+    for(let i=0;i<len;i++){ portfolioSeries.push(holdings.reduce((a,c)=>a+c.series[i],0)); }
+    const chartRange=s.chartRange||'30D';
+    let chartSlice = chartRange==='7D'? portfolioSeries.slice(-7) : chartRange==='30D'? portfolioSeries.slice(-30) : portfolioSeries;
+    if(chartRange==='7D') chartSlice = chartSlice.slice().reverse();
+    this._portfolioSeriesLen=chartSlice.length;
+    const portfolioChartColor = chartSlice[chartSlice.length-1] >= chartSlice[0] ? GREEN : RED;
+    const chartW=393,chartH=120,chartPadY=10;
+    let hasChartHover=false, chartHoverCx=0, chartHoverCy=0, chartHoverValueStr='', chartHoverLeft=0, chartHoverTop=0;
+    if(s.portfolioHoverIdx!=null && s.portfolioHoverIdx<chartSlice.length){
+      hasChartHover=true;
+      const pt=edgeSparkPointAt(chartSlice,chartW,chartH,chartPadY,s.portfolioHoverIdx);
+      chartHoverCx=pt.x; chartHoverCy=pt.y;
+      chartHoverValueStr=fmtMoney(chartSlice[s.portfolioHoverIdx]);
+      chartHoverLeft=Math.max(0,Math.min(chartW-72,pt.x-36));
+      chartHoverTop=Math.max(0,pt.y-34);
+    }
+    const range7Bg=chartRange==='7D'?T.accent:T.card, range7Color=chartRange==='7D'?'#fff':T.text;
+    const rangeC30Bg=chartRange==='30D'?T.accent:T.card, rangeC30Color=chartRange==='30D'?'#fff':T.text;
+    const rangeYTDBg=chartRange==='YTD'?T.accent:T.card, rangeYTDColor=chartRange==='YTD'?'#fff':T.text;
+
+    const best = holdings.slice().sort((a,b)=>b.weekly-a.weekly)[0];
+    const worst = holdings.slice().sort((a,b)=>a.weekly-b.weekly)[0];
+    const morningBriefText = best.name+' printed '+best.gwPts+' fantasy points and the market moved '+fmtPct(best.weekly)+' right along with it. Form and price, both green. 📈';
+    const morningBriefRecommendation = 'Hold '+best.name+'. Thesis intact, no reason to panic sell into strength.';
+
+    const gwOffset = s.gwOffset||0;
+    const gwNumber = 12+gwOffset;
+    const gwRng = mulberry32(gwNumber*97+11);
+    const gwPtsTotalCurrent = holdings.reduce((a,c)=>a+c.gwPts,0);
+    const gwPtsTotal = gwOffset===0 ? gwPtsTotalCurrent : Math.round(38+gwRng()*40);
+    const seasonPtsTotal = holdings.reduce((a,c)=>a+c.seasonPts,0);
+    const leagueAvgGwPts = Math.max(18,gwPtsTotal-7-Math.round(gwRng()*4));
+    const rivalsGw=[59,48,41];
+    const bestGwPts= gwOffset===0 ? Math.max(gwPtsTotal,...rivalsGw) : Math.round(gwPtsTotal+8+gwRng()*10);
+    const canPrevGw = gwNumber>1, canNextGw = gwNumber<12;
+    const DIFF_PROJ={Easy:9,Medium:6,Hard:3};
+
+    const biggestMoversView = [
+      {label:'Biggest gainer',name:best.name,pctStr:fmtPct(best.weekly),color:GREEN,onOpen:()=>this.openClubOverlay(best.id)},
+      {label:'Biggest loser',name:worst.name,pctStr:fmtPct(worst.weekly),color:RED,onOpen:()=>this.openClubOverlay(worst.id)}
+    ];
+
+    const upcomingFixturesView = holdings.map((c,i)=>({
+      code:c.code,color:c.color,name:c.name,
+      matchText:(c.fixtures[0].home?'vs ':'@ ')+c.fixtures[0].opp+' · '+kickoffFor(c.base,0),
+      projPtsStr: (DIFF_PROJ[c.fixtures[0].diff]+(i%3)-1)+' pts'
+    }));
+
+    const all = this.clubs;
+    const jitTick = s.priceTick||0;
+    const marketSearch = s.marketSearch||'';
+    const isMarketSearching = marketSearch.trim().length>0;
+    const isMarketDiscovery = !isMarketSearching;
+    const q = marketSearch.trim().toLowerCase();
+    const marketSearchResultsView = isMarketSearching ? all.filter(c=>c.name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q)).map(c=>Object.assign({},this.buildRowView(c,T),{onOpen:()=>this.openClubOverlay(c.id)})) : [];
+    const marketSearchEmpty = isMarketSearching && marketSearchResultsView.length===0;
+    const earnersRangeYtd = s.earnersRange!=='gw';
+    const pointEarners = all.slice().sort((a,b)=>(earnersRangeYtd?b.seasonPts-a.seasonPts:b.gwPts-a.gwPts)).slice(0,6);
+    const highestPointEarnersView = pointEarners.map((c,i)=>{
+      return {id:c.id, code:c.code, color:c.color, valueStr:(earnersRangeYtd?c.seasonPts:c.gwPts)+' pts', arrow:'', arrowColor:T.textSecondary, onOpen:()=>this.openClubOverlay(c.id)};
+    });
+    const earnersRangeGwBg=earnersRangeYtd?T.card:T.accent, earnersRangeGwColor=earnersRangeYtd?T.text:'#fff';
+    const earnersRangeYtdBg=earnersRangeYtd?T.accent:T.card, earnersRangeYtdColor=earnersRangeYtd?'#fff':T.text;
+    const movers = all.slice().sort((a,b)=>Math.abs(b.daily)-Math.abs(a.daily)).slice(0,6);
+    const topMoversView = movers.map((c,i)=>{
+      const wobble = Math.sin((jitTick+i*2.1+3)*1.6)*0.15;
+      const val = c.daily+wobble;
+      return {id:c.id, code:c.code, color:c.color, valueStr: fmtPct(val), arrow: val>=0?'\u25B2':'\u25BC', arrowColor: colorForPct(val), onOpen:()=>this.openClubOverlay(c.id)};
+    });
+    const NEWS_TIMES=['2h ago','5h ago','1d ago'];
+    const marketNewsView = all.filter(c=>c.news).slice(0,3).map((c,i)=>({
+      id:c.id, color:c.color, code:c.code, headline:c.news.h, timeStr:NEWS_TIMES[i], thumbId:'newsThumb'+i, onOpen:()=>this.openClubOverlay(c.id)
+    }));
+    const sortedDaily = all.slice().sort((a,b)=>b.daily-a.daily);
+    const trendingUpView = sortedDaily.slice(0,3).map(c=>this.buildRowView(c,T));
+    const trendingDownView = sortedDaily.slice(-3).reverse().map(c=>this.buildRowView(c,T));
+    const sortedOwnDelta = all.slice().sort((a,b)=>b.ownershipDelta-a.ownershipDelta);
+    const mostBoughtView = sortedOwnDelta.slice(0,3).map(c=>this.buildRowView(c,T));
+    const mostSoldView = sortedOwnDelta.slice(-3).reverse().map(c=>this.buildRowView(c,T));
+    const winners = all.filter(c=>c.fixtures[0].diff==='Easy').slice(0,2).map(c=>this.buildRowView(c,T));
+    const risks = all.filter(c=>c.fixtures[0].diff==='Hard').slice(0,2).map(c=>this.buildRowView(c,T));
+
+    const upCount = all.filter(c=>c.daily>0).length;
+    const briefSummary = upCount+' of '+all.length+' clubs are green today. Bulls are eating well. 🐂';
+    const oppCandidate = sortedDaily.filter(c=>!s.holdingsIds.includes(c.id))[0];
+    const briefOpportunity = oppCandidate.name+' is up '+fmtPct(oppCandidate.weekly)+' this week and still only '+oppCandidate.ownership.toFixed(1)+'% owned. '+oppCandidate.news.h+' The market may be asleep here. 👀';
+    const riskHolding = holdings.slice().sort((a,b)=>a.weekly-b.weekly)[0];
+    const briefRisk = riskHolding.name+' is down '+Math.abs(riskHolding.weekly).toFixed(1)+'% this week. '+riskHolding.news.h+' Thesis intact or bagholding — your call. 👜';
+    const hardestFixtureClub = all.filter(c=>c.fixtures[0].diff==='Hard')[0];
+    const briefFixture = hardestFixtureClub.name+' walk into a brutal fixture run starting with '+hardestFixtureClub.fixtures[0].opp+'. Could pressure the price near-term. 📉';
+    const midClub = all[Math.floor(all.length/2)];
+    const briefSuggestion = midClub.name+' is sitting quietly at '+midClub.ownership.toFixed(1)+'% ownership. Worth a look before your next move — nobody\'s talking about it yet. 🧠';
+    const amberTint = activeTheme==='dark' ? 'rgba(240,162,2,0.16)' : '#FDF3E0';
+    const briefCardsView = [
+      {code:'MKT', codeBg:T.accentTint, codeColor:ACCENT, label:'Market summary', text:briefSummary, hasClub:false},
+      {code:'OPP', codeBg:T.accentTint, codeColor:ACCENT, label:'Biggest opportunity', text:briefOpportunity, hasClub:true, clubCode:oppCandidate.code, clubColor:oppCandidate.color},
+      {code:'RSK', codeBg:T.redTint, codeColor:RED, label:'Biggest risk', text:briefRisk, hasClub:true, clubCode:riskHolding.code, clubColor:riskHolding.color},
+      {code:'FIX', codeBg:amberTint, codeColor:'#F0A202', label:'Fixture insight', text:briefFixture, hasClub:true, clubCode:hardestFixtureClub.code, clubColor:hardestFixtureClub.color},
+      {code:'SUG', codeBg:T.border, codeColor:T.textSecondary, label:'Suggested investigation', text:briefSuggestion, hasClub:true, clubCode:midClub.code, clubColor:midClub.color}
+    ];
+
+    const competitionsMoversText = best.name+' is up '+fmtPct(best.weekly)+' across the league this week, while '+worst.name+' slipped '+Math.abs(worst.weekly).toFixed(1)+'%.';
+    const competitionsRecapText = 'The gap at the top narrowed this week as portfolios leaning into in-form clubs like '+best.name+' pulled ahead — a reminder that fantasy points and market value don\'t always move together.';
+    const leagueTableView = [
+      {name:'You',you:true,gw:gwPtsTotal,season:seasonPtsTotal,portfolio:heroValueStr},
+      {name:'Priya',you:false,gw:59,season:660,portfolio:fmtMoney(505.20),portfolioNum:505.20},
+      {name:'Marcus',you:false,gw:48,season:664,portfolio:fmtMoney(523.90),portfolioNum:523.90},
+      {name:'Jordan',you:false,gw:41,season:601,portfolio:fmtMoney(478.40),portfolioNum:478.40},
+      {name:'Sam',you:false,gw:52,season:591,portfolio:fmtMoney(452.10),portfolioNum:452.10},
+      {name:'Taylor',you:false,gw:37,season:578,portfolio:fmtMoney(497.65),portfolioNum:497.65},
+      {name:'Casey',you:false,gw:44,season:552,portfolio:fmtMoney(431.80),portfolioNum:431.80},
+      {name:'Morgan',you:false,gw:29,season:519,portfolio:fmtMoney(468.25),portfolioNum:468.25}
+    ].map(r=>r.you?Object.assign({},r,{portfolio:heroValueStr,portfolioNum:heroTotalTarget}):r)
+     .sort((a,b)=> (s.leagueSortKey==='portfolio' ? b.portfolioNum-a.portfolioNum : b.season-a.season))
+     .map((r,i)=>Object.assign({},r,{rank:i+1,rowBg:r.you?T.accentTint:'transparent',nameWeight:r.you?600:400}));
+
+    const yourLeaguesView = [
+      {name:'Sunday League Legends',rankStr:'3'},
+      {name:'Office Rivals',rankStr:'1'},
+      {name:'The Boardroom',rankStr:'5'},
+      {name:'College Friends',rankStr:'2'},
+      {name:'Overall',rankStr:'8,214'}
+    ].concat(s.joinedLeagues).map(lg=>Object.assign({},lg,{onOpen:()=>this.openLeague(lg.name)}));
+
+    const PUBLIC_LEAGUES = [
+      {id:'pub1', name:'Global Community League', members:128430},
+      {id:'pub2', name:'Weekend Warriors', members:41220},
+      {id:'pub3', name:'Transfer Deadline Day', members:19875},
+      {id:'pub4', name:'The Bootroom', members:8640}
+    ];
+    const isJoinLeague = s.screen==='joinLeague';
+    const joinCode = s.joinCode||'';
+    const PRIVATE_LEAGUES_DB = {xxx:{id:'priv-xxx', name:'The Gaffers', members:24}};
+    const foundPrivateLeague = joinCode.trim() ? PRIVATE_LEAGUES_DB[joinCode.trim().toLowerCase()] : null;
+    const joinCodeError = joinCode.trim() && !foundPrivateLeague;
+    const publicLeaguesView = PUBLIC_LEAGUES.map(lg=>Object.assign({},lg,{
+      membersStr: lg.members.toLocaleString()+' members', onSelect:()=>this.openJoinModal(lg)
+    }));
+    const foundPrivateLeagueView = foundPrivateLeague ? Object.assign({},foundPrivateLeague,{
+      membersStr: foundPrivateLeague.members.toLocaleString()+' members', onSelect:()=>this.openJoinModal(foundPrivateLeague)
+    }) : null;
+    const joinModalLeague = s.joinModalLeague;
+    const isJoinModalOpen = !!joinModalLeague;
+    const isWelcomeOpen = !!s.welcomeLeagueName;
+
+    let detail=null, range7Bg2=T.card, range7Color2=T.text, range30Bg=T.card, range30Color=T.text, rangeYTDBg2=T.card, rangeYTDColor2=T.text;
+    const isOverlayOpen = !!s.overlayClubId;
+    if(isClubDetail || isTrading || isOverlayOpen){
+      const dc = this.getClub(s.overlayClubId || s.selectedClubId || s.tradeOutId);
+      if(dc){
+        const range=s.detailRange;
+        range7Bg2 = range==='7D'?T.accent:T.card; range7Color2 = range==='7D'?'#fff':T.text;
+        range30Bg = range==='30D'?T.accent:T.card; range30Color = range==='30D'?'#fff':T.text;
+        rangeYTDBg2 = range==='YTD'?T.accent:T.card; rangeYTDColor2 = range==='YTD'?'#fff':T.text;
+        const slice = range==='7D'? dc.series.slice(-7): range==='30D'? dc.series.slice(-30): dc.series;
+        const first=dc.series[Math.max(0,dc.series.length-45)];
+        const last=dc.series[dc.series.length-1];
+        const changeOverRange=((last/first)-1)*100;
+        detail = {
+          name:dc.name, code:dc.code, color:dc.color, priceStr:fmtMoney(dc.price),
+          dailyStr:fmtPct(dc.daily), dailyColor:colorForPct(dc.daily),
+          chartPoints: sparkPath(slice,305,120,4),
+          trendColor: colorForPct(dc.weekly),
+          aiText: dc.news.h,
+          fixturesView: dc.fixtures.map((f,fi)=>({matchText:(f.home?'vs ':'@ ')+f.opp+' · '+kickoffFor(dc.base,fi), projPtsStr:(DIFF_PROJ[f.diff]+(fi%3)-1)+' pts'})),
+          formView: dc.form.map(r=>({label:r, color: r==='W'?GREEN:r==='L'?RED:GRAY, bg: r==='W'?T.accentTint:r==='L'?T.redTint:T.card})),
+          newsHeadline: dc.news.h, newsMeta: dc.news.m.split(' · ').pop(),
+          ownershipStr: dc.ownership.toFixed(1)+'%', ownershipWidth: Math.min(100,dc.ownership*2).toFixed(0)+'%',
+          ownershipPctStr: dc.ownership.toFixed(2),
+          gwPtsStr: dc.gwPts+' pts', seasonPtsStr: dc.seasonPts+' pts',
+          isHeld: s.holdingsIds.includes(dc.id), tradeButtonLabel: s.holdingsIds.includes(dc.id)?'Trade':'Buy'
+        };
+      }
+    }
+
+    let availableCashStr='$0.00', confirmBg=GRAY, confirmButtonLabel='Confirm Trade', confirmOpacity=1, confirmPointerEvents='auto';
+    let tradeOut=null, tradeIn=null, candidatesView=[], budgetStr='', budgetColor=GRAY, fixtureAdvantageText='', aiExplanationText='', successText='', tradeHeaderLabel='', candidatesHeading='Choose a replacement', releaseGainLossColor=GRAY, releaseBuyPriceStr='', releaseAvgPtsStr='', releasePLStr='', releasePLPctStr='', spendingPowerStr='';
+    const isBuyMode = s.tradeMode==='buy';
+    const hasTradeOut = isTrading && !!s.tradeOutId;
+    const noTradeOut = isTrading && !s.tradeOutId;
+    const hasTradeIn = isTrading && !!s.tradeInId;
+    const noTradeIn = isTrading && !s.tradeInId;
+    const tradeOutLabel = isBuyMode? 'Selling' : 'Current';
+    const tradeInLabel = isBuyMode? 'Buying' : 'Replacement';
+    const isTradeConfirming = isTrading && s.tradeStep==='confirming';
+    const isTradeDone = isTrading && s.tradeStep==='done';
+    const isTradeActive = isTrading && (s.tradeStep==='select' || s.tradeStep==='compare');
+    if(isTrading){
+      const outClub=this.getClub(s.tradeOutId);
+      spendingPowerStr = outClub? fmtMoney(outClub.price) : '$0.00';
+      const inClub=this.getClub(s.tradeInId);
+      tradeOut = outClub? {name:outClub.name,code:outClub.code,color:outClub.color,priceStr:fmtMoney(outClub.price)} : {name:'',code:'',color:'#ccc',priceStr:''};
+      tradeIn = inClub? {name:inClub.name,code:inClub.color?inClub.code:inClub.code,color:inClub.color,priceStr:fmtMoney(inClub.price)} : {name:'',code:'',color:'#ccc',priceStr:''};
+      tradeHeaderLabel = isBuyMode? ('Buy '+(inClub?inClub.name:'')) : ('Trade '+(outClub?outClub.name:''));
+      candidatesHeading = isBuyMode? 'Sell a team' : 'Choose a replacement';
+      const codeForOpp = (name)=>{const m=this.clubs.find(x=>x.name===name); return m?m.code:name.slice(0,3).toUpperCase();};
+      const FIX_BG = {Easy:GREEN, Medium:T.border, Hard:RED};
+      const FIX_TEXT = {Easy:'#fff', Medium:T.textSecondary, Hard:'#fff'};
+      const fixturesRow = (c)=> c.fixtures.slice(0,3).map((f,fi)=>({key:fi,label:codeForOpp(f.opp)+' ('+(f.home?'H':'A')+')',bg:FIX_BG[f.diff],color:FIX_TEXT[f.diff]}));
+      const targetInClub = isBuyMode? this.getClub(s.tradeInId) : null;
+      if(isBuyMode){
+        candidatesView = s.holdingsIds.map(id=>this.getClub(id)).map(c=>{
+          const affords = targetInClub? (s.cash||0)+c.price >= targetInClub.price : true;
+          return {
+            id:c.id,name:c.name,code:c.code,color:c.color,priceStr:fmtMoney(c.price),
+            weeklyStr:fmtPct(c.weekly),weeklyColor:colorForPct(c.weekly),
+            fixturesView: fixturesRow(c),
+            formChipsView: c.form.slice(-3).map((r,i)=>({key:i,label:r,color:r==='W'?'#fff':r==='L'?'#fff':T.textSecondary,bg:r==='W'?GREEN:r==='L'?RED:T.border})),
+            rowBg: c.id===s.tradeOutId? T.rowHighlight:'transparent',
+            disabled: !affords,
+            rowOpacity: affords?1:0.25,
+            onSelect: affords? (()=>this.setState({tradeOutId:c.id, tradeStep:'compare'})) : undefined
+          };
+        });
+      } else {
+        const notOwned = this.clubs.filter(c=>!s.holdingsIds.includes(c.id));
+        const availableCashForList = (s.cash||0) + (outClub? outClub.price : 0);
+        candidatesView = notOwned.map(c=>{
+          const affords = c.price <= availableCashForList;
+          return {
+            id:c.id,name:c.name,code:c.code,color:c.color,priceStr:fmtMoney(c.price),
+            weeklyStr:fmtPct(c.weekly),weeklyColor:colorForPct(c.weekly),
+            fixturesView: fixturesRow(c),
+            formChipsView: c.form.slice(-3).map((r,i)=>({key:i,label:r,color:r==='W'?'#fff':r==='L'?'#fff':T.textSecondary,bg:r==='W'?GREEN:r==='L'?RED:T.border})),
+            rowBg: c.id===s.tradeInId? T.rowHighlight:'transparent',
+            disabled: !affords,
+            rowOpacity: affords?1:0.25,
+            onSelect: affords? (()=>this.setState({tradeInId:c.id, tradeStep:'compare'})) : undefined
+          };
+        });
+      }
+      if(outClub && inClub){
+        const delta = inClub.price - outClub.price;
+        budgetStr = (delta>=0?'-':'+')+fmtMoney(Math.abs(delta)).slice(1);
+        budgetColor = delta>0? RED: GREEN;
+        const inDiff=inClub.fixtures[0].diff, outDiff=outClub.fixtures[0].diff;
+        const rank={Easy:0,Medium:1,Hard:2};
+        fixtureAdvantageText = rank[inDiff]<rank[outDiff]? inClub.name+' has the easier run of fixtures ahead.' : rank[inDiff]>rank[outDiff]? outClub.name+' currently has the easier fixtures.' : 'Both clubs face a similar fixture difficulty.';
+        aiExplanationText = inClub.name+"'s value has "+(inClub.weekly>=0?'risen':'fallen')+' '+Math.abs(inClub.weekly).toFixed(1)+'% this week against a '+inDiff.toLowerCase()+' fixture run, while '+outClub.name+' faces a '+outDiff.toLowerCase()+' schedule. This move would '+(delta>0?'cost you':'free up')+' '+fmtMoney(Math.abs(delta))+' of balance. '+(delta>0? "Paying up for form — make sure it's not already priced in." : "Rotating into value while pocketing cash. Not bad. 🧠");
+        successText = isBuyMode? ('You now own '+inClub.name+'.') : ('You now own '+inClub.name+' instead of '+outClub.name+'.');
+      }
+      const availableCash = (s.cash||0) + (outClub? outClub.price : 0);
+      availableCashStr = fmtMoney(availableCash);
+      const canAffordTrade = inClub? inClub.price <= availableCash : true;
+      const confirmEnabled = hasTradeIn && canAffordTrade;
+      confirmBg = confirmEnabled? T.accent : T.textSecondary;
+      confirmOpacity = confirmEnabled? 1 : 0.5;
+      confirmPointerEvents = confirmEnabled? 'auto' : 'none';
+      confirmButtonLabel = canAffordTrade? (isBuyMode? 'Confirm Buy':'Confirm Trade') : 'Insufficient funds';
+      if(outClub){
+        const gl = outClub.price - outClub.series[0];
+        const glPct = (gl/outClub.series[0])*100;
+        releaseBuyPriceStr = fmtMoney(outClub.series[0]);
+        releaseAvgPtsStr = (outClub.seasonPts/12).toFixed(1)+' pts/GW';
+        releasePLStr = (gl>=0?'+':'-')+fmtMoney(Math.abs(gl)).slice(1);
+        releasePLPctStr = (gl>=0?'+':'-')+Math.abs(glPct).toFixed(2)+'%';
+        releaseGainLossColor = gl>=0? GREEN:RED;
+      }
+    }
+
+    return {
+      theme:T,
+      isTabScreen, isClubDetail, isTrading, isLeagueDetail, selectedLeagueName: s.selectedLeagueName, closeLeague:this.closeLeague,
+      isRules, goRules:this.goRules, closeRules:this.closeRules,
+      isPortfolio: s.tab==='portfolio', isMarket: s.tab==='market', isCompetitions: s.tab==='competitions', isAi: isAiScreen, isProfile: s.tab==='profile',
+      goPortfolio:this.goPortfolio, goMarket:this.goMarket, goCompetitions:this.goCompetitions, goAi:this.goAi, closeAi:this.closeAi, goProfile:this.goProfile,
+      navPortfolioColor:navColor('portfolio'), navMarketColor:navColor('market'), navCompetitionsColor:navColor('competitions'), navAiColor:navColor('ai'), navProfileColor:navColor('profile'),
+      navAiFabBg: T.aiGradient,
+      navAiFabShadow: T.aiGlow,
+      heroValueStr, weekStr:fmtPct(weekPct), weekColor:colorForPct(weekPct), seasonStr:fmtPct(seasonPct), seasonColor:colorForPct(seasonPct),
+      overallRankStr:'#8,214 of 214,502', leaguePositionStr:'3rd of 18',
+      gwPtsTotal, gwPtsStr:gwPtsTotal+'', seasonPtsStr:seasonPtsTotal+' pts', leagueAvgGwPtsStr:leagueAvgGwPts+'', bestGwPtsStr:bestGwPts+'',
+      gwNumberStr:'Gameweek '+gwNumber, prevGw:this.prevGw, nextGw:this.nextGw, canPrevGw:canPrevGw?1:0.25, canNextGw:canNextGw?1:0.25,
+      portfolioChartPoints: edgeSparkPath(chartSlice,chartW,chartH,chartPadY),
+      portfolioChartArea: edgeSparkAreaPath(chartSlice,chartW,chartH,chartPadY),
+      portfolioChartColor,
+      onPortfolioChartMove:this.onPortfolioChartMove, onPortfolioChartLeave:this.onPortfolioChartLeave,
+      hasChartHover, chartHoverCx, chartHoverCy, chartHoverValueStr, chartHoverLeft, chartHoverTop,
+      chartRange, setChartRange7D:this.setChartRange7D, setChartRange30D:this.setChartRange30D, setChartRangeYTD:this.setChartRangeYTD,
+      range7Bg, range7Color, rangeC30Bg, rangeC30Color, rangeYTDBg, rangeYTDColor,
+      setClubsRangeGw:this.setClubsRangeGw, setClubsRangeYear:this.setClubsRangeYear, clubsRangeGwBg, clubsRangeGwColor, clubsRangeYearBg, clubsRangeYearColor,
+      morningBriefText, morningBriefRecommendation, showBrief:!s.briefDismissed, dismissBrief:this.dismissBrief, holdingsView, upcomingFixturesView,
+      isOnboarding, isObCarousel, isObForm, isObClubs, isObName, isObEmail, isObBirthday, isObDone, obSlide, isOb0, isOb1, isOb2, obDotsView, GREEN, RED,
+      obPortfolioValueStr, obPortfolioPctStr, obPct1Str, obPct2Str, obPct3Str, obPct4Str, obCardHeight, obStandingsView,
+      clubsForSelect, obRemainingStr, obRemainingColor, obClubsContinueBg, obClubsCanContinue, obClubsContinueLabel, obClubsContinue:this.obClubsContinue, profileName, profileInitial, profileJoinDateStr,
+      goLogin:this.goLogin, startSignup:this.startSignup, nextCarousel:this.nextCarousel,
+      obFormQuestion, obFormHint, obFormIconPath, obFormStepStr, obProgressPct, obName:s.obName, obEmail:s.obEmail, obBirthday:s.obBirthday,
+      setObName:this.setObName, setObEmail:this.setObEmail, setObBirthday:this.setObBirthday, obBack:this.obBack, obContinue:this.obContinue, obKeyDown:this.obKeyDown,
+      obContinueEnabled, obFirstName, finishOnboarding:this.finishOnboarding,
+      trendingUpView, trendingDownView, mostBoughtView, mostSoldView, fixtureWinnersView:winners, fixtureRisksView:risks,
+      marketSearch, setMarketSearch:this.setMarketSearch, clearMarketSearch:this.clearMarketSearch, isMarketSearching, isMarketDiscovery, marketSearchResultsView, marketSearchEmpty,
+      highestPointEarnersView, topMoversView, marketNewsView, setEarnersRangeGw:this.setEarnersRangeGw, setEarnersRangeYtd:this.setEarnersRangeYtd, earnersRangeGwBg, earnersRangeGwColor, earnersRangeYtdBg, earnersRangeYtdColor,
+      briefSummary, briefOpportunity, briefRisk, briefFixture, briefSuggestion, briefCardsView,
+      competitionsMoversText, competitionsRecapText, leagueTableView, yourLeaguesView, joinLeague:this.joinLeague, createLeague:this.createLeague,
+      isJoinLeague, closeJoinLeague:this.closeJoinLeague, joinCode, setJoinCode:this.setJoinCode, clearJoinCode:this.clearJoinCode,
+      foundPrivateLeagueView, joinCodeError, publicLeaguesView,
+      isJoinModalOpen, joinModalLeague, closeJoinModal:this.closeJoinModal, confirmJoinLeague:this.confirmJoinLeague,
+      isWelcomeOpen, welcomeLeagueName: s.welcomeLeagueName, closeWelcome:this.closeWelcome,
+      setLeagueSortPortfolio:this.setLeagueSortPortfolio, setLeagueSortPoints:this.setLeagueSortPoints,
+      appearanceLabel: activeTheme==='dark' ? 'Dark' : 'Light', toggleAppearance:this.toggleAppearance, logOut:this.logOut,
+      detail, detailBackLabel: isClubDetail? (s.tab==='market'?'Market':'Portfolio') : '',
+      closeClub:this.closeClub, openTrading:this.openTrading,
+      isOverlayOpen, closeClubOverlay:this.closeClubOverlay, overlayTrade:this.overlayTrade, stopPropagation:this.stopPropagation,
+      tradeHeaderLabel, candidatesHeading, hasTradeOut, noTradeOut, tradeOutLabel, tradeInLabel, releaseGainLossColor, releaseBuyPriceStr, releaseAvgPtsStr, releasePLStr, releasePLPctStr,
+      confirmBg, confirmOpacity, confirmPointerEvents, confirmButtonLabel,
+      setRange7D:this.setRange7D, setRange30D:this.setRange30D, setRangeYTD:this.setRangeYTD,
+      range7Bg2,range7Color2,range30Bg,range30Color,rangeYTDBg2,rangeYTDColor2,
+      backFromTrading:this.backFromTrading, tradeOut, tradeIn, hasTradeIn, noTradeIn, isTradeConfirming, isTradeDone, isTradeActive,
+      candidatesView, budgetStr, budgetDisplayStr: hasTradeOut?budgetStr:'$0.00', budgetColor, fixtureAdvantageText, aiExplanationText, confirmTrade:this.confirmTrade, releaseGainLossColor, releaseBuyPriceStr, releaseAvgPtsStr, releasePLStr, releasePLPctStr, spendingPowerStr,
+      successText, backToPortfolio:this.backToPortfolio
+    };
+  }
+}
+
+</script>
+</body>
+</html>
