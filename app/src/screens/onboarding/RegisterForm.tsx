@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -32,10 +32,12 @@ function fromISODate(iso: string): Date {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-function fmtMMDDYYYY(iso: string): string {
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function fmtLongDate(iso: string): string {
   if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return `${m}/${d}/${y}`;
+  const d = fromISODate(iso);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
 }
 
 export type RegStage = "name" | "email" | "birthday";
@@ -90,6 +92,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
   const meta = META[stage];
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     if (stage === "birthday" && !birthday) setBirthday(toISODate(defaultBirthday()));
@@ -100,7 +103,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: insets.top + 16, paddingBottom: 28 }}
+      style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <Pressable
@@ -117,7 +120,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
         </View>
       </View>
 
-      <View style={{ flex: 1, justifyContent: "center" }}>
+      <View>
         <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: T.accentTint, alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
           <StageIcon stage={stage} color={T.accent} />
         </View>
@@ -150,21 +153,32 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
         )}
         {stage === "birthday" && (
           <View>
-            <Text style={{ fontSize: 22, fontWeight: "500", color: T.text, marginBottom: 8 }}>{fmtMMDDYYYY(birthday) || "mm/dd/yyyy"}</Text>
-            <DateTimePicker
-              value={birthday ? fromISODate(birthday) : defaultBirthday()}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              maximumDate={maxBirthday()}
-              minimumDate={new Date(1900, 0, 1)}
-              locale="en-US"
-              textColor={T.text}
-              themeVariant={T.mode === "dark" ? "dark" : "light"}
-              onChange={(_event, selected) => {
-                if (selected) setBirthday(toISODate(selected));
-              }}
-              style={Platform.OS === "ios" ? { alignSelf: "stretch", height: 180, marginTop: -8 } : undefined}
-            />
+            <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 8 }}>Date of birth</Text>
+            <Pressable
+              onPress={() => setPickerOpen((o) => !o)}
+              style={[styles.dateBox, { borderColor: pickerOpen ? T.accent : T.border, backgroundColor: T.card }]}
+              accessibilityRole="button"
+              accessibilityLabel="Date of birth"
+            >
+              <Text style={{ fontSize: 17, fontWeight: "500", color: T.text }}>{fmtLongDate(birthday) || "Select date"}</Text>
+              <Text style={{ fontSize: 13, color: T.textSecondary, transform: [{ rotate: pickerOpen ? "180deg" : "0deg" }] }}>▾</Text>
+            </Pressable>
+            {pickerOpen && (
+              <DateTimePicker
+                value={birthday ? fromISODate(birthday) : defaultBirthday()}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={maxBirthday()}
+                minimumDate={new Date(1900, 0, 1)}
+                locale="en-US"
+                textColor={T.text}
+                themeVariant={T.mode === "dark" ? "dark" : "light"}
+                onChange={(_event, selected) => {
+                  if (selected) setBirthday(toISODate(selected));
+                }}
+                style={Platform.OS === "ios" ? { alignSelf: "stretch", height: 180, marginTop: 8 } : undefined}
+              />
+            )}
           </View>
         )}
         <Text style={{ fontSize: 12, color: error ? "#E0393E" : T.textSecondary, marginTop: 12 }}>
@@ -172,7 +186,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
         </Text>
       </View>
 
-      <Button label="Continue" onPress={onContinue} disabled={!valid} loading={busy} />
+      <Button label="Continue" onPress={onContinue} disabled={!valid} loading={busy} style={{ marginTop: 32 }} />
     </KeyboardAvoidingView>
   );
 }
@@ -180,4 +194,13 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
 const styles = StyleSheet.create({
   input: { fontSize: 22, fontWeight: "500", borderBottomWidth: 2, paddingVertical: 8 },
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  dateBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
 });
