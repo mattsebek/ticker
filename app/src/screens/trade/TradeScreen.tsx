@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -18,6 +18,7 @@ type Props = NativeStackScreenProps<AppStackParamList, "Trade">;
 export function TradeScreen({ route, navigation }: Props) {
   const { mode, clubId } = route.params;
   const T = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
   const refreshPortfolio = useDataStore((s) => s.refreshPortfolio);
   const refreshChart = useDataStore((s) => s.refreshChart);
 
@@ -77,8 +78,8 @@ export function TradeScreen({ route, navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
-      <View style={styles.header}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>{mode === "buy" ? `Buy ${fixed.name}` : `Trade ${fixed.name}`}</Text>
         <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
           <CloseIcon color={T.text} />

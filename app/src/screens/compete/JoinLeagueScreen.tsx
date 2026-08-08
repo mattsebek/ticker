@@ -12,9 +12,9 @@ import { Button } from "../../components/Button";
 
 type Props = NativeStackScreenProps<AppStackParamList, "JoinLeague">;
 
-export function JoinLeagueScreen({ navigation }: Props) {
+export function JoinLeagueScreen({ navigation, route }: Props) {
   const T = useThemeStore((s) => s.tokens);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(route.params?.code || "");
   const [foundPrivate, setFoundPrivate] = useState<PublicLeagueRow | null>(null);
   const [codeError, setCodeError] = useState(false);
   const [publicLeagues, setPublicLeagues] = useState<PublicLeagueRow[]>([]);
@@ -140,7 +140,7 @@ export function JoinLeagueScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
   input: { width: "100%", borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 16, fontSize: 15 },
   leagueCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, padding: 16 },

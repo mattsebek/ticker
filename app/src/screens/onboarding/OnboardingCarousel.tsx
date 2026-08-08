@@ -9,7 +9,7 @@ import { Button } from "../../components/Button";
 import { GREEN, RED, FONT_SERIF } from "../../theme/theme";
 import { fmtPct } from "../../utils/format";
 
-const { width: SCREEN_W } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 const SLIDES = [
   { headline: "Welcome to Ticker", body: "Fantasy Premier League meets the stock market. Buy clubs, spot value, and outsmart the league one trade at a time." },
@@ -36,6 +36,7 @@ const STANDINGS_BASE = [
   { name: "Alex", value: "$79.10" },
 ];
 const VALUE_LADDER = ["$123.50", "$118.40", "$111.05", "$106.92", "$98.60", "$91.80", "$88.30", "$84.05", "$79.10"];
+const POINTS_LADDER = [74, 69, 65, 61, 58, 54, 50, 46, 41];
 const ROW_H = 32;
 
 function AnimatedChart() {
@@ -136,10 +137,12 @@ function Slide1Notifs({ active }: { active: boolean }) {
 
 function Slide2Standings({ active }: { active: boolean }) {
   const flip = useRef(new Animated.Value(0)).current;
+  const arrowPop = useRef(new Animated.Value(0)).current;
   const [flipped, setFlipped] = useState(false);
   useEffect(() => {
     if (!active) {
       setFlipped(false);
+      arrowPop.setValue(0);
       return;
     }
     const t = setTimeout(() => setFlipped(true), 1100);
@@ -147,6 +150,15 @@ function Slide2Standings({ active }: { active: boolean }) {
   }, [active]);
   useEffect(() => {
     Animated.timing(flip, { toValue: flipped ? 1 : 0, duration: 600, useNativeDriver: false }).start();
+    if (flipped) {
+      arrowPop.setValue(0);
+      Animated.sequence([
+        Animated.delay(450),
+        Animated.spring(arrowPop, { toValue: 1, friction: 4, tension: 140, useNativeDriver: true }),
+      ]).start();
+    } else {
+      arrowPop.setValue(0);
+    }
   }, [flipped]);
 
   return (
@@ -160,6 +172,7 @@ function Slide2Standings({ active }: { active: boolean }) {
           else if (rank1 <= 4) rank = flipped ? rank1 + 1 : rank1;
           const top = flip.interpolate({ inputRange: [0, 1], outputRange: [(rank1 - 1) * ROW_H, (rank - 1) * ROW_H] });
           const isYou = r.name === "You";
+          const showArrow = isYou && flipped && rank === 1;
           return (
             <Animated.View
               key={r.name}
@@ -178,7 +191,25 @@ function Slide2Standings({ active }: { active: boolean }) {
               }}
             >
               <Text style={{ width: 16, fontSize: 12, fontWeight: "600", color: "#8A8F98" }}>{rank}</Text>
-              <Text style={{ flex: 1, fontSize: 13, fontWeight: isYou ? "700" : "500", color: isYou ? "#fff" : "#8A8F98" }}>{r.name}</Text>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: isYou ? "700" : "500", color: isYou ? "#fff" : "#8A8F98" }}>{r.name}</Text>
+                {showArrow && (
+                  <Animated.Text
+                    style={{
+                      color: GREEN,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      opacity: arrowPop,
+                      transform: [{ scale: arrowPop.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }],
+                    }}
+                  >
+                    ▲
+                  </Animated.Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: isYou ? "700" : "500", color: isYou ? GREEN : "#8A8F98", width: 40, textAlign: "right" }}>
+                {POINTS_LADDER[rank - 1]} pts
+              </Text>
               <Text style={{ fontSize: 13, fontWeight: isYou ? "700" : "500", color: isYou ? "#fff" : "#8A8F98", width: 56, textAlign: "right" }}>
                 {VALUE_LADDER[rank - 1]}
               </Text>
@@ -254,7 +285,7 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
 
 const styles = StyleSheet.create({
   visualArea: { flex: 1, backgroundColor: "#0B0F0C", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  textArea: { paddingHorizontal: 28, paddingTop: 20, paddingBottom: 8 },
+  textArea: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 24, minHeight: SCREEN_H * 0.32, justifyContent: "center" },
   obCard: { width: 300, backgroundColor: "#151718", borderRadius: 28, padding: 20 },
   obRow: { flexDirection: "row", alignItems: "center", paddingVertical: 9, borderTopWidth: 1, borderTopColor: "#2A2C2E" },
   notifGreen: { backgroundColor: "rgba(0,200,5,0.14)", borderRadius: 16, padding: 14, marginBottom: 10 },

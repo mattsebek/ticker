@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -14,15 +14,16 @@ type Props = NativeStackScreenProps<AppStackParamList, "AiBriefing">;
 
 export function AiBriefingScreen({ navigation }: Props) {
   const T = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
   const portfolio = useDataStore((s) => s.portfolio);
   const { cards } = useBriefing();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 24 }}>
-        <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
-          <CloseIcon color={T.text} />
-        </Pressable>
+    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
+      <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { top: insets.top + 16, backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
+        <CloseIcon color={T.text} />
+      </Pressable>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 }}>
           <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: T.accent }} />
           <Text style={{ fontSize: 11, fontWeight: "600", color: T.accent, letterSpacing: 1, textTransform: "uppercase" }}>AI Briefing</Text>

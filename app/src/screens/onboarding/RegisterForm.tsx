@@ -1,8 +1,41 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Platform } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import Svg, { Circle, Path, Rect, Line } from "react-native-svg";
 import { useThemeStore } from "../../store/themeStore";
 import { Button } from "../../components/Button";
+
+const MIN_AGE_YEARS = 13;
+
+function maxBirthday(): Date {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - MIN_AGE_YEARS);
+  return d;
+}
+
+function defaultBirthday(): Date {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 20);
+  return d;
+}
+
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fromISODate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function fmtMMDDYYYY(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${y}`;
+}
 
 export type RegStage = "name" | "email" | "birthday";
 
@@ -55,7 +88,12 @@ interface Props {
 export function RegisterForm({ stage, name, email, birthday, setName, setEmail, setBirthday, onBack, onContinue, error, busy }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const meta = META[stage];
-  const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : birthday.trim().length > 0;
+
+  useEffect(() => {
+    if (stage === "birthday" && !birthday) setBirthday(toISODate(defaultBirthday()));
+  }, [stage]);
+
+  const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : !!birthday;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 }}>
@@ -100,17 +138,27 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
           />
         )}
         {stage === "birthday" && (
-          <TextInput
-            value={birthday}
-            onChangeText={setBirthday}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={T.textSecondary}
-            autoFocus
-            onSubmitEditing={onContinue}
-            style={[styles.input, { color: T.text, borderBottomColor: T.border }]}
-          />
+          <View>
+            <Text style={{ fontSize: 22, fontWeight: "500", color: T.text, marginBottom: 8 }}>{fmtMMDDYYYY(birthday) || "mm/dd/yyyy"}</Text>
+            <DateTimePicker
+              value={birthday ? fromISODate(birthday) : defaultBirthday()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              maximumDate={maxBirthday()}
+              minimumDate={new Date(1900, 0, 1)}
+              locale="en-US"
+              textColor={T.text}
+              themeVariant={T.mode === "dark" ? "dark" : "light"}
+              onChange={(_event, selected) => {
+                if (selected) setBirthday(toISODate(selected));
+              }}
+              style={Platform.OS === "ios" ? { alignSelf: "stretch", height: 180, marginTop: -8 } : undefined}
+            />
+          </View>
         )}
-        <Text style={{ fontSize: 12, color: error ? "#E0393E" : T.textSecondary, marginTop: 12 }}>{error || meta.hint}</Text>
+        <Text style={{ fontSize: 12, color: error ? "#E0393E" : T.textSecondary, marginTop: 12 }}>
+          {error || (stage === "birthday" ? `${meta.hint} You must be at least ${MIN_AGE_YEARS} years old.` : meta.hint)}
+        </Text>
       </View>
 
       <Button label="Continue" onPress={onContinue} disabled={!valid} loading={busy} />

@@ -104,3 +104,13 @@ export function LockIcon({ color, size = 18 }: IconProps) {
     </Svg>
   );
 }
+
+export function ShareIcon({ color, size = 16 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M9 11.5V2.5" />
+      <Path d="M5.8 5.3 9 2l3.2 3.3" />
+      <Path d="M4 8.5H3.2A1.2 1.2 0 0 0 2 9.7v5.6A1.2 1.2 0 0 0 3.2 16.5h11.6A1.2 1.2 0 0 0 16 15.3V9.7A1.2 1.2 0 0 0 14.8 8.5H14" />
+    </Svg>
+  );
+}

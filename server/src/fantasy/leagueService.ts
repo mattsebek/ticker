@@ -43,9 +43,9 @@ export const leagueService = {
     }
   },
 
-  create(name: string, userId: string, userName: string): LeagueRow {
+  create(name: string, userId: string, userName: string, isPrivate: boolean): LeagueRow {
     const id = "user-" + randomUUID();
-    const row: LeagueRow = { id, name, is_private: 1, code: randomUUID().slice(0, 6), commissioner: userName, base_member_count: 1 };
+    const row: LeagueRow = { id, name, is_private: isPrivate ? 1 : 0, code: randomUUID().slice(0, 6), commissioner: userName, base_member_count: 1 };
     fantasyRepo.insertLeague(row);
     fantasyRepo.addMember(id, userId, userName, false);
     return row;

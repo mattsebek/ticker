@@ -18,6 +18,7 @@ export function CompeteScreen() {
   const [leagues, setLeagues] = useState<LeagueListRow[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newIsPrivate, setNewIsPrivate] = useState(true);
 
   const load = useCallback(() => {
     api.leagues.mine().then((r) => setLeagues(r.leagues));
@@ -31,8 +32,9 @@ export function CompeteScreen() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await api.leagues.create(newName.trim());
+    await api.leagues.create(newName.trim(), newIsPrivate);
     setNewName("");
+    setNewIsPrivate(true);
     setCreateOpen(false);
     load();
   }
@@ -81,6 +83,23 @@ export function CompeteScreen() {
               placeholderTextColor={T.textSecondary}
               style={{ borderWidth: 1, borderColor: T.border, borderRadius: 12, padding: 12, fontSize: 15, color: T.text, marginBottom: 16 }}
             />
+            <View style={[styles.visibilityToggle, { backgroundColor: T.card }]}>
+              <Pressable
+                onPress={() => setNewIsPrivate(true)}
+                style={[styles.visibilityOption, newIsPrivate && { backgroundColor: T.accent }]}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: newIsPrivate ? "#fff" : T.text }}>Private</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setNewIsPrivate(false)}
+                style={[styles.visibilityOption, !newIsPrivate && { backgroundColor: T.accent }]}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: !newIsPrivate ? "#fff" : T.text }}>Public</Text>
+              </Pressable>
+            </View>
+            <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 16, textAlign: "center" }}>
+              {newIsPrivate ? "Only people you invite with a code or link can join." : "Anyone can find and join this league from the public list."}
+            </Text>
             <Button label="Create League" onPress={handleCreate} disabled={!newName.trim()} />
             <Button label="Cancel" onPress={() => setCreateOpen(false)} variant="secondary" style={{ marginTop: 10 }} />
           </Pressable>
@@ -95,4 +114,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingVertical: 14, paddingHorizontal: 16 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
   modalCard: { width: "80%", borderRadius: 20, padding: 24 },
+  visibilityToggle: { flexDirection: "row", borderRadius: 12, padding: 4, marginBottom: 8 },
+  visibilityOption: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 9 },
 });

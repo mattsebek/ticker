@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
@@ -7,6 +7,7 @@ import { FONT_SERIF } from "../../theme/theme";
 import { api } from "../../api/client";
 import type { StandingsRow } from "../../api/types";
 import type { AppStackParamList } from "../../navigation/types";
+import { ShareIcon } from "../../components/icons";
 
 type Props = NativeStackScreenProps<AppStackParamList, "LeagueDetail">;
 
@@ -16,13 +17,25 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   const [sort, setSort] = useState<"portfolio" | "points">("points");
   const [standings, setStandings] = useState<StandingsRow[]>([]);
   const [commissioner, setCommissioner] = useState("");
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     api.leagues.detail(leagueId, sort).then((r) => {
       setStandings(r.standings);
       setCommissioner(r.league.commissioner);
+      setCode(r.league.code);
     });
   }, [leagueId, sort]);
+
+  async function shareLeague() {
+    const link = `ticker://join?code=${code}`;
+    const message = `Join my Ticker league "${name}"! Use code ${code.toUpperCase()} or tap: ${link}`;
+    try {
+      await Share.share({ message, url: link });
+    } catch {
+      // user cancelled or share failed silently — nothing to recover
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -30,6 +43,10 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={{ fontSize: 22, fontWeight: "500", color: T.accent, marginTop: -1 }}>‹</Text>
           <Text style={{ fontSize: 17, color: T.accent }}>Compete</Text>
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Pressable onPress={shareLeague} disabled={!code} style={[styles.shareBtn, { backgroundColor: T.card }]} accessibilityLabel="Share league" accessibilityRole="button">
+          <ShareIcon color={T.text} />
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
@@ -63,8 +80,9 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
+  shareBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   headRow: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1 },
   headLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase" },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 16 },

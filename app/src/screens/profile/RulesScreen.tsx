@@ -182,6 +182,6 @@ export function RulesScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
 });

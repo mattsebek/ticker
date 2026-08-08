@@ -44,7 +44,7 @@ leaguesRouter.get("/lookup-code", requireAuth, (req, res) => {
   const code = String(req.query.code || "");
   if (!code.trim()) return res.json({ league: null });
   const lg = leagueService.getLeagueByCode(code);
-  if (!lg || !lg.is_private) return res.json({ league: null });
+  if (!lg) return res.json({ league: null });
   res.json({ league: { id: lg.id, name: lg.name, membersStr: lg.base_member_count.toLocaleString("en-US") + " members" } });
 });
 
@@ -55,7 +55,7 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
   const sort = req.query.sort === "portfolio" ? "portfolio" : "points";
   const standings = leagueService.standings(lg.id, round, sort);
   res.json({
-    league: { id: lg.id, name: lg.name, commissioner: lg.commissioner },
+    league: { id: lg.id, name: lg.name, commissioner: lg.commissioner, isPrivate: !!lg.is_private, code: lg.code },
     standings: standings.map((r) => ({ rank: r.rank, name: r.name, you: r.memberId === req.userId, portfolio: r.portfolio, portfolioStr: fmtMoney(r.portfolio), points: r.points })),
   });
 });
@@ -76,13 +76,13 @@ leaguesRouter.post("/join", requireAuth, (req: AuthedRequest, res) => {
   res.json({ ok: true, league: { id: lg.id, name: lg.name } });
 });
 
-const createSchema = z.object({ name: z.string().trim().min(1).max(60) });
+const createSchema = z.object({ name: z.string().trim().min(1).max(60), isPrivate: z.boolean().optional().default(true) });
 
 leaguesRouter.post("/create", requireAuth, (req: AuthedRequest, res) => {
   const user = usersRepo.getById(req.userId!);
   if (!user) return res.status(404).json({ error: "User not found" });
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Give your league a name." });
-  const lg = leagueService.create(parsed.data.name, user.id, user.name);
-  res.json({ ok: true, league: { id: lg.id, name: lg.name } });
+  const lg = leagueService.create(parsed.data.name, user.id, user.name, parsed.data.isPrivate);
+  res.json({ ok: true, league: { id: lg.id, name: lg.name, isPrivate: !!lg.is_private, code: lg.code } });
 });

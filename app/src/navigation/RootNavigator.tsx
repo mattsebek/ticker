@@ -51,8 +51,17 @@ export function RootNavigator() {
 
   const showOnboarding = !user || !user.onboarded;
 
+  const linking = {
+    prefixes: ["ticker://", "https://ticker.app"],
+    config: {
+      screens: {
+        JoinLeague: "join",
+      },
+    },
+  };
+
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} linking={showOnboarding ? undefined : linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {showOnboarding ? (
           <Stack.Screen name="Main" component={OnboardingScreen} />

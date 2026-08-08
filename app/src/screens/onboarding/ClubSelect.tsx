@@ -51,7 +51,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
         <Text style={{ fontSize: 20, color: T.text }}>‹</Text>
       </Pressable>
       <Text style={{ fontFamily: FONT_SERIF, fontSize: 24, fontWeight: "500", color: T.text, marginBottom: 4 }}>Build your portfolio</Text>
-      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }}>Pick 4 clubs to start trading.</Text>
+      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }}>Pick 4 clubs with your budget of $100.00.</Text>
       <View style={[styles.balanceRow, { backgroundColor: T.card }]}>
         <Text style={{ fontSize: 13, color: T.textSecondary }}>Remaining balance</Text>
         <Text style={{ fontSize: 19, fontWeight: "600", color: remaining < 0 ? "#E0393E" : T.text }}>{fmtMoney(remaining)}</Text>
