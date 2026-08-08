@@ -57,7 +57,10 @@ export function CompeteScreen() {
               onPress={() => lg.id !== "overall" && navigation.navigate("LeagueDetail", { leagueId: lg.id, name: lg.name })}
               style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === leagues.length - 1 ? 0 : 1 }]}
             >
-              <Text style={{ fontSize: 13, fontWeight: "400", color: T.text }}>{lg.name}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 13, fontWeight: "400", color: T.text }}>{lg.name}</Text>
+                {!!lg.membersStr && <Text style={{ fontSize: 11, color: T.textSecondary, marginTop: 2 }}>{lg.membersStr}</Text>}
+              </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: T.text }}>{lg.rankStr}</Text>
                 {lg.id !== "overall" && <Text style={{ fontSize: 14, color: T.chevron }}>›</Text>}

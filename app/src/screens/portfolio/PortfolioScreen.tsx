@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -31,8 +31,8 @@ export function PortfolioScreen() {
 
   if (!portfolio) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
-        <View />
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={T.accent} />
       </SafeAreaView>
     );
   }

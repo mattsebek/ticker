@@ -79,6 +79,7 @@ export interface LeagueListRow {
   id: string;
   name: string;
   rankStr: string;
+  membersStr: string;
 }
 
 export interface PublicLeagueRow {

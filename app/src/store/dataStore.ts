@@ -13,6 +13,7 @@ interface DataState {
   refreshChart: () => Promise<void>;
   startPolling: () => void;
   stopPolling: () => void;
+  reset: () => void;
 }
 
 let clubsTimer: ReturnType<typeof setInterval> | null = null;
@@ -72,5 +73,10 @@ export const useDataStore = create<DataState>((set, get) => ({
     clubsTimer = null;
     portfolioTimer = null;
     set({ polling: false });
+  },
+
+  reset: () => {
+    get().stopPolling();
+    set({ clubs: [], portfolio: null, chartSeries: [] });
   },
 }));
