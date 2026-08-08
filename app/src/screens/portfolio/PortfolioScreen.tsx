@@ -46,6 +46,9 @@ export function PortfolioScreen() {
           <Text style={{ fontSize: 13, color: colorForPct(portfolio.weekPct) }}>{fmtPct(portfolio.weekPct)} week</Text>
           <Text style={{ fontSize: 13, color: colorForPct(portfolio.seasonPct) }}>{fmtPct(portfolio.seasonPct)} season</Text>
         </View>
+        <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 10 }}>
+          Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.cash)}</Text>
+        </Text>
 
         <View style={{ marginTop: 20 }}>
           <View style={{ marginBottom: 10 }}>

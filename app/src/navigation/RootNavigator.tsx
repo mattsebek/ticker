@@ -62,7 +62,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme} linking={showOnboarding ? undefined : linking}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true, fullScreenGestureEnabled: true }}>
         {showOnboarding ? (
           <Stack.Screen name="Main" component={OnboardingScreen} />
         ) : (
@@ -72,6 +72,9 @@ export function RootNavigator() {
             <Stack.Screen name="LeagueDetail" component={LeagueDetailScreen} />
             <Stack.Screen name="JoinLeague" component={JoinLeagueScreen} />
             <Stack.Screen name="Rules" component={RulesScreen} />
+            {/* fullScreenGestureEnabled (set globally above) opts this back into the
+                left-edge swipe-to-dismiss gesture iOS disables by default for
+                fullScreenModal presentations. */}
             <Stack.Screen name="AiBriefing" component={AiBriefingScreen} options={{ presentation: "fullScreenModal" }} />
           </>
         )}

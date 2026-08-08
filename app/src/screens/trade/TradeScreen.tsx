@@ -54,6 +54,7 @@ export function TradeScreen({ route, navigation }: Props) {
   const other = otherId ? options.candidates.find((c) => c.id === otherId) : null;
   const tradeOut = mode === "buy" ? other : fixed;
   const tradeIn = mode === "buy" ? fixed : other;
+  const buyingPower = preview ? preview.availableCash : options.cash;
 
   async function confirm() {
     if (!otherId || !preview?.canAfford) return;
@@ -80,7 +81,14 @@ export function TradeScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>{mode === "buy" ? `Buy ${fixed.name}` : `Trade ${fixed.name}`}</Text>
+        <View>
+          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>{mode === "buy" ? `Buy ${fixed.name}` : `Trade ${fixed.name}`}</Text>
+          {step === "select" && (
+            <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 4 }}>
+              Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(buyingPower)}</Text>
+            </Text>
+          )}
+        </View>
         <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
           <CloseIcon color={T.text} />
         </Pressable>

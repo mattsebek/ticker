@@ -68,7 +68,7 @@ export function ClubOverlayHost() {
             </View>
             <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
               <Text style={{ color: T.accent, fontSize: 13 }}>{detail.gwPts} pts this week</Text>
-              <Text style={{ color: colorForPct(detail.dailyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.dailyPct)} today</Text>
+              <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
             </View>
 
             <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Form</Text>
