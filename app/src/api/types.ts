@@ -97,9 +97,14 @@ export interface StandingsRow {
   points: number;
 }
 
+export interface BriefSegment {
+  text: string;
+  tone?: "pos" | "neg";
+}
+
 export interface BriefCard {
   label: string;
-  text: string;
+  segments: BriefSegment[];
 }
 
 export interface MorningBrief {

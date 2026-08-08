@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
-import { FONT_SERIF, colorForPct } from "../../theme/theme";
+import { FONT_SERIF, colorForPct, GREEN, RED } from "../../theme/theme";
 import { fmtPct } from "../../utils/format";
 import { CloseIcon } from "../../components/icons";
 import { useBriefing } from "../../hooks/useBriefing";
@@ -39,7 +39,17 @@ export function AiBriefingScreen({ navigation }: Props) {
         {cards.map((c, i) => (
           <View key={i} style={[styles.card, { backgroundColor: T.card }]}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{c.label}</Text>
-            <Text style={{ fontSize: 14, lineHeight: 22, color: T.text }}>{c.text}</Text>
+            <Text style={{ fontSize: 14, lineHeight: 22, color: T.text }}>
+              {c.segments.map((s, j) =>
+                s.tone ? (
+                  <Text key={j} style={{ color: s.tone === "pos" ? GREEN : RED, fontWeight: "600" }}>
+                    {s.text}
+                  </Text>
+                ) : (
+                  <Text key={j}>{s.text}</Text>
+                )
+              )}
+            </Text>
           </View>
         ))}
       </ScrollView>

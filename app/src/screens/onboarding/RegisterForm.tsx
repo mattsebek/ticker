@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Svg, { Circle, Path, Rect, Line } from "react-native-svg";
 import { useThemeStore } from "../../store/themeStore";
@@ -87,6 +88,7 @@ interface Props {
 
 export function RegisterForm({ stage, name, email, birthday, setName, setEmail, setBirthday, onBack, onContinue, error, busy }: Props) {
   const T = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
   const meta = META[stage];
 
   useEffect(() => {
@@ -96,10 +98,19 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
   const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : !!birthday;
 
   return (
-    <View style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, marginBottom: 12 }}>
-        <Pressable onPress={onBack}>
-          <Text style={{ fontSize: 20, color: T.text, width: 28 }}>←</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: insets.top + 16, paddingBottom: 28 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <Pressable
+          onPress={onBack}
+          hitSlop={10}
+          accessibilityLabel="Back"
+          accessibilityRole="button"
+          style={[styles.backBtn, { backgroundColor: T.card }]}
+        >
+          <Text style={{ fontSize: 20, color: T.text }}>‹</Text>
         </Pressable>
         <View style={{ flex: 1, height: 3, backgroundColor: T.border, borderRadius: 2, overflow: "hidden" }}>
           <View style={{ height: "100%", width: meta.pct as any, backgroundColor: T.accent }} />
@@ -127,7 +138,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
         {stage === "email" && (
           <TextInput
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => setEmail(v.toLowerCase())}
             placeholder="name@email.com"
             placeholderTextColor={T.textSecondary}
             keyboardType="email-address"
@@ -162,10 +173,11 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
       </View>
 
       <Button label="Continue" onPress={onContinue} disabled={!valid} loading={busy} />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   input: { fontSize: 22, fontWeight: "500", borderBottomWidth: 2, paddingVertical: 8 },
+  backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
 });

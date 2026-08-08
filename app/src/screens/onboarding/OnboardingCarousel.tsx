@@ -44,7 +44,7 @@ function AnimatedChart() {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(sweep, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(sweep, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
         Animated.delay(400),
         Animated.timing(sweep, { toValue: 0, duration: 0, useNativeDriver: false }),
       ])
@@ -55,7 +55,7 @@ function AnimatedChart() {
   const w = sweep.interpolate({ inputRange: [0, 1], outputRange: [0, SCREEN_W] });
   const points = "0,170 40,160 80,165 120,145 160,150 200,125 240,132 280,105 320,112 360,80 400,87";
   return (
-    <Animated.View style={{ position: "absolute", inset: 0, width: w, overflow: "hidden" }}>
+    <Animated.View style={{ position: "absolute", top: "25%", left: 0, right: 0, bottom: 0, width: w, overflow: "hidden" }}>
       <Svg width={SCREEN_W} height={260} viewBox="0 0 400 260" preserveAspectRatio="none">
         <Defs>
           <LinearGradient id="obGrad" x1="0" y1="0" x2="0" y2="1">
