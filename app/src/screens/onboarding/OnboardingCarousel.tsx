@@ -96,23 +96,30 @@ function TickerTapeRow({ onLayout }: { onLayout?: (e: LayoutChangeEvent) => void
   );
 }
 
-function TickerTape() {
+function TickerTape({ edge, reverse }: { edge: "top" | "bottom"; reverse?: boolean }) {
   const insets = useSafeAreaInsets();
   const translateX = useRef(new Animated.Value(0)).current;
   const [setWidth, setSetWidth] = useState(0);
 
   useEffect(() => {
     if (!setWidth) return;
-    translateX.setValue(0);
+    translateX.setValue(reverse ? -setWidth : 0);
     const loop = Animated.loop(
-      Animated.timing(translateX, { toValue: -setWidth, duration: (setWidth / TAPE_SPEED_PX_PER_SEC) * 1000, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(translateX, {
+        toValue: reverse ? 0 : -setWidth,
+        duration: (setWidth / TAPE_SPEED_PX_PER_SEC) * 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
     );
     loop.start();
     return () => loop.stop();
-  }, [setWidth]);
+  }, [setWidth, reverse]);
+
+  const edgeStyle = edge === "top" ? { top: insets.top + 10 } : { bottom: 10 };
 
   return (
-    <View style={[styles.tapeWrap, { top: insets.top + 10 }]} pointerEvents="none">
+    <View style={[styles.tapeWrap, edgeStyle]} pointerEvents="none">
       <Animated.View style={{ flexDirection: "row", transform: [{ translateX }] }}>
         <TickerTapeRow onLayout={(e) => setSetWidth(e.nativeEvent.layout.width)} />
         <TickerTapeRow />
@@ -120,6 +127,9 @@ function TickerTape() {
     </View>
   );
 }
+
+/** Total vertical footprint of a ticker tape band (offset from its edge + its own height + a little breathing room), used to keep the centered card clear of both tapes. */
+const TAPE_CLEARANCE = 10 + 22 + 14;
 
 function Slide0Card({ tick }: { tick: number }) {
   const jit = (base: number, seed: number) => base + Math.sin((tick + seed) * 1.6) * 0.35;
@@ -274,6 +284,7 @@ function Slide2Standings({ active }: { active: boolean }) {
 
 export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   const T = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
   const tick = useTick(900);
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -300,9 +311,10 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
       >
         {SLIDES.map((slide, i) => (
           <View key={i} style={{ width: SCREEN_W, flex: 1 }}>
-            <View style={styles.visualArea}>
+            <View style={[styles.visualArea, { paddingTop: insets.top + TAPE_CLEARANCE, paddingBottom: TAPE_CLEARANCE }]}>
               <AnimatedChart />
-              <TickerTape />
+              <TickerTape edge="top" />
+              <TickerTape edge="bottom" reverse />
               {i === 0 && <Slide0Card tick={tick} />}
               {i === 1 && <Slide1Notifs active={index === 1} />}
               {i === 2 && <Slide2Standings active={index === 2} />}
