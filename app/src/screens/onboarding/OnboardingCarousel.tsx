@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   tapeWrap: { position: "absolute", left: 0, right: 0, height: 22, overflow: "hidden" },
   tapeCode: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, fontWeight: "600", color: "#8A8F98", letterSpacing: 0.5 },
   tapePct: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, fontWeight: "600", marginLeft: 6, letterSpacing: 0.5 },
-  textArea: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 24, minHeight: SCREEN_H * 0.32, justifyContent: "center" },
+  textArea: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 24, minHeight: SCREEN_H * 0.285, justifyContent: "center" },
   obCard: { width: 300, backgroundColor: "#151718", borderRadius: 28, padding: 20 },
   obRow: { flexDirection: "row", alignItems: "center", paddingVertical: 9, borderTopWidth: 1, borderTopColor: "#2A2C2E" },
   notifGreen: { backgroundColor: "rgba(0,200,5,0.14)", borderRadius: 16, padding: 14, marginBottom: 10 },
