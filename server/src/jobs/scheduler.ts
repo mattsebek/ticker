@@ -7,6 +7,8 @@ export interface JobDefinition {
   name: string;
   intervalMs: number;
   run: () => Promise<JobResult>;
+  /** Delay before this job's first run, in ms. Defaults to 1500. Stagger jobs that share an external API's rate limit so they don't all burst at boot. */
+  initialDelayMs?: number;
 }
 
 export interface JobRunRecord {
@@ -47,7 +49,7 @@ class JobScheduler {
       }
     };
     // Run once shortly after boot, then on the configured interval.
-    setTimeout(execute, 1500);
+    setTimeout(execute, job.initialDelayMs ?? 1500);
     this.timers.push(setInterval(execute, job.intervalMs));
   }
 
