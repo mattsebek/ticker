@@ -37,8 +37,18 @@ const LEAGUE_SEEDS: LeagueSeed[] = [
  * intentionally the same idempotency contract as the background jobs.
  */
 export async function bootstrap(): Promise<void> {
-  const importResult = await footballService.importSeasonSchedule();
-  console.log(`[bootstrap] season schedule: imported=${importResult.imported} skipped=${importResult.skipped} (provider=${footballService.providerName})`);
+  // A provider hiccup at boot (rate limit, transient network failure, etc.)
+  // must not take the whole server down — everything below already
+  // tolerates an empty football dataset (no clubs to seed prices/bots for,
+  // nothing to settle), and the periodic importSeasonSchedule job will keep
+  // retrying on its own interval until it succeeds.
+  let importResult: { imported: number; skipped: boolean } = { imported: 0, skipped: true };
+  try {
+    importResult = await footballService.importSeasonSchedule();
+    console.log(`[bootstrap] season schedule: imported=${importResult.imported} skipped=${importResult.skipped} (provider=${footballService.providerName})`);
+  } catch (err: any) {
+    console.error(`[bootstrap] season schedule import failed (provider=${footballService.providerName}), continuing without it:`, err?.message || err);
+  }
 
   seedOpeningPrices();
   seedLeagues();
