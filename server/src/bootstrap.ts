@@ -24,11 +24,11 @@ const LEAGUE_SEEDS: LeagueSeed[] = [
   { id: "office-rivals", name: "Office Rivals", isPrivate: true, code: null, commissioner: "Sam", baseMemberCount: 5, botMemberIds: ["bot-priya", "bot-marcus", "bot-jordan", "bot-sam"], autoJoin: true },
   { id: "the-boardroom", name: "The Boardroom", isPrivate: true, code: null, commissioner: "Taylor", baseMemberCount: 6, botMemberIds: ["bot-taylor", "bot-casey", "bot-morgan", "bot-priya", "bot-marcus"], autoJoin: true },
   { id: "college-friends", name: "College Friends", isPrivate: true, code: null, commissioner: "Jordan", baseMemberCount: 4, botMemberIds: ["bot-jordan", "bot-sam", "bot-taylor"], autoJoin: true },
-  { id: "global-community-league", name: "Global Community League", isPrivate: false, code: null, commissioner: "Ticker", baseMemberCount: 128430, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: false },
-  { id: "weekend-warriors", name: "Weekend Warriors", isPrivate: false, code: null, commissioner: "Casey", baseMemberCount: 41220, botMemberIds: ["bot-casey", "bot-morgan", "bot-sam"], autoJoin: false },
-  { id: "transfer-deadline-day", name: "Transfer Deadline Day", isPrivate: false, code: null, commissioner: "Priya", baseMemberCount: 19875, botMemberIds: ["bot-priya", "bot-jordan"], autoJoin: false },
-  { id: "the-bootroom", name: "The Bootroom", isPrivate: false, code: null, commissioner: "Marcus", baseMemberCount: 8640, botMemberIds: ["bot-marcus", "bot-taylor", "bot-casey"], autoJoin: false },
-  { id: "the-gaffers", name: "The Gaffers", isPrivate: true, code: "xxx", commissioner: "Morgan", baseMemberCount: 24, botMemberIds: ["bot-morgan", "bot-casey"], autoJoin: false },
+  { id: "global-community-league", name: "Global Community League", isPrivate: false, code: null, commissioner: "Ticker", baseMemberCount: 2340, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: false },
+  { id: "weekend-warriors", name: "Weekend Warriors", isPrivate: false, code: null, commissioner: "Casey", baseMemberCount: 860, botMemberIds: ["bot-casey", "bot-morgan", "bot-sam"], autoJoin: false },
+  { id: "transfer-deadline-day", name: "Transfer Deadline Day", isPrivate: false, code: null, commissioner: "Priya", baseMemberCount: 410, botMemberIds: ["bot-priya", "bot-jordan"], autoJoin: false },
+  { id: "the-bootroom", name: "The Bootroom", isPrivate: false, code: null, commissioner: "Marcus", baseMemberCount: 275, botMemberIds: ["bot-marcus", "bot-taylor", "bot-casey"], autoJoin: false },
+  { id: "the-gaffers", name: "The Gaffers", isPrivate: true, code: "k7m2qp", commissioner: "Morgan", baseMemberCount: 24, botMemberIds: ["bot-morgan", "bot-casey"], autoJoin: false },
 ];
 
 /**
@@ -46,6 +46,28 @@ export async function bootstrap(): Promise<void> {
 
   const settleResult = settlementService.settleAllPending();
   console.log(`[bootstrap] settled ${settleResult.settledCount} previously-unsettled fixtures`);
+
+  // Only on a genuinely fresh import: settling a whole historical season in
+  // one shot (rather than the incremental, match-by-match drift a real
+  // live season produces) compounds prices far past what a $100 draft
+  // budget was ever sized for. Re-running bootstrap after this point is a
+  // no-op everywhere else, so this must not run again either — it would
+  // compound on top of itself.
+  if (!importResult.skipped) normalizeClubPricesForBudget();
+}
+
+const TARGET_AVERAGE_CLUB_PRICE = 14;
+
+function normalizeClubPricesForBudget() {
+  const clubs = footballRepo.listClubs();
+  const prices = clubs.map((c) => marketRepo.getPrice(c.id)).filter((p): p is number => !!p && p > 0);
+  if (prices.length === 0) return;
+  const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+  if (avg <= 0) return;
+  const factor = round2(TARGET_AVERAGE_CLUB_PRICE / avg);
+  if (Math.abs(factor - 1) < 0.01) return;
+  marketRepo.scaleAllPrices(factor);
+  console.log(`[bootstrap] normalized club prices by ${factor}x (avg was $${avg.toFixed(2)}, target $${TARGET_AVERAGE_CLUB_PRICE})`);
 }
 
 /** Opening price = a base "IPO" value plus a premium derived from the club's OWN provider-supplied win probabilities across its season — not an invented strength tier. */
@@ -63,7 +85,10 @@ function seedOpeningPrices() {
 
 function seedLeagues() {
   for (const lg of LEAGUE_SEEDS) {
-    if (fantasyRepo.getLeagueById(lg.id)) continue;
+    if (fantasyRepo.getLeagueById(lg.id)) {
+      fantasyRepo.updateLeagueSeedFields(lg.id, { name: lg.name, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount });
+      continue;
+    }
     fantasyRepo.insertLeague({ id: lg.id, name: lg.name, is_private: lg.isPrivate ? 1 : 0, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount });
     for (const botId of lg.botMemberIds) {
       const bot = BOT_ROSTER.find((b) => b.id === botId);

@@ -19,17 +19,25 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
     };
   }, [offset]);
 
-  if (!data) return <View style={[styles.card, elevated ? { backgroundColor: T.elevated, ...T.elevatedShadow } : { backgroundColor: T.card }, { height: 120 }]} />;
+  if (!data) return <View style={[styles.card, elevated ? { backgroundColor: T.elevated, borderWidth: 1, borderColor: T.elevatedBorder, ...T.elevatedShadow } : { backgroundColor: T.card }, { height: 120 }]} />;
 
   return (
-    <View style={[styles.card, elevated ? { backgroundColor: T.elevated, ...T.elevatedShadow } : { backgroundColor: T.card }]}>
+    <View style={[styles.card, elevated ? { backgroundColor: T.elevated, borderWidth: 1, borderColor: T.elevatedBorder, ...T.elevatedShadow } : { backgroundColor: T.card }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => data.canPrev && setOffset((o) => Math.max(-11, o - 1))} style={{ opacity: data.canPrev ? 1 : 0.25, width: 20 }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: T.text, textAlign: "center" }}>‹</Text>
+        <Pressable
+          onPress={() => data.canPrev && setOffset((o) => Math.max(-11, o - 1))}
+          hitSlop={10}
+          style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: "600", color: data.canPrev ? T.text : T.textSecondary, textAlign: "center" }}>‹</Text>
         </Pressable>
         <Text style={{ fontSize: 12, fontWeight: "500", color: T.text, letterSpacing: 0.5 }}>Gameweek {data.gwNumber}</Text>
-        <Pressable onPress={() => data.canNext && setOffset((o) => Math.min(0, o + 1))} style={{ opacity: data.canNext ? 1 : 0.25, width: 20 }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: T.text, textAlign: "center" }}>›</Text>
+        <Pressable
+          onPress={() => data.canNext && setOffset((o) => Math.min(0, o + 1))}
+          hitSlop={10}
+          style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: "600", color: data.canNext ? T.text : T.textSecondary, textAlign: "center" }}>›</Text>
         </Pressable>
       </View>
       <View style={styles.statsRow}>
@@ -57,8 +65,8 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, paddingVertical: 18, paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 8 },
+  card: { borderRadius: 24, paddingTop: 6, paddingBottom: 18, paddingHorizontal: 20 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 4 },
   statsRow: { flexDirection: "row", alignItems: "flex-end" },
   stat: { flex: 1, alignItems: "center" },
 });

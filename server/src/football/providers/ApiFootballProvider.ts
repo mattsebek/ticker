@@ -36,7 +36,15 @@ export class ApiFootballProvider implements FootballDataProvider {
     const url = `${BASE_URL}${path}${qs ? `?${qs}` : ""}`;
     const res = await fetch(url, { headers: { "x-apisports-key": this.apiKey } });
     if (!res.ok) throw new Error(`API-Football request failed: ${res.status} ${res.statusText} (${path})`);
-    const json = (await res.json()) as { response: T };
+    const json = (await res.json()) as { response: T; errors: unknown };
+    // API-Football returns HTTP 200 even for a rejected request (rate limit,
+    // plan restriction, etc.) — `errors` is the only signal, and `response`
+    // is silently empty. Surface it as a real error instead of letting
+    // callers destructure an empty array into `undefined` and crash later
+    // with no clue why.
+    const errors = json.errors;
+    const hasErrors = Array.isArray(errors) ? errors.length > 0 : errors && typeof errors === "object" && Object.keys(errors).length > 0;
+    if (hasErrors) throw new Error(`API-Football rejected request (${path}): ${JSON.stringify(errors)}`);
     return json.response;
   }
 
@@ -52,6 +60,7 @@ export class ApiFootballProvider implements FootballDataProvider {
       providerId: `${competitionProviderId}:${s.year}`,
       competitionProviderId,
       year: String(s.year),
+      current: !!s.current,
     }));
   }
 

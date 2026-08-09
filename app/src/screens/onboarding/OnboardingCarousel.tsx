@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, ScrollView, Pressable, Dimensions, Animated, Easing, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { View, Text, ScrollView, Pressable, Dimensions, Animated, Easing, StyleSheet, Platform, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Stop, Path, Polyline } from "react-native-svg";
 import { useThemeStore } from "../../store/themeStore";
 import { useTick } from "../../hooks/useTick";
@@ -13,7 +14,7 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 const SLIDES = [
   { headline: "Welcome to Ticker", body: "Fantasy Premier League meets the stock market. Buy clubs, spot value, and outsmart the league one trade at a time." },
-  { headline: "Buy Low. Sell High. Win Big. \u{1F680}\u{1F311}", body: "Every club earns game week points and earns value based on performance, fixtures and market sentiment. Find tomorrow’s winners before everyone else does." },
+  { headline: "Buy Low. Sell High.\nWin Big. \u{1F680}\u{1F311}", body: "Every club earns game week points and earns value based on performance, fixtures and market sentiment. Find tomorrow’s winners before everyone else does." },
   { headline: "Beat the Market.\nBeat Your Friends.", body: "You’re building the smartest football portfolio in your league. Some people play fantasy. You’re playing the market." },
 ];
 
@@ -67,6 +68,56 @@ function AnimatedChart() {
         <Polyline points={points} fill="none" stroke={GREEN} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
       </Svg>
     </Animated.View>
+  );
+}
+
+const TAPE_ITEMS = [
+  { code: "BRI", pct: 3.9 },
+  { code: "LIV", pct: 2.3 },
+  { code: "AVL", pct: 4.8 },
+  { code: "CHE", pct: -1.1 },
+  { code: "ARS", pct: 1.6 },
+  { code: "MCI", pct: 0.8 },
+  { code: "TOT", pct: -2.4 },
+  { code: "NEW", pct: 3.1 },
+];
+const TAPE_SPEED_PX_PER_SEC = 36;
+
+function TickerTapeRow({ onLayout }: { onLayout?: (e: LayoutChangeEvent) => void }) {
+  return (
+    <View style={{ flexDirection: "row" }} onLayout={onLayout}>
+      {TAPE_ITEMS.map((item, i) => (
+        <View key={i} style={{ flexDirection: "row", alignItems: "center", marginRight: 28 }}>
+          <Text style={styles.tapeCode}>{item.code}</Text>
+          <Text style={[styles.tapePct, { color: item.pct >= 0 ? GREEN : RED }]}>{fmtPct(item.pct)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TickerTape() {
+  const insets = useSafeAreaInsets();
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [setWidth, setSetWidth] = useState(0);
+
+  useEffect(() => {
+    if (!setWidth) return;
+    translateX.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(translateX, { toValue: -setWidth, duration: (setWidth / TAPE_SPEED_PX_PER_SEC) * 1000, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [setWidth]);
+
+  return (
+    <View style={[styles.tapeWrap, { top: insets.top + 10 }]} pointerEvents="none">
+      <Animated.View style={{ flexDirection: "row", transform: [{ translateX }] }}>
+        <TickerTapeRow onLayout={(e) => setSetWidth(e.nativeEvent.layout.width)} />
+        <TickerTapeRow />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -251,6 +302,7 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
           <View key={i} style={{ width: SCREEN_W, flex: 1 }}>
             <View style={styles.visualArea}>
               <AnimatedChart />
+              <TickerTape />
               {i === 0 && <Slide0Card tick={tick} />}
               {i === 1 && <Slide1Notifs active={index === 1} />}
               {i === 2 && <Slide2Standings active={index === 2} />}
@@ -285,6 +337,9 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
 
 const styles = StyleSheet.create({
   visualArea: { flex: 1, backgroundColor: "#0B0F0C", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  tapeWrap: { position: "absolute", left: 0, right: 0, height: 22, overflow: "hidden" },
+  tapeCode: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, fontWeight: "600", color: "#8A8F98", letterSpacing: 0.5 },
+  tapePct: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, fontWeight: "600", marginLeft: 6, letterSpacing: 0.5 },
   textArea: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 24, minHeight: SCREEN_H * 0.32, justifyContent: "center" },
   obCard: { width: 300, backgroundColor: "#151718", borderRadius: 28, padding: 20 },
   obRow: { flexDirection: "row", alignItems: "center", paddingVertical: 9, borderTopWidth: 1, borderTopColor: "#2A2C2E" },

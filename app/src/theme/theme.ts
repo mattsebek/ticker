@@ -25,6 +25,7 @@ export interface ThemeTokens {
   spinnerTrack: string;
   navInactive: string;
   elevated: string;
+  elevatedBorder: string;
   elevatedShadow: { shadowColor: string; shadowOpacity: number; shadowRadius: number; shadowOffset: { width: number; height: number }; elevation: number };
   aiGradient: [string, string];
   aiGlowColor: string;
@@ -46,6 +47,7 @@ export const LIGHT_THEME: ThemeTokens = {
   spinnerTrack: "#EAEBEC",
   navInactive: "#C7C7CC",
   elevated: "#FFFFFF",
+  elevatedBorder: "rgba(0,0,0,0.06)",
   elevatedShadow: { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   aiGradient: ["#3DDC3B", "#00A63C"],
   aiGlowColor: "rgba(0,198,5,0.35)",
@@ -67,6 +69,7 @@ export const DARK_THEME: ThemeTokens = {
   spinnerTrack: "#2A2C2E",
   navInactive: "#54585B",
   elevated: "#1C1E1F",
+  elevatedBorder: "rgba(255,255,255,0.08)",
   elevatedShadow: { shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   aiGradient: ["#3DDC3B", "#00A63C"],
   aiGlowColor: "rgba(0,200,5,0.45)",

@@ -2,9 +2,31 @@ import { createFootballDataProvider } from "./providers";
 import { footballRepo } from "./repo";
 import { normalizeClub, normalizeCompetition, normalizeFixture, normalizeSeason } from "./normalize";
 import { Club, Fixture } from "./types";
-import { RawOddsDTO } from "./providers/types";
+import { RawOddsDTO, RawSeasonRef } from "./providers/types";
 
 const provider = createFootballDataProvider();
+
+/** Safety cap on how many fixtures a single import will fetch odds for — see importSeasonSchedule(). */
+const ODDS_IMPORT_CAP = 20;
+
+/**
+ * A provider's season list isn't guaranteed to be sorted or to have its
+ * "current" season actually accessible on every plan (e.g. a free
+ * API-Football key can't see the live season, only a few past years) — so
+ * this is the one place that decides which season Ticker actually pulls.
+ * FOOTBALL_SEASON_YEAR pins an explicit year; otherwise prefer whichever
+ * season the provider marks current, falling back to the most recent.
+ */
+function pickSeason(seasons: RawSeasonRef[]): RawSeasonRef {
+  const pinnedYear = process.env.FOOTBALL_SEASON_YEAR;
+  if (pinnedYear) {
+    const pinned = seasons.find((s) => s.year === pinnedYear);
+    if (pinned) return pinned;
+  }
+  const current = seasons.find((s) => s.current);
+  if (current) return current;
+  return seasons.slice().sort((a, b) => Number(a.year) - Number(b.year))[seasons.length - 1];
+}
 
 /**
  * Layer 1+2 orchestration: pulls raw data from whichever provider is active
@@ -21,14 +43,23 @@ export const footballService = {
 
     const [competitionRaw] = await provider.fetchCompetitions();
     const competition = normalizeCompetition(provider.name, competitionRaw);
-    const [seasonRaw] = await provider.fetchSeasons(competitionRaw.providerId);
+    const seasonRaw = pickSeason(await provider.fetchSeasons(competitionRaw.providerId));
     const season = normalizeSeason(provider.name, seasonRaw, competition.id);
 
     const clubsRaw = await provider.fetchClubs(seasonRaw.providerId);
     for (const c of clubsRaw) normalizeClub(provider.name, c);
 
     const fixturesRaw = await provider.fetchFixtures(seasonRaw.providerId);
-    const odds = await provider.fetchOdds(fixturesRaw.map((f) => f.providerId));
+    // A provider like API-Football spends one request PER fixture on
+    // `fetchOdds` — pulling odds for a whole season (hundreds of fixtures) in
+    // one import would blow any reasonable rate limit by itself. Only the
+    // not-yet-played slice actually needs odds right now (already-finished
+    // fixtures settle from their real result, not a prediction), and even
+    // that's capped — `normalizeFixture` already falls back to a neutral
+    // win-probability when odds are missing, so this is a budget tradeoff,
+    // not a correctness one.
+    const notYetPlayed = fixturesRaw.filter((f) => f.status === "NS").slice(0, ODDS_IMPORT_CAP);
+    const odds = await provider.fetchOdds(notYetPlayed.map((f) => f.providerId));
     const oddsByFixture = new Map(odds.map((o) => [o.fixtureProviderId, o]));
     for (const f of fixturesRaw) normalizeFixture(provider.name, f, season.id, oddsByFixture.get(f.providerId));
 
@@ -44,7 +75,10 @@ export const footballService = {
 
     const sinceRound = Math.max(1, footballRepo.maxRound() - 1);
     const results = await provider.fetchResults(seasonProviderId, sinceRound);
-    const odds = await provider.fetchOdds(results.map((f) => f.providerId));
+    // Same one-request-per-fixture cost as importSeasonSchedule() — only
+    // spend odds budget on fixtures that haven't kicked off yet.
+    const notYetPlayed = results.filter((f) => f.status === "NS").slice(0, ODDS_IMPORT_CAP);
+    const odds = await provider.fetchOdds(notYetPlayed.map((f) => f.providerId));
     const oddsByFixture = new Map<string, RawOddsDTO>(odds.map((o) => [o.fixtureProviderId, o]));
     for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId, oddsByFixture.get(f.providerId));
     return { updated: results.length };
@@ -52,7 +86,7 @@ export const footballService = {
 
   async currentSeasonProviderId(): Promise<string> {
     const [competitionRaw] = await provider.fetchCompetitions();
-    const [seasonRaw] = await provider.fetchSeasons(competitionRaw.providerId);
+    const seasonRaw = pickSeason(await provider.fetchSeasons(competitionRaw.providerId));
     return seasonRaw.providerId;
   },
 
@@ -62,6 +96,7 @@ export const footballService = {
     if (scheduled.length === 0) return { updated: 0 };
 
     const providerIds = scheduled
+      .slice(0, ODDS_IMPORT_CAP)
       .map((f) => footballRepo.getProviderId(provider.name, "fixture", f.id))
       .filter((x): x is string => !!x);
     const odds = await provider.fetchOdds(providerIds);

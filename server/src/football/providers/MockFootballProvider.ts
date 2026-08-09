@@ -111,7 +111,7 @@ export class MockFootballProvider implements FootballDataProvider {
   }
 
   async fetchSeasons(competitionProviderId: string): Promise<RawSeasonRef[]> {
-    return [{ providerId: SEASON_ID, competitionProviderId, year: "2025" }];
+    return [{ providerId: SEASON_ID, competitionProviderId, year: "2025", current: true }];
   }
 
   async fetchClubs(_seasonProviderId: string): Promise<RawTeamRef[]> {

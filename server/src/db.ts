@@ -2,7 +2,10 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const dataDir = path.join(__dirname, "..", "data");
+// DATA_DIR lets a host with a persistent volume (e.g. Railway) point the
+// SQLite file at the mounted volume path, so it survives redeploys/restarts.
+// Unset locally — same relative path as always.
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "..", "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 // Just the connection. Every domain (football/, market/, fantasy/,

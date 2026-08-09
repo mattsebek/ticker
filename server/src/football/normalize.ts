@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { footballRepo } from "./repo";
 import { Club, Competition, Season, Fixture, FixtureStatus } from "./types";
 import { RawTeamRef, RawCompetitionRef, RawSeasonRef, RawFixtureDTO, RawFixtureStatus, RawOddsDTO } from "./providers/types";
+import { lookupClubColor } from "./clubColors";
 
 /**
  * Layer 2 — Data Normalization.
@@ -36,7 +37,7 @@ export function normalizeSeason(provider: string, raw: RawSeasonRef, competition
 
 export function normalizeClub(provider: string, raw: RawTeamRef): Club {
   const { id } = findOrCreateTickerId(provider, "club", raw.providerId, () => `club_${slug(raw.code || raw.name)}`);
-  const club: Club = { id, name: raw.name, code: raw.code, color: raw.color || "#666666" };
+  const club: Club = { id, name: raw.name, code: raw.code, color: raw.color || lookupClubColor(raw.name) || "#666666" };
   footballRepo.upsertClub(club);
   return club;
 }

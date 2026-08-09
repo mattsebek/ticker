@@ -25,6 +25,8 @@ export interface RawSeasonRef {
   providerId: string;
   competitionProviderId: string;
   year: string;
+  /** Whether the provider considers this the active/ongoing season — not necessarily accessible on every plan (see FOOTBALL_SEASON_YEAR). */
+  current: boolean;
 }
 
 export interface RawFixtureDTO {

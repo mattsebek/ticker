@@ -64,7 +64,7 @@ export function OnboardingScreen() {
         <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 24 }}>Enter the email you signed up with.</Text>
         <TextInput
           value={loginEmail}
-          onChangeText={setLoginEmail}
+          onChangeText={(v) => setLoginEmail(v.toLowerCase())}
           placeholder="name@email.com"
           placeholderTextColor={T.textSecondary}
           autoCapitalize="none"

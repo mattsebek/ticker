@@ -22,7 +22,7 @@ export interface ClubSummary {
   seasonPts: number;
   sparkline: number[];
   form: ("W" | "D" | "L")[];
-  nextFixture: NextFixture;
+  nextFixture: NextFixture | null;
 }
 
 export interface ClubFixture {
@@ -104,6 +104,7 @@ export interface BriefSegment {
 
 export interface BriefCard {
   label: string;
+  emoji: string;
   segments: BriefSegment[];
 }
 

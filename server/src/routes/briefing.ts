@@ -81,12 +81,12 @@ briefingRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   ];
 
   const cards = [
-    { label: "Buying power", segments: buyingPower },
-    { label: "Market summary", segments: summary },
-    { label: "Biggest opportunity", segments: opportunity },
-    { label: "Biggest risk", segments: risk },
-    { label: "Fixture insight", segments: fixtureInsight },
-    { label: "Suggested investigation", segments: suggestion },
+    { label: "Buying power", emoji: "💰", segments: buyingPower },
+    { label: "Market summary", emoji: "📊", segments: summary },
+    { label: "Biggest opportunity", emoji: "🚀", segments: opportunity },
+    { label: "Biggest risk", emoji: "⚠️", segments: risk },
+    { label: "Fixture insight", emoji: "⚽", segments: fixtureInsight },
+    { label: "Suggested investigation", emoji: "🔍", segments: suggestion },
   ];
 
   res.json({ morningBrief, cards });

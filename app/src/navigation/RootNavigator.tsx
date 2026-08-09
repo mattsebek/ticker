@@ -68,7 +68,7 @@ export function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabsScreen} />
-            <Stack.Screen name="Trade" component={TradeScreen} options={{ presentation: "modal" }} />
+            <Stack.Screen name="Trade" component={TradeScreen} options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="LeagueDetail" component={LeagueDetailScreen} />
             <Stack.Screen name="JoinLeague" component={JoinLeagueScreen} />
             <Stack.Screen name="Rules" component={RulesScreen} />

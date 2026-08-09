@@ -23,10 +23,12 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
       <ClubBadge code={club.code} color={club.color} size={40} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ fontSize: 14, fontWeight: "400", color: T.text }}>{club.name}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 }}>
-          <Text style={{ fontSize: 12, fontWeight: "400", color: T.textSecondary }}>{club.nextFixture.matchText.split(" · ")[0]}</Text>
-          <DifficultyArrow diff={club.nextFixture.diff} />
-        </View>
+        {club.nextFixture && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 }}>
+            <Text style={{ fontSize: 12, fontWeight: "400", color: T.textSecondary }}>{club.nextFixture.matchText.split(" · ")[0]}</Text>
+            <DifficultyArrow diff={club.nextFixture.diff} />
+          </View>
+        )}
       </View>
       {club.sparkline?.length > 1 && <SparkLine values={club.sparkline} width={52} height={20} color={trendColor} />}
       <View style={{ alignItems: "flex-end", width: 72 }}>

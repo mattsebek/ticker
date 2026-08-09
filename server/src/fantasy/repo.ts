@@ -96,6 +96,16 @@ export const fantasyRepo = {
       lg.base_member_count
     );
   },
+  /** Re-syncs seed-derived display fields on an already-seeded league (name/code/commissioner/display count), so editing bootstrap.ts's LEAGUE_SEEDS takes effect without a database reset. Never touches membership. */
+  updateLeagueSeedFields(id: string, fields: Pick<LeagueRow, "name" | "code" | "commissioner" | "base_member_count">) {
+    db.prepare("UPDATE leagues SET name = ?, code = ?, commissioner = ?, base_member_count = ? WHERE id = ?").run(
+      fields.name,
+      fields.code,
+      fields.commissioner,
+      fields.base_member_count,
+      id
+    );
+  },
   addMember(leagueId: string, memberId: string, memberName: string, isBot: boolean) {
     db.prepare("INSERT OR IGNORE INTO league_members (league_id, member_id, member_name, is_bot, joined_at) VALUES (?,?,?,?,?)").run(
       leagueId,
