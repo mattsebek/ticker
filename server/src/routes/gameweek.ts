@@ -16,5 +16,6 @@ gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     best: summary.best,
     canPrev: summary.canPrev,
     canNext: summary.canNext,
+    nextKickoff: gameweekService.nextKickoff(),
   });
 });

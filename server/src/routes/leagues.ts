@@ -4,8 +4,6 @@ import { requireAuth, AuthedRequest } from "../shared/auth";
 import { usersRepo } from "../shared/usersRepo";
 import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
-import { portfolioService } from "../market/portfolioService";
-import { fantasyRepo } from "../fantasy/repo";
 
 export const leaguesRouter = Router();
 
@@ -30,11 +28,6 @@ leaguesRouter.get("/mine", requireAuth, (req: AuthedRequest, res) => {
     const mine = standings.find((r) => r.memberId === user.id);
     return { id: lg.id, name: lg.name, rankStr: mine ? String(mine.rank) : "-", membersStr: fmtManagers(standings.length) };
   });
-
-  const mySeasonPts = portfolioService.getHoldings(user.id).reduce((a, h) => a + fantasyRepo.seasonPointsThroughRound(h.clubId, round), 0);
-  const TOTAL_MANAGERS = 214502;
-  const overallRank = Math.max(1, Math.min(TOTAL_MANAGERS, Math.round(TOTAL_MANAGERS / (1 + mySeasonPts / 40))));
-  rows.push({ id: "overall", name: "Overall", rankStr: overallRank.toLocaleString("en-US"), membersStr: fmtManagers(TOTAL_MANAGERS) });
 
   res.json({ leagues: rows });
 });

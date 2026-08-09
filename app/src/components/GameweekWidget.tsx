@@ -4,10 +4,23 @@ import { useThemeStore } from "../store/themeStore";
 import { api } from "../api/client";
 import type { GameweekResponse } from "../api/types";
 
+function fmtCountdown(targetIso: string, now: number): string | null {
+  const diffMs = new Date(targetIso).getTime() - now;
+  if (diffMs <= 0) return null;
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
   const T = useThemeStore((s) => s.tokens);
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<GameweekResponse | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
@@ -18,6 +31,11 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
       cancelled = true;
     };
   }, [offset]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!data) return <View style={[styles.card, elevated ? { backgroundColor: T.elevated, borderWidth: 1, borderColor: T.elevatedBorder, ...T.elevatedShadow } : { backgroundColor: T.card }, { height: 120 }]} />;
 
@@ -60,6 +78,12 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
           </View>
         </View>
       </View>
+      {data.nextKickoff && fmtCountdown(data.nextKickoff, now) && (
+        <View style={[styles.countdownRow, { borderTopColor: T.border }]}>
+          <Text style={{ fontSize: 12, color: T.textSecondary }}>Trades lock in</Text>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent }}>{fmtCountdown(data.nextKickoff, now)}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -69,4 +93,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 4 },
   statsRow: { flexDirection: "row", alignItems: "flex-end" },
   stat: { flex: 1, alignItems: "center" },
+  countdownRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1 },
 });

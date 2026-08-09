@@ -320,7 +320,7 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
               {i === 2 && <Slide2Standings active={index === 2} />}
             </View>
             <View style={styles.textArea}>
-              <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, color: T.text, lineHeight: 40, marginBottom: 10 }}>{slide.headline}</Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, color: T.text, lineHeight: 40, marginTop: -5, marginBottom: 10 }}>{slide.headline}</Text>
               <Text style={{ fontSize: 16, lineHeight: 24, color: T.textSecondary }}>{slide.body}</Text>
               {i === 0 && (
                 <Pressable onPress={() => goTo(1)} style={{ marginTop: 12 }}>

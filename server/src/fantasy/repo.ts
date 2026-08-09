@@ -86,6 +86,12 @@ export const fantasyRepo = {
   getLeagueByCode(code: string): LeagueRow | undefined {
     return db.prepare("SELECT * FROM leagues WHERE code = ?").get(code.trim().toLowerCase()) as LeagueRow | undefined;
   },
+  /** Removes a league and everything attached to it (membership, cached standings). Used to retire obsolete seed leagues — see bootstrap.ts. */
+  deleteLeague(id: string) {
+    db.prepare("DELETE FROM league_members WHERE league_id = ?").run(id);
+    db.prepare("DELETE FROM standings_cache WHERE league_id = ?").run(id);
+    db.prepare("DELETE FROM leagues WHERE id = ?").run(id);
+  },
   insertLeague(lg: LeagueRow) {
     db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count) VALUES (?,?,?,?,?,?)").run(
       lg.id,

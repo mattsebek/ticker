@@ -1,5 +1,6 @@
 import { fantasyRepo } from "./repo";
 import { portfolioService } from "../market/portfolioService";
+import { footballRepo } from "../football/repo";
 import { BOT_ROSTER } from "../shared/bots";
 
 export interface GameweekSummary {
@@ -32,5 +33,13 @@ export const gameweekService = {
     const best = Math.max(...allPoints);
 
     return { round: clamped, points: myPoints, average, best, canPrev: clamped > 1, canNext: clamped < current };
+  },
+
+  /** ISO kickoff of the earliest fixture in the next not-yet-scored round — when trading locks for that gameweek. Null once the schedule runs out (or isn't published yet). */
+  nextKickoff(): string | null {
+    const nextRound = fantasyRepo.maxScoredRound() + 1;
+    const fixtures = footballRepo.listFixturesByRound(nextRound);
+    if (fixtures.length === 0) return null;
+    return fixtures.reduce((min, f) => (f.kickoff < min ? f.kickoff : min), fixtures[0].kickoff);
   },
 };

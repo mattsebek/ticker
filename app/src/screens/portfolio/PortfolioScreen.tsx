@@ -30,16 +30,20 @@ export function PortfolioScreen() {
   const T = useThemeStore((s) => s.tokens);
   const portfolio = useDataStore((s) => s.portfolio);
   const chartSeries = useDataStore((s) => s.chartSeries);
-  const [range, setRange] = useState<Range>("30D");
+  const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
   const brief = useBriefing();
 
   const slice = useMemo(() => {
-    if (!chartSeries.length) return [];
-    if (range === "7D") return chartSeries.slice(-7);
-    if (range === "30D") return chartSeries.slice(-30);
-    return chartSeries;
-  }, [chartSeries, range]);
+    let base = chartSeries;
+    if (range === "7D") base = chartSeries.slice(-7);
+    else if (range === "30D") base = chartSeries.slice(-30);
+    // A brand-new account has little or no price history yet — rather than
+    // showing an empty chart, draw a flat line at the current value so
+    // there's still a colored, readable graph from day one.
+    if (base.length < 2 && portfolio) return [portfolio.heroValue, portfolio.heroValue];
+    return base;
+  }, [chartSeries, range, portfolio]);
 
   if (!portfolio) {
     return (

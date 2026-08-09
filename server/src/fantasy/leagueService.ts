@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { fantasyRepo, LeagueRow } from "./repo";
 import { portfolioService } from "../market/portfolioService";
 
-export const DEFAULT_AUTO_JOIN_LEAGUE_IDS = ["sunday-league-legends", "office-rivals", "the-boardroom", "college-friends"];
+export const DEFAULT_AUTO_JOIN_LEAGUE_IDS = ["overall-league"];
 
 export interface StandingsRow {
   rank: number;

@@ -73,6 +73,7 @@ export interface GameweekResponse {
   best: number;
   canPrev: boolean;
   canNext: boolean;
+  nextKickoff: string | null;
 }
 
 export interface LeagueListRow {

@@ -19,16 +19,22 @@ interface LeagueSeed {
   autoJoin: boolean;
 }
 
+/** The one league every manager (real or bot) belongs to — see leagueService.DEFAULT_AUTO_JOIN_LEAGUE_IDS. */
 const LEAGUE_SEEDS: LeagueSeed[] = [
-  { id: "sunday-league-legends", name: "Sunday League Legends", isPrivate: false, code: null, commissioner: "Marcus", baseMemberCount: 8, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: true },
-  { id: "office-rivals", name: "Office Rivals", isPrivate: true, code: null, commissioner: "Sam", baseMemberCount: 5, botMemberIds: ["bot-priya", "bot-marcus", "bot-jordan", "bot-sam"], autoJoin: true },
-  { id: "the-boardroom", name: "The Boardroom", isPrivate: true, code: null, commissioner: "Taylor", baseMemberCount: 6, botMemberIds: ["bot-taylor", "bot-casey", "bot-morgan", "bot-priya", "bot-marcus"], autoJoin: true },
-  { id: "college-friends", name: "College Friends", isPrivate: true, code: null, commissioner: "Jordan", baseMemberCount: 4, botMemberIds: ["bot-jordan", "bot-sam", "bot-taylor"], autoJoin: true },
-  { id: "global-community-league", name: "Global Community League", isPrivate: false, code: null, commissioner: "Ticker", baseMemberCount: 2340, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: false },
-  { id: "weekend-warriors", name: "Weekend Warriors", isPrivate: false, code: null, commissioner: "Casey", baseMemberCount: 860, botMemberIds: ["bot-casey", "bot-morgan", "bot-sam"], autoJoin: false },
-  { id: "transfer-deadline-day", name: "Transfer Deadline Day", isPrivate: false, code: null, commissioner: "Priya", baseMemberCount: 410, botMemberIds: ["bot-priya", "bot-jordan"], autoJoin: false },
-  { id: "the-bootroom", name: "The Bootroom", isPrivate: false, code: null, commissioner: "Marcus", baseMemberCount: 275, botMemberIds: ["bot-marcus", "bot-taylor", "bot-casey"], autoJoin: false },
-  { id: "the-gaffers", name: "The Gaffers", isPrivate: true, code: "k7m2qp", commissioner: "Morgan", baseMemberCount: 24, botMemberIds: ["bot-morgan", "bot-casey"], autoJoin: false },
+  { id: "overall-league", name: "Overall League", isPrivate: false, code: "overall", commissioner: "Ticker", baseMemberCount: BOT_ROSTER.length, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: true },
+];
+
+/** Retired demo leagues from before the app had real users — delete so an existing (already-seeded) database self-heals without a manual reset. */
+const RETIRED_LEAGUE_IDS = [
+  "sunday-league-legends",
+  "office-rivals",
+  "the-boardroom",
+  "college-friends",
+  "global-community-league",
+  "weekend-warriors",
+  "transfer-deadline-day",
+  "the-bootroom",
+  "the-gaffers",
 ];
 
 /**
@@ -51,6 +57,7 @@ export async function bootstrap(): Promise<void> {
   }
 
   seedOpeningPrices();
+  retireOldDemoLeagues();
   seedLeagues();
   seedBotManagers();
 
@@ -90,6 +97,12 @@ function seedOpeningPrices() {
     }, 0);
     const openingPrice = round2(6 + winProbSum * 0.9);
     priceUpdateService.ensureOpeningPrice(club.id, openingPrice);
+  }
+}
+
+function retireOldDemoLeagues() {
+  for (const id of RETIRED_LEAGUE_IDS) {
+    if (fantasyRepo.getLeagueById(id)) fantasyRepo.deleteLeague(id);
   }
 }
 

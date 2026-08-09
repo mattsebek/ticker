@@ -100,8 +100,12 @@ export function CompeteScreen() {
                 <Text style={{ fontSize: 13, fontWeight: "600", color: !newIsPrivate ? "#fff" : T.text }}>Public</Text>
               </Pressable>
             </View>
-            <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 16, textAlign: "center" }}>
-              {newIsPrivate ? "Only people you invite with a code or link can join." : "Anyone can find and join this league from the public list."}
+            <Text
+              style={{ fontSize: 12, color: T.textSecondary, marginBottom: 16, textAlign: "center" }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {newIsPrivate ? "Only people you add with a code/link can join." : "Anyone can find and join this league from the public list."}
             </Text>
             <Button label="Create League" onPress={handleCreate} disabled={!newName.trim()} />
             <Button label="Cancel" onPress={() => setCreateOpen(false)} variant="secondary" style={{ marginTop: 10 }} />
