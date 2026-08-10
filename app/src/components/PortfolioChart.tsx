@@ -8,13 +8,20 @@ import { GREEN, RED } from "../theme/theme";
 const CHART_H = 120;
 const PAD_Y = 10;
 
-export function PortfolioChart({ series, rangeKey }: { series: number[]; rangeKey: string }) {
+function fmtTooltipDate(t: number): string {
+  const d = new Date(t);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${time}, ${date}`;
+}
+
+export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: number }[]; rangeKey: string }) {
   const T = useThemeStore((s) => s.tokens);
   const [width, setWidth] = useState(0);
   const reveal = useRef(new Animated.Value(0)).current;
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const seriesRef = useRef(series);
-  seriesRef.current = series;
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
   const widthRef = useRef(width);
   widthRef.current = width;
 
@@ -30,19 +37,19 @@ export function PortfolioChart({ series, rangeKey }: { series: number[]; rangeKe
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (e) => {
         const w = widthRef.current;
-        const s = seriesRef.current;
-        if (!w || s.length < 2) return;
+        const pts = pointsRef.current;
+        if (!w || pts.length < 2) return;
         const localX = Math.max(0, Math.min(w, e.nativeEvent.locationX));
-        const idx = Math.round((localX / w) * (s.length - 1));
-        setHoverIdx(Math.max(0, Math.min(s.length - 1, idx)));
+        const idx = Math.round((localX / w) * (pts.length - 1));
+        setHoverIdx(Math.max(0, Math.min(pts.length - 1, idx)));
       },
       onPanResponderGrant: (e) => {
         const w = widthRef.current;
-        const s = seriesRef.current;
-        if (!w || s.length < 2) return;
+        const pts = pointsRef.current;
+        if (!w || pts.length < 2) return;
         const localX = e.nativeEvent.locationX;
-        const idx = Math.round((localX / w) * (s.length - 1));
-        setHoverIdx(Math.max(0, Math.min(s.length - 1, idx)));
+        const idx = Math.round((localX / w) * (pts.length - 1));
+        setHoverIdx(Math.max(0, Math.min(pts.length - 1, idx)));
       },
       onPanResponderRelease: () => setHoverIdx(null),
       onPanResponderTerminate: () => setHoverIdx(null),
@@ -53,7 +60,9 @@ export function PortfolioChart({ series, rangeKey }: { series: number[]; rangeKe
     setWidth(e.nativeEvent.layout.width);
   }
 
-  if (series.length < 2) return <View onLayout={onLayout} style={{ height: CHART_H }} />;
+  const series = useMemo(() => points.map((p) => p.v), [points]);
+
+  if (points.length < 2) return <View onLayout={onLayout} style={{ height: CHART_H }} />;
 
   const color = series[series.length - 1] >= series[0] ? GREEN : RED;
   const linePoints = edgeSparkPath(series, Math.max(width, 1), CHART_H, PAD_Y);
@@ -86,14 +95,15 @@ export function PortfolioChart({ series, rangeKey }: { series: number[]; rangeKe
           style={[
             styles.tooltip,
             {
-              left: Math.max(0, Math.min(width - 72, hoverPt.x - 36)),
-              top: Math.max(0, hoverPt.y - 34),
+              left: Math.max(0, Math.min(width - 120, hoverPt.x - 60)),
+              top: Math.max(0, hoverPt.y - 52),
               backgroundColor: T.elevated,
               ...T.elevatedShadow,
             },
           ]}
         >
-          <Text style={{ color: T.text, fontWeight: "600", fontSize: 13 }}>{fmtMoney(series[hoverIdx])}</Text>
+          <Text style={{ color: T.textSecondary, fontSize: 11, marginBottom: 2 }}>{fmtTooltipDate(points[hoverIdx].t)}</Text>
+          <Text style={{ color: T.text, fontWeight: "600", fontSize: 13 }}>{fmtMoney(points[hoverIdx].v)}</Text>
         </View>
       )}
     </View>
@@ -101,5 +111,5 @@ export function PortfolioChart({ series, rangeKey }: { series: number[]; rangeKe
 }
 
 const styles = StyleSheet.create({
-  tooltip: { position: "absolute", borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
+  tooltip: { position: "absolute", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 },
 });

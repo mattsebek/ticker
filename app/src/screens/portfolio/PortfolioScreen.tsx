@@ -14,27 +14,36 @@ import { useBriefing } from "../../hooks/useBriefing";
 
 type Range = "7D" | "30D" | "YTD";
 
+type Point = { t: number; v: number };
+
 const DAY_MS = 86_400_000;
 const GRID_POINTS_7D = 200;
+// "Today" always gets at least this fraction of the 7D chart's width,
+// regardless of how much of today has actually elapsed — a purely
+// time-proportional split would make a brand-new account's real activity a
+// near-invisible sliver at the very edge. Real trading-app charts (e.g. a
+// flat overnight/market-closed plateau vs. the live trading window) don't
+// scale strictly by literal duration either; this is the same idea.
+const TODAY_WEIGHT = 0.3;
 // Cash + holdings always sums to exactly this at inception, before any real
 // price movement — the correct flat baseline for "before this account
 // existed" rather than an arbitrary guess.
 const STARTING_VALUE = 100;
 
-function windowByDays(points: { t: number; v: number }[], days: number): { t: number; v: number }[] {
+function windowByDays(points: Point[], days: number): Point[] {
   const cutoff = Date.now() - days * DAY_MS;
   return points.filter((p) => p.t >= cutoff);
 }
 
-/** Keeps only the last value seen per calendar day — smooths a long range down to one point per day instead of every individual tick. */
-function bucketByDay(points: { t: number; v: number }[]): number[] {
-  const lastPerDay = new Map<string, number>();
-  for (const p of points) lastPerDay.set(new Date(p.t).toISOString().slice(0, 10), p.v);
+/** Keeps only the last point seen per calendar day — smooths a long range down to one point per day instead of every individual tick. */
+function bucketByDay(points: Point[]): Point[] {
+  const lastPerDay = new Map<string, Point>();
+  for (const p of points) lastPerDay.set(new Date(p.t).toISOString().slice(0, 10), p);
   return [...lastPerDay.values()];
 }
 
 /**
- * Resamples real (t, v) points onto an evenly-spaced grid spanning the full
+ * Resamples real points onto an evenly-spaced grid spanning the full
  * [windowStart, windowEnd] span, step-holding the last known value forward
  * (and `startingValue` before the first real point). PortfolioChart plots
  * an array evenly by INDEX, not by real time — without this, a brand-new
@@ -42,19 +51,46 @@ function bucketByDay(points: { t: number; v: number }[]): number[] {
  * to fill the entire 7-day-labeled width, reading as a full week of
  * activity instead of a flat week with one recent sliver of real movement.
  */
-function resampleWithFlatFill(points: { t: number; v: number }[], windowStart: number, windowEnd: number, gridSize: number, startingValue: number): number[] {
-  const grid: number[] = [];
+function resampleWithFlatFill(points: Point[], windowStart: number, windowEnd: number, gridSize: number, startingValue: number): Point[] {
+  const grid: Point[] = [];
   let pi = 0;
   let last = startingValue;
   for (let i = 0; i < gridSize; i++) {
-    const gt = windowStart + (i / (gridSize - 1)) * (windowEnd - windowStart);
+    const gt = gridSize === 1 ? windowEnd : windowStart + (i / (gridSize - 1)) * (windowEnd - windowStart);
     while (pi < points.length && points[pi].t <= gt) {
       last = points[pi].v;
       pi++;
     }
-    grid.push(last);
+    grid.push({ t: gt, v: last });
   }
   return grid;
+}
+
+/** 7D split into two independently-gridded segments — "the rest of the week" and "today" — so today keeps a fixed, legible share of the width no matter how little real time has actually passed. */
+function resample7D(points: Point[], startingValue: number): Point[] {
+  const now = Date.now();
+  const todayStart = now - DAY_MS;
+  const weekStart = now - 7 * DAY_MS;
+
+  const olderGridSize = Math.max(2, Math.round(GRID_POINTS_7D * (1 - TODAY_WEIGHT)));
+  const todayGridSize = Math.max(2, GRID_POINTS_7D - olderGridSize);
+
+  const olderGrid = resampleWithFlatFill(
+    points.filter((p) => p.t < todayStart),
+    weekStart,
+    todayStart,
+    olderGridSize,
+    startingValue
+  );
+  const todayGrid = resampleWithFlatFill(
+    points.filter((p) => p.t >= todayStart),
+    todayStart,
+    now,
+    todayGridSize,
+    olderGrid[olderGrid.length - 1].v
+  );
+
+  return [...olderGrid, ...todayGrid];
 }
 
 function PctChange({ value, label }: { value: number; label: string }) {
@@ -78,22 +114,23 @@ export function PortfolioScreen() {
   const brief = useBriefing();
 
   const slice = useMemo(() => {
-    // 7D is resampled onto a real-time grid — a fresh account's first few
-    // minutes of activity should read as a flat week with one recent
-    // sliver of movement, not stretched to fill the whole width. 30D/YTD
-    // collapse to one point per day, so a longer range reads as a trend
-    // rather than a wall of noise.
-    let base: number[];
-    if (range === "7D") {
-      const now = Date.now();
-      base = resampleWithFlatFill(chartPoints, now - 7 * DAY_MS, now, GRID_POINTS_7D, STARTING_VALUE);
-    } else if (range === "30D") base = bucketByDay(windowByDays(chartPoints, 30));
+    // 7D is resampled onto a real-time grid (with "today" guaranteed a fixed
+    // share of the width — see resample7D) so a fresh account's activity
+    // reads as a flat week with a legible recent sliver, not stretched to
+    // fill the whole width. 30D/YTD collapse to one point per day, so a
+    // longer range reads as a trend rather than a wall of noise.
+    let base: Point[];
+    if (range === "7D") base = resample7D(chartPoints, STARTING_VALUE);
+    else if (range === "30D") base = bucketByDay(windowByDays(chartPoints, 30));
     else base = bucketByDay(chartPoints);
     // Some history exists but not enough points for this range — draw a
     // flat line at the current value rather than an empty chart. A
     // brand-new account with NO movement at all skips the chart entirely
     // (see hasMovement below), so this only covers the sparse-history case.
-    if (base.length < 2 && portfolio) return [portfolio.heroValue, portfolio.heroValue];
+    if (base.length < 2 && portfolio) {
+      const now = Date.now();
+      return [{ t: now - DAY_MS, v: portfolio.heroValue }, { t: now, v: portfolio.heroValue }];
+    }
     return base;
   }, [chartPoints, range, portfolio]);
 
@@ -134,7 +171,7 @@ export function PortfolioScreen() {
               </PillRow>
             </View>
             <View style={{ marginHorizontal: -24 }}>
-              <PortfolioChart series={slice} rangeKey={range} />
+              <PortfolioChart points={slice} rangeKey={range} />
             </View>
           </View>
         )}
