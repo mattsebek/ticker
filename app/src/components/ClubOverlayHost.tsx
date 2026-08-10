@@ -40,7 +40,8 @@ export function ClubOverlayHost() {
 
   if (!clubId || !detail) return null;
 
-  const isHeld = !!portfolio?.holdings.some((h) => h.id === clubId);
+  const holding = portfolio?.holdings.find((h) => h.id === clubId);
+  const isHeld = !!holding;
 
   function trade() {
     close();
@@ -71,12 +72,16 @@ export function ClubOverlayHost() {
               <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
             </View>
 
-            <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Form</Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {detail.form.map((f, i) => (
-                <FormChip key={i} result={f} />
-              ))}
-            </View>
+            {detail.form.length > 0 && (
+              <>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Form</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {detail.form.map((f, i) => (
+                    <FormChip key={i} result={f} />
+                  ))}
+                </View>
+              </>
+            )}
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 22, marginBottom: 8 }}>
               <Text style={{ color: T.text, fontSize: 16, fontWeight: "600" }}>Upcoming Fixtures</Text>
@@ -90,14 +95,37 @@ export function ClubOverlayHost() {
                 </View>
               ))}
             </View>
+
+            {holding && (
+              <>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Your Position</Text>
+                <View style={{ backgroundColor: T.card, borderRadius: 20, overflow: "hidden" }}>
+                  <View style={[styles.positionRow, { borderBottomColor: T.borderLight }]}>
+                    <Text style={{ color: T.textSecondary, fontSize: 13 }}>Purchase price</Text>
+                    <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{fmtMoney(holding.purchasePrice)}</Text>
+                  </View>
+                  <View style={[styles.positionRow, { borderBottomColor: T.borderLight }]}>
+                    <Text style={{ color: T.textSecondary, fontSize: 13 }}>Points earned</Text>
+                    <Text style={{ color: T.accent, fontSize: 14, fontWeight: "600" }}>{holding.seasonPts} pts</Text>
+                  </View>
+                  <View style={[styles.positionRow, { borderBottomWidth: 0 }]}>
+                    <Text style={{ color: T.textSecondary, fontSize: 13 }}>Gain / loss</Text>
+                    <Text style={{ color: colorForPct(detail.price - holding.purchasePrice), fontSize: 14, fontWeight: "600" }}>
+                      {detail.price - holding.purchasePrice >= 0 ? "+" : "-"}
+                      {fmtMoney(Math.abs(detail.price - holding.purchasePrice))}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </ScrollView>
 
           <View style={[styles.footer, { backgroundColor: T.card }]}>
             <View>
-              <Text style={{ color: T.textSecondary, fontSize: 13 }}>League Ownership</Text>
-              <Text style={{ color: T.text, fontSize: 19, fontWeight: "600", marginTop: 2 }}>{detail.ownershipPct.toFixed(2)}%</Text>
+              <Text style={{ color: T.textSecondary, fontSize: 14 }}>League Ownership</Text>
+              <Text style={{ color: T.text, fontSize: 24, fontWeight: "600", marginTop: 4 }}>{detail.ownershipPct.toFixed(2)}%</Text>
             </View>
-            <Button label={isHeld ? "Trade" : "Buy"} onPress={trade} fullWidth={false} style={{ paddingHorizontal: 40 }} />
+            <Button label={isHeld ? "Trade" : "Buy"} onPress={trade} fullWidth={false} style={{ paddingHorizontal: 44, paddingVertical: 18 }} />
           </View>
         </View>
       </View>
@@ -109,5 +137,6 @@ const styles = StyleSheet.create({
   sheetWrap: { flex: 1, justifyContent: "flex-end" },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 20, paddingHorizontal: 24 },
   closeBtn: { position: "absolute", top: 16, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, marginHorizontal: -24 },
+  footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 24, paddingTop: 26, paddingBottom: 38, marginHorizontal: -24, minHeight: 110 },
+  positionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1 },
 });

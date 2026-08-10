@@ -31,6 +31,7 @@ function publicUser(u: UserRow) {
     hasHoldings: marketRepo.getHoldings(u.id).length > 0,
     briefDismissed: !!u.brief_dismissed,
     joinDateStr: new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    createdAt: u.created_at,
   };
 }
 

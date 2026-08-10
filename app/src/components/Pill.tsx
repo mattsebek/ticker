@@ -6,14 +6,15 @@ export function PillRow({ children }: { children: React.ReactNode }) {
   return <View style={styles.row}>{children}</View>;
 }
 
-export function Pill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+export function Pill({ label, active, onPress, disabled }: { label: string; active: boolean; onPress: () => void; disabled?: boolean }) {
   const T = useThemeStore((s) => s.tokens);
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.pill,
-        { backgroundColor: active ? T.accent : T.card, opacity: pressed ? 0.7 : 1 },
+        { backgroundColor: active ? T.accent : T.card, opacity: disabled ? 0.35 : pressed ? 0.7 : 1 },
       ]}
     >
       <Text style={[styles.label, { color: active ? "#fff" : T.text }]}>{label}</Text>

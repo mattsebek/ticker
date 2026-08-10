@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
+import { useAuthStore } from "../../store/authStore";
 import { FONT_SERIF, colorForPct } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { PillRow, Pill } from "../../components/Pill";
@@ -109,12 +110,21 @@ export function PortfolioScreen() {
   const T = useThemeStore((s) => s.tokens);
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
+  const user = useAuthStore((s) => s.user);
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
   const [scrub, setScrub] = useState<Point | null>(null);
   const brief = useBriefing();
 
+  // 30D/YTD aren't meaningful (or even well-defined — bucketByDay would
+  // just echo back the same handful of days) until there's actually a
+  // week of real history to look back on.
+  const extendedRangesUnlocked = !user || Date.now() - user.createdAt >= 7 * DAY_MS;
+
   useEffect(() => setScrub(null), [range]);
+  useEffect(() => {
+    if (!extendedRangesUnlocked && range !== "7D") setRange("7D");
+  }, [extendedRangesUnlocked, range]);
 
   const slice = useMemo(() => {
     // 7D is resampled onto a real-time grid (with "today" guaranteed a fixed
@@ -169,8 +179,8 @@ export function PortfolioScreen() {
             <View style={{ marginBottom: 10 }}>
               <PillRow>
                 <Pill label="7D" active={range === "7D"} onPress={() => setRange("7D")} />
-                <Pill label="30D" active={range === "30D"} onPress={() => setRange("30D")} />
-                <Pill label="YTD" active={range === "YTD"} onPress={() => setRange("YTD")} />
+                <Pill label="30D" active={range === "30D"} onPress={() => setRange("30D")} disabled={!extendedRangesUnlocked} />
+                <Pill label="YTD" active={range === "YTD"} onPress={() => setRange("YTD")} disabled={!extendedRangesUnlocked} />
               </PillRow>
             </View>
             <View style={{ marginHorizontal: -24 }}>

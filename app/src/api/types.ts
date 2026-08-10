@@ -60,6 +60,7 @@ export interface User {
   hasHoldings: boolean;
   briefDismissed: boolean;
   joinDateStr: string;
+  createdAt: number;
 }
 
 export interface PortfolioResponse {
