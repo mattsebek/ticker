@@ -10,13 +10,16 @@ interface Props {
   loading?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
+  /** Overrides the theme-derived secondary-variant colors — for placing this button on a surface with a fixed (non-theme) background, e.g. the always-dark onboarding carousel. */
+  textColor?: string;
+  borderColor?: string;
 }
 
-export function Button({ label, onPress, variant = "primary", disabled, loading, fullWidth = true, style }: Props) {
+export function Button({ label, onPress, variant = "primary", disabled, loading, fullWidth = true, style, textColor, borderColor }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const bg = disabled ? T.textSecondary : variant === "primary" ? T.accent : variant === "danger" ? "#E0393E" : "transparent";
-  const color = variant === "secondary" && !disabled ? T.text : "#fff";
-  const border = variant === "secondary" ? { borderWidth: 1, borderColor: T.border } : {};
+  const color = textColor ?? (variant === "secondary" && !disabled ? T.text : "#fff");
+  const border = variant === "secondary" ? { borderWidth: 1, borderColor: borderColor ?? T.border } : {};
   return (
     <Pressable
       disabled={disabled || loading}

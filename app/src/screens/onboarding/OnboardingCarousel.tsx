@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, Dimensions, Animated, Easing, StyleSheet, Platform, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Stop, Path, Polyline } from "react-native-svg";
-import { useThemeStore } from "../../store/themeStore";
 import { useTick } from "../../hooks/useTick";
 import { ClubBadge } from "../../components/ClubBadge";
 import { SparkLine } from "../../components/SparkLine";
@@ -11,6 +10,16 @@ import { GREEN, RED, FONT_SERIF } from "../../theme/theme";
 import { fmtPct } from "../../utils/format";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+// Onboarding is a fixed "trading terminal at night" visual — the ticker
+// tape, chart, and mockup cards below are all hand-tuned for a dark
+// backdrop, so the whole carousel ignores the user's light/dark setting
+// rather than rendering half-themed. The actual app respects it once
+// they're logged in.
+const OB_BG = "#0B0F0C";
+const OB_TEXT = "#fff";
+const OB_TEXT_SECONDARY = "#8A8F98";
+const OB_BORDER = "#2A2C2E";
 
 const SLIDES = [
   { headline: "Welcome to Ticker", body: "Fantasy Premier League meets the stock market. Buy clubs, earn points, and outsmart the league one trade at a time." },
@@ -294,7 +303,6 @@ function Slide2Standings({ active }: { active: boolean }) {
 }
 
 export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
-  const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
   const tick = useTick(350);
   const [index, setIndex] = useState(0);
@@ -311,7 +319,7 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: T.bg }}>
+    <View style={{ flex: 1, backgroundColor: OB_BG }}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -331,11 +339,11 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
               {i === 2 && <Slide2Standings active={index === 2} />}
             </View>
             <View style={styles.textArea}>
-              <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, color: T.text, lineHeight: 40, marginTop: -5, marginBottom: 10 }}>{slide.headline}</Text>
-              <Text style={{ fontSize: 16, lineHeight: 24, color: T.textSecondary }}>{slide.body}</Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, color: OB_TEXT, lineHeight: 40, marginTop: -5, marginBottom: 10 }}>{slide.headline}</Text>
+              <Text style={{ fontSize: 16, lineHeight: 24, color: OB_TEXT_SECONDARY }}>{slide.body}</Text>
               {i === 0 && (
                 <Pressable onPress={() => goTo(1)} style={{ marginTop: 12 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>Swipe to learn more →</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: OB_TEXT }}>Swipe to learn more →</Text>
                 </Pressable>
               )}
             </View>
@@ -346,12 +354,12 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
       <View style={styles.dots}>
         {SLIDES.map((_, i) => (
           <Pressable key={i} onPress={() => goTo(i)}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === index ? T.text : T.border }} />
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === index ? OB_TEXT : OB_BORDER }} />
           </Pressable>
         ))}
       </View>
       <View style={styles.buttonsRow}>
-        <Button label="Log in" onPress={onLogin} variant="secondary" style={{ flex: 1 }} />
+        <Button label="Log in" onPress={onLogin} variant="secondary" textColor={OB_TEXT} borderColor={OB_BORDER} style={{ flex: 1 }} />
         <Button label="Sign up" onPress={onSignup} style={{ flex: 1 }} />
       </View>
     </View>
