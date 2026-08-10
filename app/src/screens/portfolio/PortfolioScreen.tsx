@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
@@ -111,7 +111,10 @@ export function PortfolioScreen() {
   const chartPoints = useDataStore((s) => s.chartPoints);
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
+  const [scrub, setScrub] = useState<Point | null>(null);
   const brief = useBriefing();
+
+  useEffect(() => setScrub(null), [range]);
 
   const slice = useMemo(() => {
     // 7D is resampled onto a real-time grid (with "today" guaranteed a fixed
@@ -152,7 +155,7 @@ export function PortfolioScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={{ fontSize: 13, color: T.textSecondary, fontWeight: "500", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 14 }}>Portfolio</Text>
-        <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", letterSpacing: -0.3, color: T.text }}>{fmtMoney(portfolio.heroValue)}</Text>
+        <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", letterSpacing: -0.3, color: T.text }}>{fmtMoney(scrub ? scrub.v : portfolio.heroValue)}</Text>
         <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
           <PctChange value={portfolio.weekPct} label="week" />
           <PctChange value={portfolio.seasonPct} label="season" />
@@ -171,7 +174,7 @@ export function PortfolioScreen() {
               </PillRow>
             </View>
             <View style={{ marginHorizontal: -24 }}>
-              <PortfolioChart points={slice} rangeKey={range} />
+              <PortfolioChart points={slice} rangeKey={range} onScrub={setScrub} />
             </View>
           </View>
         )}

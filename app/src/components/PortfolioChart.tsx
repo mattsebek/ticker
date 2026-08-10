@@ -7,6 +7,8 @@ import { GREEN, RED } from "../theme/theme";
 
 const CHART_H = 120;
 const PAD_Y = 10;
+const REFERENCE_VALUE = 100; // the exact starting portfolio value at inception
+const REFERENCE_COLOR = "#8A8F98";
 
 function fmtTooltipDate(t: number): string {
   const d = new Date(t);
@@ -15,7 +17,9 @@ function fmtTooltipDate(t: number): string {
   return `${time}, ${date}`;
 }
 
-export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: number }[]; rangeKey: string }) {
+type Point = { t: number; v: number };
+
+export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[]; rangeKey: string; onScrub?: (point: Point | null) => void }) {
   const T = useThemeStore((s) => s.tokens);
   const [width, setWidth] = useState(0);
   const reveal = useRef(new Animated.Value(0)).current;
@@ -24,6 +28,8 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
   pointsRef.current = points;
   const widthRef = useRef(width);
   widthRef.current = width;
+  const onScrubRef = useRef(onScrub);
+  onScrubRef.current = onScrub;
 
   useEffect(() => {
     reveal.setValue(0);
@@ -40,19 +46,27 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
         const pts = pointsRef.current;
         if (!w || pts.length < 2) return;
         const localX = Math.max(0, Math.min(w, e.nativeEvent.locationX));
-        const idx = Math.round((localX / w) * (pts.length - 1));
-        setHoverIdx(Math.max(0, Math.min(pts.length - 1, idx)));
+        const idx = Math.max(0, Math.min(pts.length - 1, Math.round((localX / w) * (pts.length - 1))));
+        setHoverIdx(idx);
+        onScrubRef.current?.(pts[idx]);
       },
       onPanResponderGrant: (e) => {
         const w = widthRef.current;
         const pts = pointsRef.current;
         if (!w || pts.length < 2) return;
         const localX = e.nativeEvent.locationX;
-        const idx = Math.round((localX / w) * (pts.length - 1));
-        setHoverIdx(Math.max(0, Math.min(pts.length - 1, idx)));
+        const idx = Math.max(0, Math.min(pts.length - 1, Math.round((localX / w) * (pts.length - 1))));
+        setHoverIdx(idx);
+        onScrubRef.current?.(pts[idx]);
       },
-      onPanResponderRelease: () => setHoverIdx(null),
-      onPanResponderTerminate: () => setHoverIdx(null),
+      onPanResponderRelease: () => {
+        setHoverIdx(null);
+        onScrubRef.current?.(null);
+      },
+      onPanResponderTerminate: () => {
+        setHoverIdx(null);
+        onScrubRef.current?.(null);
+      },
     })
   ).current;
 
@@ -69,6 +83,12 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
   const areaPath = edgeSparkAreaPath(series, Math.max(width, 1), CHART_H, PAD_Y);
   const hoverPt = hoverIdx != null ? edgeSparkPointAt(series, width, CHART_H, PAD_Y, hoverIdx) : null;
 
+  const min = Math.min(...series);
+  const max = Math.max(...series);
+  const range = max - min || 1;
+  const referenceY = PAD_Y + (CHART_H - PAD_Y * 2) * (1 - (REFERENCE_VALUE - min) / range);
+  const showReference = REFERENCE_VALUE >= min && REFERENCE_VALUE <= max;
+
   return (
     <View onLayout={onLayout} style={{ width: "100%", height: CHART_H }} {...pan.panHandlers}>
       {width > 0 && (
@@ -82,6 +102,7 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
                 </LinearGradient>
               </Defs>
               <Path d={areaPath} fill="url(#portfolioGrad)" stroke="none" />
+              {showReference && <Line x1={0} y1={referenceY} x2={width} y2={referenceY} stroke={REFERENCE_COLOR} strokeWidth={1} strokeDasharray="4,4" />}
               <Polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
               {hoverPt && <Line x1={hoverPt.x} y1={0} x2={hoverPt.x} y2={CHART_H} stroke={T.border} strokeWidth={1} strokeDasharray="3,3" />}
               {hoverPt && <Circle cx={hoverPt.x} cy={hoverPt.y} r={4} fill={T.accent} stroke={T.bg} strokeWidth={2} />}
@@ -90,20 +111,8 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
         </Animated.View>
       )}
       {hoverPt && hoverIdx != null && (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.tooltip,
-            {
-              left: Math.max(0, Math.min(width - 120, hoverPt.x - 60)),
-              top: Math.max(0, hoverPt.y - 52),
-              backgroundColor: T.elevated,
-              ...T.elevatedShadow,
-            },
-          ]}
-        >
-          <Text style={{ color: T.textSecondary, fontSize: 11, marginBottom: 2 }}>{fmtTooltipDate(points[hoverIdx].t)}</Text>
-          <Text style={{ color: T.text, fontWeight: "600", fontSize: 13 }}>{fmtMoney(points[hoverIdx].v)}</Text>
+        <View pointerEvents="none" style={[styles.dateLabel, { left: Math.max(0, Math.min(width - 130, hoverPt.x - 65)), top: 0 }]}>
+          <Text style={{ color: T.textSecondary, fontSize: 12, fontWeight: "600" }}>{fmtTooltipDate(points[hoverIdx].t)}</Text>
         </View>
       )}
     </View>
@@ -111,5 +120,5 @@ export function PortfolioChart({ points, rangeKey }: { points: { t: number; v: n
 }
 
 const styles = StyleSheet.create({
-  tooltip: { position: "absolute", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 },
+  dateLabel: { position: "absolute", width: 130, alignItems: "center" },
 });
