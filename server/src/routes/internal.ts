@@ -14,6 +14,21 @@ internalRouter.get("/jobs", (req, res) => {
 });
 
 /**
+ * Dev/ops only: forces an immediate retry of the season import, bypassing
+ * the scheduler's own interval. Useful after a transient provider failure
+ * (e.g. a rate-limit rejection) — importSeasonSchedule() is idempotent
+ * (skips once fixtures exist), so this is safe to call repeatedly.
+ */
+internalRouter.post("/import-season", async (req, res) => {
+  try {
+    const result = await footballService.importSeasonSchedule();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
  * Dev/QA only: nudges club price(s) directly, bypassing the real
  * settlement pipeline, so a tester can watch Market/Portfolio react without
  * waiting for a real match to settle. Writes through the same
