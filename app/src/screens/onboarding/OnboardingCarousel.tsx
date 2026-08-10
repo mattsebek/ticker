@@ -13,16 +13,18 @@ import { fmtPct } from "../../utils/format";
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 const SLIDES = [
-  { headline: "Welcome to Ticker", body: "Fantasy Premier League meets the stock market. Buy clubs, spot value, and outsmart the league one trade at a time." },
+  { headline: "Welcome to Ticker", body: "Fantasy Premier League meets the stock market. Buy clubs, earn points, and outsmart the league one trade at a time." },
   { headline: "Buy Low. Sell High.\nWin Big. \u{1F680}\u{1F311}", body: "Every club earns game week points and earns value based on performance, fixtures and market sentiment. Find tomorrow’s winners before everyone else does." },
   { headline: "Beat the Market.\nBeat Your Friends.", body: "You’re building the smartest football portfolio in your league. Some people play fantasy. You’re playing the market." },
 ];
 
+// spark values trend to match each club's `base` sign — up for a gaining
+// club, down for a losing one (SparkLine plots larger values higher).
 const CLUBS4 = [
-  { code: "LIV", name: "Liverpool", color: "#C8102E", base: 2.3, seed: 0, spark: [11, 9, 10, 6, 7, 2] },
-  { code: "AVL", name: "Aston Villa", color: "#670E36", base: 4.8, seed: 1, spark: [12, 10, 11, 5, 4, 1] },
-  { code: "CHE", name: "Chelsea", color: "#132257", base: -1.1, seed: 2, spark: [3, 5, 4, 9, 8, 13] },
-  { code: "ARS", name: "Arsenal", color: "#EF0107", base: 1.6, seed: 3, spark: [10, 11, 8, 9, 5, 4] },
+  { code: "LIV", name: "Liverpool", color: "#C8102E", base: 2.3, seed: 0, spark: [2, 4, 3, 7, 6, 11] },
+  { code: "AVL", name: "Aston Villa", color: "#670E36", base: 4.8, seed: 1, spark: [1, 3, 2, 6, 9, 12] },
+  { code: "CHE", name: "Chelsea", color: "#132257", base: -1.1, seed: 2, spark: [11, 8, 9, 5, 6, 3] },
+  { code: "ARS", name: "Arsenal", color: "#EF0107", base: 1.6, seed: 3, spark: [5, 4, 7, 6, 8, 9] },
 ];
 
 const STANDINGS_BASE = [
@@ -132,8 +134,10 @@ function TickerTape({ edge, reverse }: { edge: "top" | "bottom"; reverse?: boole
 const TAPE_CLEARANCE = 10 + 22 + 14;
 
 function Slide0Card({ tick }: { tick: number }) {
-  const jit = (base: number, seed: number) => base + Math.sin((tick + seed) * 1.6) * 0.35;
-  const portfolioValue = 104.82 + Math.sin(tick * 0.4) * 1.35 + Math.sin(tick * 0.9 + 1) * 0.4;
+  // Small, frequent wobble on top of each club's base pct — a real ticker
+  // never sits perfectly still, and this is the first screen anyone sees.
+  const jit = (base: number, seed: number) => base + Math.sin((tick + seed) * 0.5) * 0.25 + Math.sin((tick + seed) * 1.3) * 0.1;
+  const portfolioValue = 104.82 + Math.sin(tick * 0.18) * 1.1 + Math.sin(tick * 0.35 + 1) * 0.3;
   return (
     <View style={styles.obCard}>
       <Text style={{ color: "#8A8F98", fontSize: 11, marginBottom: 4 }}>Portfolio value</Text>
@@ -285,7 +289,7 @@ function Slide2Standings({ active }: { active: boolean }) {
 export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
-  const tick = useTick(900);
+  const tick = useTick(350);
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
