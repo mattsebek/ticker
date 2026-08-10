@@ -133,15 +133,22 @@ function TickerTape({ edge, reverse }: { edge: "top" | "bottom"; reverse?: boole
 /** Total vertical footprint of a ticker tape band (offset from its edge + its own height + a little breathing room), used to keep the centered card clear of both tapes. */
 const TAPE_CLEARANCE = 10 + 22 + 14;
 
+// Portfolio value ticks up a handful of times, then holds — a few visible
+// gains rather than a value that never stops flickering.
+const PORTFOLIO_VALUE_STEPS = [104.82, 105.06, 104.94, 105.35, 105.61];
+
 function Slide0Card({ tick }: { tick: number }) {
   // Small, frequent wobble on top of each club's base pct — a real ticker
   // never sits perfectly still, and this is the first screen anyone sees.
   const jit = (base: number, seed: number) => base + Math.sin((tick + seed) * 0.5) * 0.25 + Math.sin((tick + seed) * 1.3) * 0.1;
-  const portfolioValue = 104.82 + Math.sin(tick * 0.18) * 1.1 + Math.sin(tick * 0.35 + 1) * 0.3;
+  const portfolioValue = PORTFOLIO_VALUE_STEPS[Math.min(tick, PORTFOLIO_VALUE_STEPS.length - 1)];
   return (
     <View style={styles.obCard}>
       <Text style={{ color: "#8A8F98", fontSize: 11, marginBottom: 4 }}>Portfolio value</Text>
-      <Text style={{ color: "#fff", fontSize: 26, fontWeight: "700", marginBottom: 2 }}>${portfolioValue.toFixed(2)}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+        <Text style={{ color: "#fff", fontSize: 26, fontWeight: "700" }}>${portfolioValue.toFixed(2)}</Text>
+        <Text style={{ color: GREEN, fontSize: 18, fontWeight: "700" }}>▲</Text>
+      </View>
       <Text style={{ color: GREEN, fontSize: 12, fontWeight: "600", marginBottom: 14 }}>{fmtPct(jit(4.8, 0))} today</Text>
       {CLUBS4.map((c, i) => {
         const pct = jit(c.base, i + 1);
