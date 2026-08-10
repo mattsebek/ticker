@@ -65,17 +65,19 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
                 styles.card,
                 {
                   position: "absolute",
-                  left: depth * 7,
-                  right: depth * 7,
+                  left: depth * 8,
+                  right: depth * 8,
                   top: depth * PEEK_OFFSET,
                   backgroundColor: T.card,
-                  opacity: 1 - depth * 0.22,
+                  borderWidth: 1,
+                  borderColor: T.border,
+                  opacity: 1 - depth * 0.16,
                 },
               ]}
             />
           ))}
         <Animated.View style={{ position: "absolute", left: 0, right: 0, top: 0, transform: [{ translateX: slideX }] }}>
-          <View style={[styles.card, { backgroundColor: T.card }]}>
+          <View style={[styles.card, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border, ...T.elevatedShadow }]}>
             <Pressable onPress={dismissTop} style={styles.close} accessibilityLabel="Dismiss" accessibilityRole="button">
               <CloseIcon color={T.textSecondary} size={12} />
             </Pressable>
