@@ -57,7 +57,7 @@ export async function bootstrap(): Promise<void> {
     console.error(`[bootstrap] season schedule import failed (provider=${footballService.providerName}), continuing without it:`, err?.message || err);
   }
 
-  seedOpeningPrices();
+  await seedOpeningPrices();
   retireOldDemoLeagues();
   seedLeagues();
   seedBotManagers();
@@ -70,16 +70,16 @@ const OPENING_PRICE_FLOOR = 6;
 const OPENING_PRICE_CEIL = 35;
 
 /**
- * A club's "strength" for opening-price purposes: the average of its REAL
- * (provider-predicted) win probabilities. Summing across a whole season and
- * filling in a neutral 0.33 for fixtures the import hasn't fetched odds for
- * yet (see ODDS_IMPORT_CAP in football/service.ts) diluted genuine
- * differences between clubs down to pennies — a title-favorite and a
- * relegation-favorite both average out to "mostly 0.33." Ignoring the
- * un-informed fixtures keeps the signal real, even though early in a season
- * that might only be one or two matches per club.
+ * A club's in-season "form" signal for opening-price purposes: the average
+ * of its REAL (provider-predicted) win probabilities. Summing across a
+ * whole season and filling in a neutral 0.33 for fixtures the import
+ * hasn't fetched odds for yet (see ODDS_IMPORT_CAP in football/service.ts)
+ * diluted genuine differences between clubs down to pennies. But even
+ * ignoring the un-informed fixtures, this early in a season it's only 1-2
+ * specific matchups per club — too small a sample to trust alone (a club
+ * with an easy opening schedule looks artificially strong).
  */
-function clubStrength(clubId: string): number | null {
+function clubFormSignal(clubId: string): number | null {
   const real = footballRepo
     .listFixturesForClub(clubId)
     .map((f) => (f.homeClubId === clubId ? f.homeWinProb : f.awayWinProb))
@@ -88,25 +88,46 @@ function clubStrength(clubId: string): number | null {
   return real.reduce((a, b) => a + b, 0) / real.length;
 }
 
+const PRIOR_SEASON_WEIGHT = 0.65; // last season's actual table is a far steadier signal than 1-2 early matchups
+
 /**
- * Strength min-max mapped across THIS season's priceable clubs onto a
- * fixed $6-$35 range, so the best and worst clubs always land near the
- * ends regardless of the absolute scale of the provider's probabilities.
- * A club with no informed fixtures yet gets the field's midpoint (not the
- * floor) until real data arrives.
+ * Blends last season's final points (steady, real signal) with the current
+ * season's early win-probability form (freshness — transfers, new manager,
+ * etc.), each independently min-max normalized across this season's clubs,
+ * then maps the blend onto a fixed $6-$35 range so the best and worst
+ * clubs land near the ends. Newly promoted clubs (no prior top-flight
+ * campaign) are estimated at the average points of last season's bottom 3
+ * relegated clubs — a "typical newcomer" expectation, not an invented
+ * tier. If no prior-season data is available at all (e.g. the mock
+ * provider), falls back to form alone.
  */
-function computeOpeningPrices(clubIds: string[]): Map<string, number> {
-  const strengths = clubIds.map((id) => ({ id, strength: clubStrength(id) }));
-  const known = strengths.map((s) => s.strength).filter((s): s is number => s != null);
-  const min = known.length ? Math.min(...known) : 0.3;
-  const max = known.length ? Math.max(...known) : 0.4;
-  const mid = (min + max) / 2;
+async function computeOpeningPrices(clubIds: string[]): Promise<Map<string, number>> {
+  const priorStandings = await footballService.fetchPriorSeasonStandings();
+  const priorPoints = [...priorStandings.values()].map((v) => v.points).sort((a, b) => a - b);
+  const newcomerEstimate = priorPoints.length >= 3 ? priorPoints.slice(0, 3).reduce((a, b) => a + b, 0) / 3 : null;
+
+  const rows = clubIds.map((id) => ({
+    id,
+    form: clubFormSignal(id),
+    priorPoints: priorStandings.get(id)?.points ?? newcomerEstimate,
+  }));
+
+  const norm = (values: number[]) => {
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 1;
+    return (v: number) => (max - min < 0.01 ? 0.5 : clamp((v - min) / (max - min), 0, 1));
+  };
+  const forms = rows.map((r) => r.form).filter((v): v is number => v != null);
+  const points = rows.map((r) => r.priorPoints).filter((v): v is number => v != null);
+  const normForm = norm(forms);
+  const normPoints = norm(points);
+  const formMid = forms.length ? forms.reduce((a, b) => a + b, 0) / forms.length : 0.33;
 
   return new Map(
-    strengths.map((s) => {
-      const strength = s.strength ?? mid;
-      const t = max - min < 0.01 ? 0.5 : clamp((strength - min) / (max - min), 0, 1);
-      return [s.id, round2(OPENING_PRICE_FLOOR + t * (OPENING_PRICE_CEIL - OPENING_PRICE_FLOOR))];
+    rows.map((r) => {
+      const formT = normForm(r.form ?? formMid);
+      const t = r.priorPoints != null && points.length > 0 ? PRIOR_SEASON_WEIGHT * normPoints(r.priorPoints) + (1 - PRIOR_SEASON_WEIGHT) * formT : formT;
+      return [r.id, round2(OPENING_PRICE_FLOOR + t * (OPENING_PRICE_CEIL - OPENING_PRICE_FLOOR))];
     })
   );
 }
@@ -116,10 +137,10 @@ function computeOpeningPrices(clubIds: string[]): Map<string, number> {
  * ensureOpeningPrice()'s own once-only guard, a later boot picks it up
  * once import succeeds, rather than locking in an uninformed price now.
  */
-function seedOpeningPrices() {
+async function seedOpeningPrices() {
   const clubs = footballRepo.listClubs().filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
   if (clubs.length === 0) return;
-  const prices = computeOpeningPrices(clubs.map((c) => c.id));
+  const prices = await computeOpeningPrices(clubs.map((c) => c.id));
   for (const [clubId, price] of prices) priceUpdateService.ensureOpeningPrice(clubId, price);
 }
 
@@ -131,11 +152,11 @@ function seedOpeningPrices() {
  * path; exposed via POST /internal/reseed-prices for iterating on the
  * pricing formula before the season actually starts.
  */
-export function reseedAllOpeningPrices(): { priced: number; skipped: number } {
+export async function reseedAllOpeningPrices(): Promise<{ priced: number; skipped: number }> {
   const all = footballRepo.listClubs();
   const clubs = all.filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
   if (clubs.length === 0) return { priced: 0, skipped: all.length };
-  const prices = computeOpeningPrices(clubs.map((c) => c.id));
+  const prices = await computeOpeningPrices(clubs.map((c) => c.id));
   for (const [clubId, price] of prices) marketRepo.setOpeningPrice(clubId, price);
   return { priced: clubs.length, skipped: all.length - clubs.length };
 }

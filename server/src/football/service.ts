@@ -90,6 +90,34 @@ export const footballService = {
     return seasonRaw.providerId;
   },
 
+  /**
+   * Final standings from the season immediately before the current one, by
+   * Ticker club id. Used by bootstrap.ts as a stability signal for opening
+   * prices — this early in a season, live win-probability data only covers
+   * a club's first couple of specific matchups (see ODDS_IMPORT_CAP) and is
+   * too noisy on its own to approximate real quality (two lucky/unlucky
+   * fixtures shouldn't decide a club's price). Best-effort: returns an
+   * empty map if the provider doesn't expose a prior season (e.g. a mock),
+   * and simply omits any club with no prior top-flight campaign (promoted
+   * sides) — the caller decides how to price those.
+   */
+  async fetchPriorSeasonStandings(): Promise<Map<string, { position: number; points: number }>> {
+    const result = new Map<string, { position: number; points: number }>();
+    const [competitionRaw] = await provider.fetchCompetitions();
+    const seasons = await provider.fetchSeasons(competitionRaw.providerId);
+    const current = pickSeason(seasons);
+    const priorYear = String(Number(current.year) - 1);
+    const prior = seasons.find((s) => s.year === priorYear);
+    if (!prior) return result;
+
+    const rows = await provider.fetchStandings(prior.providerId);
+    for (const row of rows) {
+      const clubId = footballRepo.getMapping(provider.name, "club", row.teamProviderId);
+      if (clubId) result.set(clubId, { position: row.position, points: row.points });
+    }
+    return result;
+  },
+
   /** Odds refresh for not-yet-finished fixtures (predictions can move as kickoff approaches). Idempotent. */
   async refreshOdds(): Promise<{ updated: number }> {
     const scheduled = footballRepo.listFixturesByStatus("scheduled");

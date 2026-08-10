@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { ClubBadge } from "../../components/ClubBadge";
 import { Button } from "../../components/Button";
@@ -10,6 +11,7 @@ import { FONT_SERIF } from "../../theme/theme";
 
 export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (cash: number) => void }) {
   const T = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -46,7 +48,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: 16 }}>
+    <View style={{ flex: 1, backgroundColor: T.bg, paddingHorizontal: 24, paddingTop: insets.top + 16 }}>
       <Pressable onPress={onBack} style={[styles.backBtn, { backgroundColor: T.card }]}>
         <Text style={{ fontSize: 20, color: T.text }}>‹</Text>
       </Pressable>
@@ -89,7 +91,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
 const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   balanceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 10, borderBottomWidth: 1 },
   checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, alignItems: "center" },
 });

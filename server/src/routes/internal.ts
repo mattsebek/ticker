@@ -31,9 +31,13 @@ internalRouter.get("/leagues", (req, res) => {
  * Only meaningful before real settlement has moved any price — see
  * reseedAllOpeningPrices()'s own doc comment.
  */
-internalRouter.post("/reseed-prices", (req, res) => {
-  const result = reseedAllOpeningPrices();
-  res.json({ ok: true, ...result });
+internalRouter.post("/reseed-prices", async (req, res) => {
+  try {
+    const result = await reseedAllOpeningPrices();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
 });
 
 /**
