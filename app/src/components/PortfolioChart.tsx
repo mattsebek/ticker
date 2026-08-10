@@ -39,8 +39,17 @@ export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[];
 
   const pan = useRef(
     PanResponder.create({
+      // The chart sits inside a vertical ScrollView. Without claiming the
+      // gesture in the CAPTURE phase and refusing to hand it back, RN's
+      // default responder negotiation lets the ScrollView win any touch
+      // that isn't a clean tap exactly where the gesture started — which
+      // reads as "scrubbing only works right on the line" even though the
+      // whole box is nominally touchable.
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (e) => {
         const w = widthRef.current;
         const pts = pointsRef.current;
