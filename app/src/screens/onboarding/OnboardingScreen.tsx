@@ -24,6 +24,7 @@ export function OnboardingScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [remaining, setRemaining] = useState(0);
 
@@ -31,7 +32,7 @@ export function OnboardingScreen() {
     clearError();
     if (stage === "name" && name.trim()) setStage("email");
     else if (stage === "email" && /\S+@\S+\.\S+/.test(email)) setStage("birthday");
-    else if (stage === "birthday" && birthday.trim()) {
+    else if (stage === "birthday" && birthday.trim() && agreedToTerms) {
       const ok = await register(name, email, birthday);
       if (ok) setStage("clubs");
     }
@@ -85,9 +86,11 @@ export function OnboardingScreen() {
         name={name}
         email={email}
         birthday={birthday}
+        agreedToTerms={agreedToTerms}
         setName={setName}
         setEmail={setEmail}
         setBirthday={setBirthday}
+        setAgreedToTerms={setAgreedToTerms}
         onBack={handleFormBack}
         onContinue={handleFormContinue}
         error={authError}

@@ -112,6 +112,7 @@ export interface BriefCard {
 export interface MorningBrief {
   text: string;
   recommendation: string;
+  label?: string;
 }
 
 export interface TradeCandidateRow extends ClubSummary {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Svg, { Circle, Path, Rect, Line } from "react-native-svg";
@@ -7,6 +7,8 @@ import { useThemeStore } from "../../store/themeStore";
 import { Button } from "../../components/Button";
 
 const MIN_AGE_YEARS = 13;
+// Placeholder until the real Terms of Service page exists.
+const TERMS_URL = "https://ticker.app/terms";
 
 function maxBirthday(): Date {
   const d = new Date();
@@ -79,16 +81,18 @@ interface Props {
   name: string;
   email: string;
   birthday: string;
+  agreedToTerms: boolean;
   setName: (v: string) => void;
   setEmail: (v: string) => void;
   setBirthday: (v: string) => void;
+  setAgreedToTerms: (v: boolean) => void;
   onBack: () => void;
   onContinue: () => void;
   error?: string | null;
   busy?: boolean;
 }
 
-export function RegisterForm({ stage, name, email, birthday, setName, setEmail, setBirthday, onBack, onContinue, error, busy }: Props) {
+export function RegisterForm({ stage, name, email, birthday, agreedToTerms, setName, setEmail, setBirthday, setAgreedToTerms, onBack, onContinue, error, busy }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
   const meta = META[stage];
@@ -98,7 +102,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
     if (stage === "birthday" && !birthday) setBirthday(toISODate(defaultBirthday()));
   }, [stage]);
 
-  const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : !!birthday;
+  const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : !!birthday && agreedToTerms;
 
   return (
     <KeyboardAvoidingView
@@ -179,6 +183,27 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
                 style={Platform.OS === "ios" ? { alignSelf: "stretch", height: 180, marginTop: 8 } : undefined}
               />
             )}
+            <Pressable
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreedToTerms }}
+              style={{ flexDirection: "row", alignItems: "center", marginTop: 20, gap: 10 }}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  { borderColor: agreedToTerms ? T.accent : T.border, backgroundColor: agreedToTerms ? T.accent : "transparent" },
+                ]}
+              >
+                {agreedToTerms && <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>✓</Text>}
+              </View>
+              <Text style={{ fontSize: 13, color: T.text, flex: 1 }}>
+                I agree to the Ticker{" "}
+                <Text style={{ textDecorationLine: "underline" }} onPress={() => Linking.openURL(TERMS_URL)}>
+                  Terms of Service
+                </Text>
+              </Text>
+            </Pressable>
           </View>
         )}
         <Text style={{ fontSize: 12, color: error ? "#E0393E" : T.textSecondary, marginTop: 12 }}>
@@ -194,6 +219,7 @@ export function RegisterForm({ stage, name, email, birthday, setName, setEmail, 
 const styles = StyleSheet.create({
   input: { fontSize: 22, fontWeight: "500", borderBottomWidth: 2, paddingVertical: 8 },
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   dateBox: {
     flexDirection: "row",
     alignItems: "center",

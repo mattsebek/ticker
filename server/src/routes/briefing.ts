@@ -3,10 +3,36 @@ import { requireAuth, AuthedRequest } from "../shared/auth";
 import { marketRepo } from "../market/repo";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
+import { fantasyRepo } from "../fantasy/repo";
 import { clubSummary } from "../presenters";
 import { round2 } from "../shared/rng";
 
 export const briefingRouter = Router();
+
+/**
+ * Before any fixture has actually settled, every club's weekly/daily % is
+ * either exactly 0 or pure micro-jitter noise (see jobs/microPriceJitter.ts)
+ * — a "brief" built from picking a best/worst mover out of that is
+ * meaningless. Explain the game's own mechanics instead until there's
+ * something real to report.
+ */
+const DID_YOU_KNOW_TIPS: { label: string; emoji: string; text: string }[] = [
+  { label: "Lock-in rule", emoji: "🔒", text: "You must lock in exactly 4 clubs before a gameweek begins to earn points for that week — but the market never closes, so you can trade whenever you want." },
+  { label: "Your budget", emoji: "💵", text: "Every manager starts with the same $100 budget. Splurge on one favorite and you'll have less left for the rest of your four — building a balanced roster is the whole game." },
+  { label: "How prices move", emoji: "📈", text: "Club prices react to real performance — strong results tend to push demand (and price) up, and rough patches tend to pull it back down." },
+  { label: "Leagues", emoji: "🏆", text: "You're automatically entered in the Overall League against every manager. You can also create or join private leagues with friends using an invite code." },
+  { label: "Ownership", emoji: "👀", text: "Ownership percentage shows how many managers hold a club. A club that's rising but still lightly owned can be one of the best value plays." },
+  { label: "Scoring", emoji: "⚽", text: "Your gameweek score comes from how your 4 clubs actually perform on the pitch that week — the better they do, the more points you earn." },
+];
+
+function didYouKnowBrief() {
+  const tip = DID_YOU_KNOW_TIPS[Math.floor(Math.random() * DID_YOU_KNOW_TIPS.length)];
+  return { text: tip.text, recommendation: "", label: "Did You Know?" };
+}
+
+function didYouKnowCards() {
+  return DID_YOU_KNOW_TIPS.map((t) => ({ label: t.label, emoji: t.emoji, segments: [{ text: t.text }] }));
+}
 
 function fmtMoney(v: number) {
   return "$" + v.toFixed(2);
@@ -29,6 +55,7 @@ briefingRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   const round = gameweekService.currentRound();
   const holdingIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
   if (holdingIds.length === 0) return res.json({ morningBrief: null, cards: [] });
+  if (fantasyRepo.maxScoredRound() === 0) return res.json({ morningBrief: didYouKnowBrief(), cards: didYouKnowCards() });
 
   const holdings = holdingIds.map((id) => footballService.getClub(id)!).filter(Boolean);
   const holdingSummaries = holdings.map((c) => clubSummary(c, round));

@@ -133,15 +133,15 @@ function TickerTape({ edge, reverse }: { edge: "top" | "bottom"; reverse?: boole
 /** Total vertical footprint of a ticker tape band (offset from its edge + its own height + a little breathing room), used to keep the centered card clear of both tapes. */
 const TAPE_CLEARANCE = 10 + 22 + 14;
 
-// Portfolio value ticks up a handful of times, then holds — a few visible
-// gains rather than a value that never stops flickering.
-const PORTFOLIO_VALUE_STEPS = [104.82, 105.06, 104.94, 105.35, 105.61];
-
 function Slide0Card({ tick }: { tick: number }) {
   // Small, frequent wobble on top of each club's base pct — a real ticker
   // never sits perfectly still, and this is the first screen anyone sees.
   const jit = (base: number, seed: number) => base + Math.sin((tick + seed) * 0.5) * 0.25 + Math.sin((tick + seed) * 1.3) * 0.1;
-  const portfolioValue = PORTFOLIO_VALUE_STEPS[Math.min(tick, PORTFOLIO_VALUE_STEPS.length - 1)];
+  // Keeps drifting up and down for as long as this slide is on screen, but
+  // at roughly a third the cadence of the rows below it — sampling the sine
+  // on a throttled tick rather than the raw one is what slows it down.
+  const slowTick = Math.floor(tick / 3);
+  const portfolioValue = 104.82 + Math.sin(slowTick * 0.4) * 1.1 + Math.sin(slowTick * 0.9 + 1) * 0.35;
   return (
     <View style={styles.obCard}>
       <Text style={{ color: "#8A8F98", fontSize: 11, marginBottom: 4 }}>Portfolio value</Text>

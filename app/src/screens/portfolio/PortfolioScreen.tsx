@@ -38,12 +38,19 @@ export function PortfolioScreen() {
     let base = chartSeries;
     if (range === "7D") base = chartSeries.slice(-7);
     else if (range === "30D") base = chartSeries.slice(-30);
-    // A brand-new account has little or no price history yet — rather than
-    // showing an empty chart, draw a flat line at the current value so
-    // there's still a colored, readable graph from day one.
+    // Some history exists but not enough points for this range — draw a
+    // flat line at the current value rather than an empty chart. A
+    // brand-new account with NO movement at all skips the chart entirely
+    // (see hasMovement below), so this only covers the sparse-history case.
     if (base.length < 2 && portfolio) return [portfolio.heroValue, portfolio.heroValue];
     return base;
   }, [chartSeries, range, portfolio]);
+
+  // Right after picking clubs, cash + holdings always sums to exactly the
+  // $100 starting budget — a graph of that is meaningless noise, not
+  // information. Once anything (a settlement, a trade, the market jitter)
+  // has actually moved the value, show it.
+  const hasMovement = !portfolio || portfolio.heroValue !== 100 || chartSeries.length >= 2;
 
   if (!portfolio) {
     return (
@@ -66,18 +73,20 @@ export function PortfolioScreen() {
           Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.cash)}</Text>
         </Text>
 
-        <View style={{ marginTop: 15 }}>
-          <View style={{ marginBottom: 10 }}>
-            <PillRow>
-              <Pill label="7D" active={range === "7D"} onPress={() => setRange("7D")} />
-              <Pill label="30D" active={range === "30D"} onPress={() => setRange("30D")} />
-              <Pill label="YTD" active={range === "YTD"} onPress={() => setRange("YTD")} />
-            </PillRow>
+        {hasMovement && (
+          <View style={{ marginTop: 15 }}>
+            <View style={{ marginBottom: 10 }}>
+              <PillRow>
+                <Pill label="7D" active={range === "7D"} onPress={() => setRange("7D")} />
+                <Pill label="30D" active={range === "30D"} onPress={() => setRange("30D")} />
+                <Pill label="YTD" active={range === "YTD"} onPress={() => setRange("YTD")} />
+              </PillRow>
+            </View>
+            <View style={{ marginHorizontal: -24 }}>
+              <PortfolioChart series={slice} rangeKey={range} />
+            </View>
           </View>
-          <View style={{ marginHorizontal: -24 }}>
-            <PortfolioChart series={slice} rangeKey={range} />
-          </View>
-        </View>
+        )}
 
         <View style={{ marginTop: 20 }}>
           <GameweekWidget />

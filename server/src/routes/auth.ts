@@ -7,6 +7,12 @@ import { leagueService } from "../fantasy/leagueService";
 
 export const authRouter = Router();
 
+// Must match RegisterForm.tsx's MIN_AGE_YEARS — the client already enforces
+// this via the date picker's maximumDate and tells the user "13+" in the
+// hint text, so the server rejecting anyone under 16 was silently
+// contradicting what the UI promised.
+const MIN_AGE_YEARS = 13;
+
 const registerSchema = z.object({
   name: z.string().trim().min(1).max(80),
   email: z.string().trim().email(),
@@ -43,7 +49,7 @@ authRouter.post("/register", (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid input" });
   const { name, email, birthday } = parsed.data;
 
-  if (ageFromBirthday(birthday) < 16) return res.status(400).json({ error: "You must be old enough to use Ticker in your region." });
+  if (ageFromBirthday(birthday) < MIN_AGE_YEARS) return res.status(400).json({ error: `You must be at least ${MIN_AGE_YEARS} years old to use Ticker.` });
   if (usersRepo.getByEmail(email)) return res.status(409).json({ error: "An account with that email already exists. Try logging in instead." });
 
   const user = usersRepo.create(name, email, birthday);

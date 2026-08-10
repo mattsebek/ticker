@@ -22,10 +22,16 @@ export function MorningBriefCard({ brief, dismissed }: { brief: MorningBrief; di
       </Pressable>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: T.accent }} />
-        <Text style={{ fontSize: 11, fontWeight: "500", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>Morning Brief</Text>
+        <Text style={{ fontSize: 11, fontWeight: "500", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{brief.label || "Morning Brief"}</Text>
       </View>
       <Text style={{ fontSize: 13, lineHeight: 20, color: T.text, paddingRight: 16 }}>
-        {brief.text} <Text style={{ fontWeight: "700", fontStyle: "italic" }}>Recommendation:</Text> {brief.recommendation}
+        {brief.text}
+        {brief.recommendation ? (
+          <>
+            {" "}
+            <Text style={{ fontWeight: "700", fontStyle: "italic" }}>Recommendation:</Text> {brief.recommendation}
+          </>
+        ) : null}
       </Text>
     </View>
   );

@@ -4,16 +4,21 @@ import { useThemeStore } from "../store/themeStore";
 import { api } from "../api/client";
 import type { GameweekResponse } from "../api/types";
 
+// Always ticks down to the second — even an 11-day-away countdown should
+// visibly move, not just change once an hour.
 function fmtCountdown(targetIso: string, now: number): string | null {
   const diffMs = new Date(targetIso).getTime() - now;
   if (diffMs <= 0) return null;
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
+  return `${seconds}s`;
 }
 
 export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
@@ -33,7 +38,7 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
   }, [offset]);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
