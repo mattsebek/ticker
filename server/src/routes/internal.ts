@@ -31,15 +31,6 @@ internalRouter.get("/leagues", (req, res) => {
  * Only meaningful before real settlement has moved any price — see
  * reseedAllOpeningPrices()'s own doc comment.
  */
-internalRouter.get("/prior-standings", async (req, res) => {
-  try {
-    const map = await footballService.fetchPriorSeasonStandings();
-    res.json({ ok: true, size: map.size, rows: [...map.entries()] });
-  } catch (err: any) {
-    res.status(502).json({ ok: false, error: err?.message || String(err) });
-  }
-});
-
 internalRouter.post("/reseed-prices", async (req, res) => {
   try {
     const result = await reseedAllOpeningPrices();
