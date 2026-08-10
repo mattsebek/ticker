@@ -92,6 +92,12 @@ export const fantasyRepo = {
     db.prepare("DELETE FROM standings_cache WHERE league_id = ?").run(id);
     db.prepare("DELETE FROM leagues WHERE id = ?").run(id);
   },
+  /** Removes every real (non-bot) member from every league, leaving the seeded bot rosters intact. Used by the /internal/reset-users ops action. */
+  removeAllNonBotMembers() {
+    db.prepare("DELETE FROM standings_cache WHERE member_id IN (SELECT member_id FROM league_members WHERE is_bot = 0)").run();
+    const result = db.prepare("DELETE FROM league_members WHERE is_bot = 0").run();
+    return result.changes;
+  },
   insertLeague(lg: LeagueRow) {
     db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count) VALUES (?,?,?,?,?,?)").run(
       lg.id,
@@ -141,6 +147,9 @@ export const fantasyRepo = {
   },
   listAllLeagueIds(): string[] {
     return (db.prepare("SELECT id FROM leagues").all() as { id: string }[]).map((r) => r.id);
+  },
+  listAllLeagues(): LeagueRow[] {
+    return db.prepare("SELECT * FROM leagues").all() as LeagueRow[];
   },
 
   // --- standings cache (recalculateLeagueStandings job) ---

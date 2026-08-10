@@ -3,14 +3,48 @@ import { z } from "zod";
 import { scheduler } from "../jobs/scheduler";
 import { footballService } from "../football/service";
 import { marketRepo } from "../market/repo";
+import { fantasyRepo } from "../fantasy/repo";
 import { gameweekService } from "../fantasy/gameweekService";
 import { round2, clamp } from "../shared/rng";
+import { reseedAllOpeningPrices, resetAllUsers } from "../bootstrap";
 
 /** Basic job observability — not authenticated, intended for local/ops use only. */
 export const internalRouter = Router();
 
 internalRouter.get("/jobs", (req, res) => {
   res.json({ jobs: scheduler.getStatus() });
+});
+
+internalRouter.get("/leagues", (req, res) => {
+  const leagues = fantasyRepo.listAllLeagues();
+  res.json({
+    leagues: leagues.map((lg) => ({
+      ...lg,
+      members: fantasyRepo.getMembers(lg.id),
+    })),
+  });
+});
+
+/**
+ * Dev/ops only, pre-launch tuning: force-recomputes and overwrites every
+ * club's opening price from the current pricing formula in bootstrap.ts.
+ * Only meaningful before real settlement has moved any price — see
+ * reseedAllOpeningPrices()'s own doc comment.
+ */
+internalRouter.post("/reseed-prices", (req, res) => {
+  const result = reseedAllOpeningPrices();
+  res.json({ ok: true, ...result });
+});
+
+/**
+ * Dev/ops only: wipes every real registered account (and its trading +
+ * league state) so registration can be tested from scratch. Leaves clubs,
+ * fixtures, prices, leagues, and seeded bot rosters untouched — see
+ * resetAllUsers() in bootstrap.ts.
+ */
+internalRouter.post("/reset-users", (req, res) => {
+  const result = resetAllUsers();
+  res.json({ ok: true, ...result });
 });
 
 /**

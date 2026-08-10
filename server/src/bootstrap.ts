@@ -5,8 +5,9 @@ import { tradingService } from "./market/tradingService";
 import { marketRepo } from "./market/repo";
 import { settlementService } from "./fantasy/settlementService";
 import { fantasyRepo } from "./fantasy/repo";
+import { usersRepo } from "./shared/usersRepo";
 import { BOT_ROSTER } from "./shared/bots";
-import { round2 } from "./shared/rng";
+import { round2, clamp } from "./shared/rng";
 
 interface LeagueSeed {
   id: string;
@@ -57,80 +58,86 @@ export async function bootstrap(): Promise<void> {
   }
 
   seedOpeningPrices();
-  healStaleOpeningPrices();
   retireOldDemoLeagues();
   seedLeagues();
   seedBotManagers();
 
   const settleResult = settlementService.settleAllPending();
   console.log(`[bootstrap] settled ${settleResult.settledCount} previously-unsettled fixtures`);
-
-  // Only on a genuinely fresh import: settling a whole historical season in
-  // one shot (rather than the incremental, match-by-match drift a real
-  // live season produces) compounds prices far past what a $100 draft
-  // budget was ever sized for. Re-running bootstrap after this point is a
-  // no-op everywhere else, so this must not run again either — it would
-  // compound on top of itself.
-  if (!importResult.skipped) normalizeClubPricesForBudget();
 }
 
-const TARGET_AVERAGE_CLUB_PRICE = 14;
+const OPENING_PRICE_FLOOR = 6;
+const OPENING_PRICE_CEIL = 35;
 
-function normalizeClubPricesForBudget() {
-  const clubs = footballRepo.listClubs();
-  const prices = clubs.map((c) => marketRepo.getPrice(c.id)).filter((p): p is number => !!p && p > 0);
-  if (prices.length === 0) return;
-  const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-  if (avg <= 0) return;
-  const factor = round2(TARGET_AVERAGE_CLUB_PRICE / avg);
-  if (Math.abs(factor - 1) < 0.01) return;
-  marketRepo.scaleAllPrices(factor);
-  console.log(`[bootstrap] normalized club prices by ${factor}x (avg was $${avg.toFixed(2)}, target $${TARGET_AVERAGE_CLUB_PRICE})`);
-}
-
-/** Opening price = a base "IPO" value plus a premium derived from the club's OWN provider-supplied win probabilities across its season — not an invented strength tier. */
-function computeOpeningPrice(clubId: string): number {
-  const fixtures = footballRepo.listFixturesForClub(clubId);
-  const winProbSum = fixtures.reduce((sum, f) => {
-    const prob = f.homeClubId === clubId ? f.homeWinProb : f.awayWinProb;
-    return sum + (prob ?? 0.33);
-  }, 0);
-  return round2(6 + winProbSum * 0.9);
-}
-
-function seedOpeningPrices() {
-  for (const club of footballRepo.listClubs()) {
-    priceUpdateService.ensureOpeningPrice(club.id, computeOpeningPrice(club.id));
-  }
+/**
+ * A club's "strength" for opening-price purposes: the average of its REAL
+ * (provider-predicted) win probabilities. Summing across a whole season and
+ * filling in a neutral 0.33 for fixtures the import hasn't fetched odds for
+ * yet (see ODDS_IMPORT_CAP in football/service.ts) diluted genuine
+ * differences between clubs down to pennies — a title-favorite and a
+ * relegation-favorite both average out to "mostly 0.33." Ignoring the
+ * un-informed fixtures keeps the signal real, even though early in a season
+ * that might only be one or two matches per club.
+ */
+function clubStrength(clubId: string): number | null {
+  const real = footballRepo
+    .listFixturesForClub(clubId)
+    .map((f) => (f.homeClubId === clubId ? f.homeWinProb : f.awayWinProb))
+    .filter((p): p is number => p != null);
+  if (real.length === 0) return null;
+  return real.reduce((a, b) => a + b, 0) / real.length;
 }
 
 /**
- * ensureOpeningPrice() only ever sets a club's price once — fine when
- * clubs and fixtures import together, but importSeasonSchedule() persists
- * clubs BEFORE fixtures, so a provider hiccup (e.g. a rate-limit rejection)
- * partway through can leave clubs seeded with zero fixtures — computing the
- * exact $6.00 floor — and no later successful import ever revisits that
- * price. Once fixtures land for a club still parked at that floor, this
- * recomputes it for real. $6.00 exactly is otherwise not a realistic
- * organic price (a nonzero win-prob sum practically never rounds back to
- * it), so this can't misfire on a club that's already been priced from real
- * data.
+ * Strength min-max mapped across THIS season's priceable clubs onto a
+ * fixed $6-$35 range, so the best and worst clubs always land near the
+ * ends regardless of the absolute scale of the provider's probabilities.
+ * A club with no informed fixtures yet gets the field's midpoint (not the
+ * floor) until real data arrives.
  */
-function healStaleOpeningPrices() {
-  const stillFlat = footballRepo.listClubs().filter((c) => marketRepo.getPrice(c.id) === 6);
-  if (stillFlat.length === 0) return;
-  let healed = 0;
-  for (const club of stillFlat) {
-    if (footballRepo.listFixturesForClub(club.id).length === 0) continue; // still nothing to price off of — next boot retries
-    const openingPrice = computeOpeningPrice(club.id);
-    marketRepo.setPrice(club.id, openingPrice);
-    marketRepo.recordPriceHistory(club.id, 0, openingPrice, 0, null);
-    healed++;
-  }
-  if (healed > 0) {
-    console.log(`[bootstrap] healed ${healed} club price(s) stuck at the uninformed $6 floor`);
-    normalizeClubPricesForBudget();
-  }
+function computeOpeningPrices(clubIds: string[]): Map<string, number> {
+  const strengths = clubIds.map((id) => ({ id, strength: clubStrength(id) }));
+  const known = strengths.map((s) => s.strength).filter((s): s is number => s != null);
+  const min = known.length ? Math.min(...known) : 0.3;
+  const max = known.length ? Math.max(...known) : 0.4;
+  const mid = (min + max) / 2;
+
+  return new Map(
+    strengths.map((s) => {
+      const strength = s.strength ?? mid;
+      const t = max - min < 0.01 ? 0.5 : clamp((strength - min) / (max - min), 0, 1);
+      return [s.id, round2(OPENING_PRICE_FLOOR + t * (OPENING_PRICE_CEIL - OPENING_PRICE_FLOOR))];
+    })
+  );
+}
+
+/**
+ * A club simply isn't priced here if it has zero fixtures yet — via
+ * ensureOpeningPrice()'s own once-only guard, a later boot picks it up
+ * once import succeeds, rather than locking in an uninformed price now.
+ */
+function seedOpeningPrices() {
+  const clubs = footballRepo.listClubs().filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
+  if (clubs.length === 0) return;
+  const prices = computeOpeningPrices(clubs.map((c) => c.id));
+  for (const [clubId, price] of prices) priceUpdateService.ensureOpeningPrice(clubId, price);
+}
+
+/**
+ * Admin-only, pre-launch tuning action: force-recomputes and OVERWRITES
+ * every priceable club's price, bypassing ensureOpeningPrice's once-only
+ * guard — unlike seedOpeningPrices() this is safe only before real
+ * settlement has moved any price organically. Not wired into any automatic
+ * path; exposed via POST /internal/reseed-prices for iterating on the
+ * pricing formula before the season actually starts.
+ */
+export function reseedAllOpeningPrices(): { priced: number; skipped: number } {
+  const all = footballRepo.listClubs();
+  const clubs = all.filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
+  if (clubs.length === 0) return { priced: 0, skipped: all.length };
+  const prices = computeOpeningPrices(clubs.map((c) => c.id));
+  for (const [clubId, price] of prices) marketRepo.setOpeningPrice(clubId, price);
+  return { priced: clubs.length, skipped: all.length - clubs.length };
 }
 
 function retireOldDemoLeagues() {
@@ -151,6 +158,20 @@ function seedLeagues() {
       if (bot) fantasyRepo.addMember(lg.id, botId, bot.name, true);
     }
   }
+}
+
+/**
+ * Admin-only ops action: wipes every real registered account and its
+ * trading/league state so registration can be tested fresh, while leaving
+ * clubs, fixtures, prices, leagues, and the seeded bot rosters untouched.
+ * Exposed via POST /internal/reset-users.
+ */
+export function resetAllUsers(): { usersDeleted: number; membershipsDeleted: number } {
+  const userIds = usersRepo.listIds();
+  const membershipsDeleted = fantasyRepo.removeAllNonBotMembers();
+  marketRepo.deleteUserData(userIds);
+  const usersDeleted = usersRepo.deleteAll();
+  return { usersDeleted, membershipsDeleted };
 }
 
 function seedBotManagers() {

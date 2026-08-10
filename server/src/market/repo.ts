@@ -91,6 +91,15 @@ export const marketRepo = {
   setCash(userId: string, cash: number) {
     db.prepare("UPDATE market_accounts SET cash = ? WHERE user_id = ?").run(cash, userId);
   },
+  /** Wipes every trading record for the given (real) user ids — account, holdings, transactions, ledger. Bots aren't passed in, so their seeded rosters are untouched. Used by the /internal/reset-users ops action. */
+  deleteUserData(userIds: string[]) {
+    if (userIds.length === 0) return;
+    const placeholders = userIds.map(() => "?").join(",");
+    db.prepare(`DELETE FROM ledger_entries WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM transactions WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM holdings WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM market_accounts WHERE user_id IN (${placeholders})`).run(...userIds);
+  },
 
   // --- prices ---
   getPrice(clubId: string): number | undefined {
@@ -108,13 +117,28 @@ export const marketRepo = {
       `INSERT OR IGNORE INTO price_history (club_id, round, price, impact_pct, fixture_id, created_at) VALUES (?,?,?,?,?,?)`
     ).run(clubId, round, price, impactPct, fixtureId, Date.now());
   },
+  /**
+   * Sets a club's IPO/opening price. Unlike recordPriceHistory(), this
+   * REPLACES round 0 rather than appending — round-0 history rows all share
+   * fixture_id = NULL, and SQLite's unique index treats every NULL as
+   * distinct, so appending here (as recordPriceHistory does) silently
+   * accumulates duplicate round-0 rows instead of deduping, which reads back
+   * as fake price movement. Real settlement moves (non-null fixture_id) are
+   * unaffected and still go through recordPriceHistory.
+   */
+  setOpeningPrice(clubId: string, price: number) {
+    const now = Date.now();
+    db.prepare("DELETE FROM price_history WHERE club_id = ? AND round = 0 AND fixture_id IS NULL").run(clubId);
+    db.prepare(
+      `INSERT INTO club_prices (club_id, price, updated_at) VALUES (?,?,?)
+       ON CONFLICT(club_id) DO UPDATE SET price=excluded.price, updated_at=excluded.updated_at`
+    ).run(clubId, price, now);
+    db.prepare(
+      `INSERT INTO price_history (club_id, round, price, impact_pct, fixture_id, created_at) VALUES (?,0,?,0,NULL,?)`
+    ).run(clubId, price, now);
+  },
   getPriceSeries(clubId: string): { round: number; price: number }[] {
     return db.prepare("SELECT round, price FROM price_history WHERE club_id = ? ORDER BY round ASC").all(clubId) as any[];
-  },
-  /** Uniformly rescales every club's current price and its whole price_history — see bootstrap.ts's normalizeClubPricesForBudget(). */
-  scaleAllPrices(factor: number) {
-    db.prepare("UPDATE club_prices SET price = ROUND(price * ?, 2)").run(factor);
-    db.prepare("UPDATE price_history SET price = ROUND(price * ?, 2)").run(factor);
   },
   hasSettledFixture(fixtureId: string, clubId: string): boolean {
     return !!db.prepare("SELECT 1 FROM price_history WHERE fixture_id = ? AND club_id = ?").get(fixtureId, clubId);

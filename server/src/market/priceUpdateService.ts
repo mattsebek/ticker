@@ -26,8 +26,7 @@ export const priceUpdateService = {
   /** Seeds an opening price the first time a club is seen (before any fixture has settled). */
   ensureOpeningPrice(clubId: string, openingPrice: number): void {
     if (marketRepo.getPrice(clubId) != null) return;
-    marketRepo.setPrice(clubId, openingPrice);
-    marketRepo.recordPriceHistory(clubId, 0, openingPrice, 0, null);
+    marketRepo.setOpeningPrice(clubId, openingPrice);
   },
 
   /**

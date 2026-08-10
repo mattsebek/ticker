@@ -52,4 +52,11 @@ export const usersRepo = {
   setBriefDismissed(id: string, dismissed: boolean) {
     db.prepare("UPDATE users SET brief_dismissed = ? WHERE id = ?").run(dismissed ? 1 : 0, id);
   },
+  /** Wipes every registered account (bots aren't rows in this table). Used by the /internal/reset-users ops action. */
+  deleteAll(): number {
+    return db.prepare("DELETE FROM users").run().changes;
+  },
+  listIds(): string[] {
+    return (db.prepare("SELECT id FROM users").all() as { id: string }[]).map((r) => r.id);
+  },
 };

@@ -22,9 +22,27 @@ function winProbFor(fixture: Fixture, clubId: string): number {
   return (isHome ? fixture.homeWinProb : fixture.awayWinProb) ?? 0.33;
 }
 
+// Kickoffs are stored as raw provider ISO timestamps (UTC) — the app has no
+// per-user timezone setting yet, so render in the timezone the product is
+// actually being built/tested in rather than leaking the raw ISO string.
+const KICKOFF_DISPLAY_TZ = "America/Chicago";
+
+function formatKickoff(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: KICKOFF_DISPLAY_TZ,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+}
+
 function fixtureMatchText(fixture: Fixture, clubId: string, opponent?: Club): string {
   const isHome = fixture.homeClubId === clubId;
-  return `${isHome ? "vs" : "@"} ${opponent?.name ?? "TBD"} · ${fixture.kickoff.replace(/^Round \d+ · /, "")}`;
+  return `${isHome ? "vs" : "@"} ${opponent?.name ?? "TBD"} · ${formatKickoff(fixture.kickoff)}`;
 }
 
 function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
