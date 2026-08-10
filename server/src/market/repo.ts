@@ -140,6 +140,15 @@ export const marketRepo = {
   getPriceSeries(clubId: string): { round: number; price: number }[] {
     return db.prepare("SELECT round, price FROM price_history WHERE club_id = ? ORDER BY round ASC").all(clubId) as any[];
   },
+  /**
+   * Chronological price history for charting — ordered by `id` (insertion
+   * order) rather than `round`, since multiple events (settlement, then
+   * several microPriceJitter ticks) can share the same round number and
+   * `round ASC` alone wouldn't order those consistently.
+   */
+  getPriceSeriesWithTime(clubId: string): { price: number; createdAt: number }[] {
+    return db.prepare("SELECT price, created_at as createdAt FROM price_history WHERE club_id = ? ORDER BY id ASC").all(clubId) as any[];
+  },
   hasSettledFixture(fixtureId: string, clubId: string): boolean {
     return !!db.prepare("SELECT 1 FROM price_history WHERE fixture_id = ? AND club_id = ?").get(fixtureId, clubId);
   },

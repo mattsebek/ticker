@@ -43,7 +43,7 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
 });
 
 portfolioRouter.get("/chart", requireAuth, (req: AuthedRequest, res) => {
-  res.json({ series: portfolioService.getPortfolioSeries(req.userId!) });
+  res.json({ points: portfolioService.getPortfolioSeries(req.userId!) });
 });
 
 const selectSchema = z.object({ clubIds: z.array(z.string()).length(4) });

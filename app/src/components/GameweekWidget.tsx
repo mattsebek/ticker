@@ -85,7 +85,7 @@ export function GameweekWidget({ elevated = true }: { elevated?: boolean }) {
       </View>
       {data.nextKickoff && fmtCountdown(data.nextKickoff, now) && (
         <View style={[styles.countdownRow, { borderTopColor: T.border }]}>
-          <Text style={{ fontSize: 12, color: T.textSecondary }}>Trades lock in</Text>
+          <Text style={{ fontSize: 12, color: T.textSecondary }}>Your clubs lock in</Text>
           <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent }}>{fmtCountdown(data.nextKickoff, now)}</Text>
         </View>
       )}

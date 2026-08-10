@@ -8,11 +8,25 @@ import { fmtMoney } from "../../utils/format";
 import { PillRow, Pill } from "../../components/Pill";
 import { PortfolioChart } from "../../components/PortfolioChart";
 import { GameweekWidget } from "../../components/GameweekWidget";
-import { MorningBriefCard } from "../../components/MorningBriefCard";
+import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
 import { useBriefing } from "../../hooks/useBriefing";
 
 type Range = "7D" | "30D" | "YTD";
+
+const DAY_MS = 86_400_000;
+
+function windowByDays(points: { t: number; v: number }[], days: number): { t: number; v: number }[] {
+  const cutoff = Date.now() - days * DAY_MS;
+  return points.filter((p) => p.t >= cutoff);
+}
+
+/** Keeps only the last value seen per calendar day — smooths a long range down to one point per day instead of every individual tick. */
+function bucketByDay(points: { t: number; v: number }[]): number[] {
+  const lastPerDay = new Map<string, number>();
+  for (const p of points) lastPerDay.set(new Date(p.t).toISOString().slice(0, 10), p.v);
+  return [...lastPerDay.values()];
+}
 
 function PctChange({ value, label }: { value: number; label: string }) {
   const color = colorForPct(value);
@@ -29,28 +43,32 @@ function PctChange({ value, label }: { value: number; label: string }) {
 export function PortfolioScreen() {
   const T = useThemeStore((s) => s.tokens);
   const portfolio = useDataStore((s) => s.portfolio);
-  const chartSeries = useDataStore((s) => s.chartSeries);
+  const chartPoints = useDataStore((s) => s.chartPoints);
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
   const brief = useBriefing();
 
   const slice = useMemo(() => {
-    let base = chartSeries;
-    if (range === "7D") base = chartSeries.slice(-7);
-    else if (range === "30D") base = chartSeries.slice(-30);
+    // 7D shows every real point in the window — that's what makes it look
+    // like an actual live market. 30D/YTD collapse to one point per day, so
+    // a longer range reads as a trend rather than a wall of noise.
+    let base: number[];
+    if (range === "7D") base = windowByDays(chartPoints, 7).map((p) => p.v);
+    else if (range === "30D") base = bucketByDay(windowByDays(chartPoints, 30));
+    else base = bucketByDay(chartPoints);
     // Some history exists but not enough points for this range — draw a
     // flat line at the current value rather than an empty chart. A
     // brand-new account with NO movement at all skips the chart entirely
     // (see hasMovement below), so this only covers the sparse-history case.
     if (base.length < 2 && portfolio) return [portfolio.heroValue, portfolio.heroValue];
     return base;
-  }, [chartSeries, range, portfolio]);
+  }, [chartPoints, range, portfolio]);
 
   // Right after picking clubs, cash + holdings always sums to exactly the
   // $100 starting budget — a graph of that is meaningless noise, not
   // information. Once anything (a settlement, a trade, the market jitter)
   // has actually moved the value, show it.
-  const hasMovement = !portfolio || portfolio.heroValue !== 100 || chartSeries.length >= 2;
+  const hasMovement = !portfolio || portfolio.heroValue !== 100 || chartPoints.length >= 2;
 
   if (!portfolio) {
     return (
@@ -92,7 +110,7 @@ export function PortfolioScreen() {
           <GameweekWidget />
         </View>
 
-        {brief.morningBrief && <MorningBriefCard brief={brief.morningBrief} dismissed={portfolio.briefDismissed} />}
+        <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 
         <View style={styles.sectionHeader}>
           <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>

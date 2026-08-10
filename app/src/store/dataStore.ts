@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import { api } from "../api/client";
 import { getToken } from "../api/session";
-import type { ClubSummary, PortfolioResponse } from "../api/types";
+import type { ChartPoint, ClubSummary, PortfolioResponse } from "../api/types";
 
 interface DataState {
   clubs: ClubSummary[];
   portfolio: PortfolioResponse | null;
-  chartSeries: number[];
+  chartPoints: ChartPoint[];
   polling: boolean;
   refreshClubs: () => Promise<void>;
   refreshPortfolio: () => Promise<void>;
@@ -22,7 +22,7 @@ let portfolioTimer: ReturnType<typeof setInterval> | null = null;
 export const useDataStore = create<DataState>((set, get) => ({
   clubs: [],
   portfolio: null,
-  chartSeries: [],
+  chartPoints: [],
   polling: false,
 
   refreshClubs: async () => {
@@ -47,8 +47,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   refreshChart: async () => {
     if (!getToken()) return;
     try {
-      const { series } = await api.portfolio.chart();
-      set({ chartSeries: series });
+      const { points } = await api.portfolio.chart();
+      set({ chartPoints: points });
     } catch {
       // ignore
     }
@@ -77,6 +77,6 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   reset: () => {
     get().stopPolling();
-    set({ clubs: [], portfolio: null, chartSeries: [] });
+    set({ clubs: [], portfolio: null, chartPoints: [] });
   },
 }));

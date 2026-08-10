@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./config";
 import { getToken } from "./session";
 import type {
+  ChartPoint,
   ClubDetail,
   ClubSummary,
   GameweekResponse,
@@ -53,7 +54,7 @@ export const api = {
   },
   portfolio: {
     get: () => request<PortfolioResponse>("/portfolio"),
-    chart: () => request<{ series: number[] }>("/portfolio/chart"),
+    chart: () => request<{ points: ChartPoint[] }>("/portfolio/chart"),
     select: (clubIds: string[]) => request<{ ok: true; cash: number }>("/portfolio/select", { method: "POST", body: JSON.stringify({ clubIds }) }),
     setBriefDismissed: (dismissed: boolean) => request("/portfolio/brief-dismissed", { method: "PATCH", body: JSON.stringify({ dismissed }) }),
   },

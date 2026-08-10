@@ -1,5 +1,11 @@
 export type FixtureDifficulty = "Easy" | "Medium" | "Hard";
 
+/** One real portfolio-value observation — emitted whenever a held club's price actually changed. */
+export interface ChartPoint {
+  t: number;
+  v: number;
+}
+
 export interface NextFixture {
   opp: string;
   home: boolean;

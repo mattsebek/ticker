@@ -58,21 +58,41 @@ export const portfolioService = {
     return marketRepo.getHoldings(userId).some((h) => h.club_id === clubId);
   },
 
-  /** Combined portfolio "hero" chart series — sum of each held club's price history, aligned by round. */
-  getPortfolioSeries(userId: string): number[] {
+  /**
+   * Combined portfolio "hero" chart series, as real (timestamp, total
+   * value) points — cash plus every held club's price, replayed
+   * chronologically as each club's price actually changed (settlement,
+   * or the microPriceJitter filler). Aligning by array INDEX (the old
+   * approach) silently broke once clubs could accumulate price_history
+   * rows at different rates; merging real events by timestamp is the only
+   * way to get a chart that means what "7D"/"30D"/"YTD" claim it means.
+   * Capped to the most recent MAX_POINTS so a long-running account with
+   * frequent jitter doesn't grow this payload unbounded — plenty of
+   * resolution for a phone screen either way.
+   */
+  getPortfolioSeries(userId: string): { t: number; v: number }[] {
     const holdings = marketRepo.getHoldings(userId);
     if (holdings.length === 0) return [];
-    const seriesPerClub = holdings.map((h) => marketRepo.getPriceSeries(h.club_id));
-    const maxLen = Math.max(...seriesPerClub.map((s) => s.length));
-    const combined: number[] = [];
-    for (let i = 0; i < maxLen; i++) {
-      let sum = 0;
-      for (const series of seriesPerClub) {
-        const point = series[i] ?? series[series.length - 1];
-        sum += point ? point.price : 0;
+    const cash = marketRepo.getCash(userId);
+
+    const latestPrice = new Map<string, number>();
+    const events: { t: number; clubId: string; price: number }[] = [];
+    for (const h of holdings) {
+      latestPrice.set(h.club_id, h.purchase_price);
+      for (const p of marketRepo.getPriceSeriesWithTime(h.club_id)) {
+        events.push({ t: p.createdAt, clubId: h.club_id, price: p.price });
       }
-      combined.push(round2(sum));
     }
-    return combined;
+    events.sort((a, b) => a.t - b.t);
+
+    const points: { t: number; v: number }[] = [];
+    for (const e of events) {
+      latestPrice.set(e.clubId, e.price);
+      const total = cash + [...latestPrice.values()].reduce((a, b) => a + b, 0);
+      points.push({ t: e.t, v: round2(total) });
+    }
+
+    const MAX_POINTS = 500;
+    return points.length > MAX_POINTS ? points.slice(points.length - MAX_POINTS) : points;
   },
 };
