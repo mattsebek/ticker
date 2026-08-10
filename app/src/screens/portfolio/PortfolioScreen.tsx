@@ -15,6 +15,11 @@ import { useBriefing } from "../../hooks/useBriefing";
 type Range = "7D" | "30D" | "YTD";
 
 const DAY_MS = 86_400_000;
+const GRID_POINTS_7D = 200;
+// Cash + holdings always sums to exactly this at inception, before any real
+// price movement — the correct flat baseline for "before this account
+// existed" rather than an arbitrary guess.
+const STARTING_VALUE = 100;
 
 function windowByDays(points: { t: number; v: number }[], days: number): { t: number; v: number }[] {
   const cutoff = Date.now() - days * DAY_MS;
@@ -26,6 +31,30 @@ function bucketByDay(points: { t: number; v: number }[]): number[] {
   const lastPerDay = new Map<string, number>();
   for (const p of points) lastPerDay.set(new Date(p.t).toISOString().slice(0, 10), p.v);
   return [...lastPerDay.values()];
+}
+
+/**
+ * Resamples real (t, v) points onto an evenly-spaced grid spanning the full
+ * [windowStart, windowEnd] span, step-holding the last known value forward
+ * (and `startingValue` before the first real point). PortfolioChart plots
+ * an array evenly by INDEX, not by real time — without this, a brand-new
+ * account's first few minutes of microPriceJitter ticks would get stretched
+ * to fill the entire 7-day-labeled width, reading as a full week of
+ * activity instead of a flat week with one recent sliver of real movement.
+ */
+function resampleWithFlatFill(points: { t: number; v: number }[], windowStart: number, windowEnd: number, gridSize: number, startingValue: number): number[] {
+  const grid: number[] = [];
+  let pi = 0;
+  let last = startingValue;
+  for (let i = 0; i < gridSize; i++) {
+    const gt = windowStart + (i / (gridSize - 1)) * (windowEnd - windowStart);
+    while (pi < points.length && points[pi].t <= gt) {
+      last = points[pi].v;
+      pi++;
+    }
+    grid.push(last);
+  }
+  return grid;
 }
 
 function PctChange({ value, label }: { value: number; label: string }) {
@@ -49,12 +78,16 @@ export function PortfolioScreen() {
   const brief = useBriefing();
 
   const slice = useMemo(() => {
-    // 7D shows every real point in the window — that's what makes it look
-    // like an actual live market. 30D/YTD collapse to one point per day, so
-    // a longer range reads as a trend rather than a wall of noise.
+    // 7D is resampled onto a real-time grid — a fresh account's first few
+    // minutes of activity should read as a flat week with one recent
+    // sliver of movement, not stretched to fill the whole width. 30D/YTD
+    // collapse to one point per day, so a longer range reads as a trend
+    // rather than a wall of noise.
     let base: number[];
-    if (range === "7D") base = windowByDays(chartPoints, 7).map((p) => p.v);
-    else if (range === "30D") base = bucketByDay(windowByDays(chartPoints, 30));
+    if (range === "7D") {
+      const now = Date.now();
+      base = resampleWithFlatFill(chartPoints, now - 7 * DAY_MS, now, GRID_POINTS_7D, STARTING_VALUE);
+    } else if (range === "30D") base = bucketByDay(windowByDays(chartPoints, 30));
     else base = bucketByDay(chartPoints);
     // Some history exists but not enough points for this range — draw a
     // flat line at the current value rather than an empty chart. A
