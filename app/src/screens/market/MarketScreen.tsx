@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useClubOverlayStore } from "../../store/overlayStore";
+import { useTick } from "../../hooks/useTick";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
@@ -12,10 +13,25 @@ import { colorForPct } from "../../theme/theme";
 import { fmtMoney, fmtPct } from "../../utils/format";
 import { api } from "../../api/client";
 
+// Cosmetic-only wobble on top of the real price/pct — real movement (match
+// settlement, microPriceJitter) only touches a club every so often, and
+// this screen otherwise sits dead still between refreshes. A tiny
+// randomized tick reads as "the market is alive" without touching any real
+// data. Display-only: never sent to the server, never affects portfolio math.
+const JIT_PRICE_PCT = 0.0001; // ±0.01% of price
+const JIT_PCT_POINTS = 0.01; // ±0.01 percentage points on the displayed daily %
+function jitPrice(price: number, tick: number, seed: number): number {
+  return price * (1 + Math.sin((tick + seed) * 0.7) * JIT_PRICE_PCT);
+}
+function jitPct(pct: number, tick: number, seed: number): number {
+  return pct + Math.sin((tick + seed) * 0.7 + 1) * JIT_PCT_POINTS;
+}
+
 export function MarketScreen() {
   const T = useThemeStore((s) => s.tokens);
   const clubs = useDataStore((s) => s.clubs);
   const open = useClubOverlayStore((s) => s.open);
+  const tick = useTick(500);
   const [search, setSearch] = useState("");
   const [earnersRange, setEarnersRange] = useState<"gw" | "ytd">("gw");
   const [news, setNews] = useState<{ id: string; code: string; color: string; headline: string; timeStr: string }[]>([]);
@@ -62,19 +78,23 @@ export function MarketScreen() {
 
         {isSearching ? (
           <View>
-            {searchResults.map((c) => (
-              <Pressable key={c.id} onPress={() => open(c.id)} style={styles.searchRow}>
-                <ClubBadge code={c.code} color={c.color} size={36} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
-                  <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>{c.code}</Text>
-                </View>
-                <View style={{ alignItems: "flex-end", width: 60 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{fmtMoney(c.price)}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "500", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
-                </View>
-              </Pressable>
-            ))}
+            {searchResults.map((c, i) => {
+              const price = jitPrice(c.price, tick, i);
+              const pct = jitPct(c.dailyPct, tick, i);
+              return (
+                <Pressable key={c.id} onPress={() => open(c.id)} style={styles.searchRow}>
+                  <ClubBadge code={c.code} color={c.color} size={36} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
+                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>{c.code}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end", width: 60 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{fmtMoney(price)}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "500", color: colorForPct(pct) }}>{fmtPct(pct)}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
             {searchResults.length === 0 && (
               <Text style={{ textAlign: "center", color: T.textSecondary, fontSize: 14, paddingVertical: 32 }}>No clubs match "{search}"</Text>
             )}
@@ -83,14 +103,17 @@ export function MarketScreen() {
           <View>
             <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Top Movers</Text>
             <View style={styles.grid}>
-              {topMovers.map((c) => (
-                <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(c.dailyPct) }}>
-                    {c.dailyPct >= 0 ? "▲" : "▼"} {fmtPct(c.dailyPct)}
-                  </Text>
-                </Pressable>
-              ))}
+              {topMovers.map((c, i) => {
+                const pct = jitPct(c.dailyPct, tick, i);
+                return (
+                  <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(pct) }}>
+                      {pct >= 0 ? "▲" : "▼"} {fmtPct(pct)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
