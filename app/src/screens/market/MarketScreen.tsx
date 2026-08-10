@@ -18,8 +18,8 @@ import { api } from "../../api/client";
 // this screen otherwise sits dead still between refreshes. A tiny
 // randomized tick reads as "the market is alive" without touching any real
 // data. Display-only: never sent to the server, never affects portfolio math.
-const JIT_PRICE_PCT = 0.0001; // ±0.01% of price
-const JIT_PCT_POINTS = 0.01; // ±0.01 percentage points on the displayed daily %
+const JIT_PRICE_PCT = 0.003; // ±0.3% of price
+const JIT_PCT_POINTS = 0.3; // ±0.3 percentage points on the displayed daily %
 function jitPrice(price: number, tick: number, seed: number): number {
   return price * (1 + Math.sin((tick + seed) * 0.7) * JIT_PRICE_PCT);
 }
