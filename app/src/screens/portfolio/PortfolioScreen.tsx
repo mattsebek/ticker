@@ -24,7 +24,7 @@ const GRID_POINTS_7D = 200;
 // near-invisible sliver at the very edge. Real trading-app charts (e.g. a
 // flat overnight/market-closed plateau vs. the live trading window) don't
 // scale strictly by literal duration either; this is the same idea.
-const TODAY_WEIGHT = 0.3;
+const TODAY_WEIGHT = 0.6;
 // Cash + holdings always sums to exactly this at inception, before any real
 // price movement — the correct flat baseline for "before this account
 // existed" rather than an arbitrary guess.
