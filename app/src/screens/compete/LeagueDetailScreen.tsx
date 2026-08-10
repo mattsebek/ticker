@@ -63,7 +63,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
           {standings.map((r, i) => (
-            <View key={r.name} style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}>
+            <View key={r.memberId} style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}>
               <Text style={{ width: 28, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.rank}</Text>
               <Text style={{ flex: 1, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
               <Text style={{ width: 80, textAlign: "center", fontSize: 12, fontWeight: "500", color: T.textSecondary }}>{r.portfolioStr}</Text>

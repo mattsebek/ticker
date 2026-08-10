@@ -96,6 +96,7 @@ export interface PublicLeagueRow {
 }
 
 export interface StandingsRow {
+  memberId: string;
   rank: number;
   name: string;
   you: boolean;

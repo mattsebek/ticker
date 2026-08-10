@@ -53,7 +53,7 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
   const standings = leagueService.standings(lg.id, round, sort);
   res.json({
     league: { id: lg.id, name: lg.name, commissioner: lg.commissioner, isPrivate: !!lg.is_private, code: lg.code },
-    standings: standings.map((r) => ({ rank: r.rank, name: r.name, you: r.memberId === req.userId, portfolio: r.portfolio, portfolioStr: fmtMoney(r.portfolio), points: r.points })),
+    standings: standings.map((r) => ({ memberId: r.memberId, rank: r.rank, name: r.name, you: r.memberId === req.userId, portfolio: r.portfolio, portfolioStr: fmtMoney(r.portfolio), points: r.points })),
   });
 });
 
