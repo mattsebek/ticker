@@ -57,6 +57,7 @@ export async function bootstrap(): Promise<void> {
   }
 
   seedOpeningPrices();
+  healStaleOpeningPrices();
   retireOldDemoLeagues();
   seedLeagues();
   seedBotManagers();
@@ -88,15 +89,47 @@ function normalizeClubPricesForBudget() {
 }
 
 /** Opening price = a base "IPO" value plus a premium derived from the club's OWN provider-supplied win probabilities across its season — not an invented strength tier. */
+function computeOpeningPrice(clubId: string): number {
+  const fixtures = footballRepo.listFixturesForClub(clubId);
+  const winProbSum = fixtures.reduce((sum, f) => {
+    const prob = f.homeClubId === clubId ? f.homeWinProb : f.awayWinProb;
+    return sum + (prob ?? 0.33);
+  }, 0);
+  return round2(6 + winProbSum * 0.9);
+}
+
 function seedOpeningPrices() {
   for (const club of footballRepo.listClubs()) {
-    const fixtures = footballRepo.listFixturesForClub(club.id);
-    const winProbSum = fixtures.reduce((sum, f) => {
-      const prob = f.homeClubId === club.id ? f.homeWinProb : f.awayWinProb;
-      return sum + (prob ?? 0.33);
-    }, 0);
-    const openingPrice = round2(6 + winProbSum * 0.9);
-    priceUpdateService.ensureOpeningPrice(club.id, openingPrice);
+    priceUpdateService.ensureOpeningPrice(club.id, computeOpeningPrice(club.id));
+  }
+}
+
+/**
+ * ensureOpeningPrice() only ever sets a club's price once — fine when
+ * clubs and fixtures import together, but importSeasonSchedule() persists
+ * clubs BEFORE fixtures, so a provider hiccup (e.g. a rate-limit rejection)
+ * partway through can leave clubs seeded with zero fixtures — computing the
+ * exact $6.00 floor — and no later successful import ever revisits that
+ * price. Once fixtures land for a club still parked at that floor, this
+ * recomputes it for real. $6.00 exactly is otherwise not a realistic
+ * organic price (a nonzero win-prob sum practically never rounds back to
+ * it), so this can't misfire on a club that's already been priced from real
+ * data.
+ */
+function healStaleOpeningPrices() {
+  const stillFlat = footballRepo.listClubs().filter((c) => marketRepo.getPrice(c.id) === 6);
+  if (stillFlat.length === 0) return;
+  let healed = 0;
+  for (const club of stillFlat) {
+    if (footballRepo.listFixturesForClub(club.id).length === 0) continue; // still nothing to price off of — next boot retries
+    const openingPrice = computeOpeningPrice(club.id);
+    marketRepo.setPrice(club.id, openingPrice);
+    marketRepo.recordPriceHistory(club.id, 0, openingPrice, 0, null);
+    healed++;
+  }
+  if (healed > 0) {
+    console.log(`[bootstrap] healed ${healed} club price(s) stuck at the uninformed $6 floor`);
+    normalizeClubPricesForBudget();
   }
 }
 
