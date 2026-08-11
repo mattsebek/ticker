@@ -2,6 +2,23 @@ export function fmtMoney(v: number): string {
   return "$" + v.toFixed(2);
 }
 
+// Always ticks down to the second — even an 11-day-away countdown should
+// visibly move, not just change once an hour.
+export function fmtCountdown(targetIso: string, now: number): string | null {
+  const diffMs = new Date(targetIso).getTime() - now;
+  if (diffMs <= 0) return null;
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
+  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
+  return `${seconds}s`;
+}
+
 export function fmtPct(v: number): string {
   return (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
 }

@@ -6,23 +6,7 @@ import { useThemeStore } from "../store/themeStore";
 import { api } from "../api/client";
 import type { GameweekResponse } from "../api/types";
 import type { AppStackParamList } from "../navigation/types";
-
-// Always ticks down to the second — even an 11-day-away countdown should
-// visibly move, not just change once an hour.
-function fmtCountdown(targetIso: string, now: number): string | null {
-  const diffMs = new Date(targetIso).getTime() - now;
-  if (diffMs <= 0) return null;
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
-  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
-  return `${seconds}s`;
-}
+import { fmtCountdown } from "../utils/format";
 
 export function GameweekWidget() {
   const T = useThemeStore((s) => s.tokens);

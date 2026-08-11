@@ -9,6 +9,7 @@ import { FONT_SERIF, GREEN, RED } from "../../theme/theme";
 import { api } from "../../api/client";
 import type { GameweekDetailResponse, GameweekClubDetail } from "../../api/types";
 import type { AppStackParamList } from "../../navigation/types";
+import { fmtCountdown } from "../../utils/format";
 
 type Props = NativeStackScreenProps<AppStackParamList, "GameweekDetail">;
 
@@ -100,6 +101,7 @@ export function GameweekDetailScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<GameweekDetailResponse | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
@@ -112,13 +114,23 @@ export function GameweekDetailScreen({ navigation }: Props) {
     };
   }, [offset]);
 
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Only the latest round (not yet locked) has anything to count down to —
+  // once its fixtures kick off, this round becomes "current" server-side
+  // and fmtCountdown naturally returns null, so the row just disappears.
+  const countdown = data && !data.canNext && data.nextKickoff ? fmtCountdown(data.nextKickoff, now) : null;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
       <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { top: insets.top + 16, backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
         <CloseIcon color={T.text} />
       </Pressable>
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: 40 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: countdown ? 4 : 24 }}>
           <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
             <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canPrev ? T.accent : T.border }}>‹</Text>
           </Pressable>
@@ -127,7 +139,11 @@ export function GameweekDetailScreen({ navigation }: Props) {
             <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.accent : T.border }}>›</Text>
           </Pressable>
         </View>
-        <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24, textAlign: "center" }}>How your 4 clubs are doing this week</Text>
+        {countdown && (
+          <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24, textAlign: "center" }}>
+            Your clubs lock in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+          </Text>
+        )}
 
         {!data ? (
           <ActivityIndicator color={T.accent} style={{ marginTop: 40 }} />

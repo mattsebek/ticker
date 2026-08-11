@@ -114,6 +114,7 @@ export interface GameweekDetailResponse {
   round: number;
   canPrev: boolean;
   canNext: boolean;
+  nextKickoff: string | null;
   clubs: GameweekClubDetail[];
 }
 
