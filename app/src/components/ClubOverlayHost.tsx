@@ -19,6 +19,14 @@ import { Button } from "./Button";
 const DISMISS_DISTANCE = 110;
 const DISMISS_VELOCITY = 0.8;
 const PAGE_DISTANCE = 80;
+const DRAG_START_THRESHOLD = 10;
+
+/** fixtureMatchText (server) is "vs Opponent · Fri, Aug 21, 2:00 PM" — split so the date can be styled as secondary, the opponent as primary. */
+function splitMatchText(matchText: string): { opponent: string; date: string | null } {
+  const i = matchText.indexOf(" · ");
+  if (i === -1) return { opponent: matchText, date: null };
+  return { opponent: matchText.slice(0, i), date: matchText.slice(i + 3) };
+}
 
 export function ClubOverlayHost() {
   const clubId = useClubOverlayStore((s) => s.clubId);
@@ -30,6 +38,7 @@ export function ClubOverlayHost() {
   const [detail, setDetail] = useState<ClubDetail | null>(null);
   const translateY = useRef(new Animated.Value(0)).current;
   const translateX = useRef(new Animated.Value(0)).current;
+  const scrollYRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,13 +68,24 @@ export function ClubOverlayHost() {
   const hasPrev = heldIndex > 0;
   const hasNext = heldIndex >= 0 && heldIndex < heldIds.length - 1;
 
-  // One responder on the non-scrolling header zone (handle + badge/price)
-  // handles both gestures, so neither ever fights the body's ScrollView:
-  // a mostly-vertical downward drag dismisses, a mostly-horizontal drag
-  // pages to the next/previous held club.
+  // Covers the whole sheet (not just the header) so a swipe works from
+  // anywhere on the card, matching Apple's own card. Claimed in the CAPTURE
+  // phase — deciding in bubble phase let the body's ScrollView win drags
+  // that started over it, which is what made the gestures not work at all
+  // outside the narrow header strip they were first scoped to. A
+  // horizontal drag is always claimed (paging); a downward drag is only
+  // claimed once the ScrollView is already at its top (scrollYRef <= 0),
+  // so scrolling back up through content still works normally and dismiss
+  // only kicks in past that boundary — the standard native-sheet contract.
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 || g.dy > 8,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponderCapture: (_, g) => {
+        const horizontal = Math.abs(g.dx) > Math.abs(g.dy);
+        if (horizontal) return Math.abs(g.dx) > DRAG_START_THRESHOLD;
+        return g.dy > DRAG_START_THRESHOLD && scrollYRef.current <= 0;
+      },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_, g) => {
         if (Math.abs(g.dx) > Math.abs(g.dy)) translateX.setValue(g.dx);
         else if (g.dy > 0) translateY.setValue(g.dy);
@@ -110,8 +130,8 @@ export function ClubOverlayHost() {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.35)" }]} />
       </Pressable>
       <View style={styles.sheetWrap} pointerEvents="box-none">
-        <Animated.View style={[styles.sheet, { backgroundColor: T.card, maxHeight: "88%", transform: [{ translateX }, { translateY }] }]}>
-          <View {...pan.panHandlers}>
+        <Animated.View style={[styles.sheet, { backgroundColor: T.card, maxHeight: "88%", transform: [{ translateX }, { translateY }] }]} {...pan.panHandlers}>
+          <View>
             <View style={[styles.handle, { backgroundColor: T.border }]} />
             <Pressable onPress={close} style={[styles.closeBtn, { backgroundColor: T.elevated }]} accessibilityLabel="Close" accessibilityRole="button">
               <CloseIcon color={T.text} />
@@ -129,7 +149,13 @@ export function ClubOverlayHost() {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+            onScroll={(e) => {
+              scrollYRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+          >
             {detail.form.length > 0 && (
               <>
                 <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Form</Text>
@@ -141,20 +167,26 @@ export function ClubOverlayHost() {
               </>
             )}
 
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 22, marginBottom: 10 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 22, marginBottom: 6 }}>
               <Text style={{ color: T.text, fontSize: 16, fontWeight: "600" }}>Upcoming Fixtures</Text>
               <Text style={{ color: T.textSecondary, fontSize: 10, fontWeight: "500", textTransform: "uppercase", letterSpacing: 0.5 }}>Projected Points</Text>
             </View>
-            {detail.fixtures.map((fx, i) => (
-              <View key={i} style={[styles.plainRow, i === detail.fixtures.length - 1 && { paddingBottom: 0 }]}>
-                <Text style={{ color: T.text, fontSize: 13 }}>{fx.matchText}</Text>
-                <Text style={{ color: T.accent, fontSize: 13, fontWeight: "600" }}>{fx.projPts} pts</Text>
-              </View>
-            ))}
+            {detail.fixtures.map((fx, i) => {
+              const { opponent, date } = splitMatchText(fx.matchText);
+              return (
+                <View key={i} style={[styles.plainRow, i === detail.fixtures.length - 1 && { paddingBottom: 0 }]}>
+                  <Text style={{ fontSize: 13 }}>
+                    <Text style={{ color: T.text }}>{opponent}</Text>
+                    {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
+                  </Text>
+                  <Text style={{ color: T.accent, fontSize: 13, fontWeight: "600" }}>{fx.projPts} pts</Text>
+                </View>
+              );
+            })}
 
             {holding && (
               <>
-                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 10 }}>Your Position</Text>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 34, marginBottom: 6 }}>Your Position</Text>
                 <View style={styles.plainRow}>
                   <Text style={{ color: T.textSecondary, fontSize: 13 }}>Purchase price</Text>
                   <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{fmtMoney(holding.purchasePrice)}</Text>
@@ -192,6 +224,6 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, overflow: "hidden" },
   handle: { alignSelf: "center", width: 36, height: 5, borderRadius: 3, marginBottom: 14 },
   closeBtn: { position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12 },
+  plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 24, paddingTop: 22, paddingBottom: 38, borderTopWidth: 1 },
 });

@@ -81,8 +81,7 @@ function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexL
         {/* space-between (not absolute positioning) so the counter always gets its own clear row below the text, no matter how many lines the text wraps to. */}
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16, paddingRight: 16 }}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: T.accent }} />
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16, paddingRight: 16 }}>
               <Text style={{ fontSize: 11, fontWeight: "500", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {card.emoji} {card.label}
               </Text>
