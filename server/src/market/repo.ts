@@ -149,6 +149,10 @@ export const marketRepo = {
   getPriceSeriesWithTime(clubId: string): { price: number; createdAt: number }[] {
     return db.prepare("SELECT price, created_at as createdAt FROM price_history WHERE club_id = ? ORDER BY id ASC").all(clubId) as any[];
   },
+  /** Demo/screenshot tooling only — backdates a synthetic history point (round=-999 marks it as such) without touching the club's current live price. See /internal/seed-history. */
+  seedHistoricalPrice(clubId: string, price: number, createdAt: number) {
+    db.prepare(`INSERT INTO price_history (club_id, round, price, impact_pct, fixture_id, created_at) VALUES (?,-999,?,0,NULL,?)`).run(clubId, price, createdAt);
+  },
   hasSettledFixture(fixtureId: string, clubId: string): boolean {
     return !!db.prepare("SELECT 1 FROM price_history WHERE fixture_id = ? AND club_id = ?").get(fixtureId, clubId);
   },

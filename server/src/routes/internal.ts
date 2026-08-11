@@ -4,9 +4,12 @@ import { scheduler } from "../jobs/scheduler";
 import { footballService } from "../football/service";
 import { marketRepo } from "../market/repo";
 import { fantasyRepo } from "../fantasy/repo";
+import { usersRepo } from "../shared/usersRepo";
 import { gameweekService } from "../fantasy/gameweekService";
 import { round2, clamp } from "../shared/rng";
 import { reseedAllOpeningPrices, resetAllUsers } from "../bootstrap";
+
+const DAY_MS = 86_400_000;
 
 /** Basic job observability — not authenticated, intended for local/ops use only. */
 export const internalRouter = Router();
@@ -100,4 +103,70 @@ internalRouter.post("/simulate", (req, res) => {
   });
 
   res.json({ ok: true, moves });
+});
+
+/**
+ * Demo/screenshot tooling only: backdates an account's created_at so
+ * first-week-only gating (30D/YTD lock, the daily Did You Know reset) reads
+ * as if it had been registered `daysAgo` days ago. Doesn't touch any
+ * trading data — see /internal/seed-history for backdated price history.
+ */
+const backdateSchema = z.object({ email: z.string().trim().email(), daysAgo: z.number().min(1).max(365) });
+
+internalRouter.post("/backdate-user", (req, res) => {
+  const parsed = backdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "email and daysAgo required" });
+  const user = usersRepo.getByEmail(parsed.data.email);
+  if (!user) return res.status(404).json({ error: "No account with that email." });
+  const createdAt = Date.now() - parsed.data.daysAgo * DAY_MS;
+  usersRepo.setCreatedAt(user.id, createdAt);
+  res.json({ ok: true, createdAt });
+});
+
+/**
+ * Demo/screenshot tooling only: backfills `days` worth of synthetic price
+ * history (round=-999) for a user's currently-held clubs, as a random walk
+ * that ends exactly at each club's real current price — so today's value
+ * is unaffected, only the chart's past gets a believable shape. Requires
+ * the user to have already picked their 4 clubs.
+ */
+const seedHistorySchema = z.object({ email: z.string().trim().email(), days: z.number().min(1).max(30), pointsPerDay: z.number().min(2).max(100).optional() });
+
+internalRouter.post("/seed-history", (req, res) => {
+  const parsed = seedHistorySchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "email and days required" });
+  const user = usersRepo.getByEmail(parsed.data.email);
+  if (!user) return res.status(404).json({ error: "No account with that email." });
+
+  const holdings = marketRepo.getHoldings(user.id);
+  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't picked 4 clubs yet." });
+
+  const { days } = parsed.data;
+  const pointsPerDay = parsed.data.pointsPerDay ?? 10;
+  const totalPoints = days * pointsPerDay;
+  const now = Date.now();
+  const windowStart = now - days * DAY_MS;
+
+  let seeded = 0;
+  for (const h of holdings) {
+    const currentPrice = marketRepo.getPrice(h.club_id) ?? h.purchase_price;
+    // Random-walk FROM today's real price backward in conceptual time, then
+    // reverse — guarantees the chart's most recent point is exactly
+    // today's actual price, with a believable wobble leading up to it.
+    const values = [currentPrice];
+    for (let i = 1; i < totalPoints; i++) {
+      const step = currentPrice * 0.015;
+      const next = round2(clamp(values[i - 1] + (Math.random() - 0.5) * step, currentPrice * 0.55, currentPrice * 1.75));
+      values.push(next);
+    }
+    values.reverse();
+
+    for (let i = 0; i < totalPoints; i++) {
+      const t = Math.round(windowStart + (i / (totalPoints - 1)) * (now - windowStart));
+      marketRepo.seedHistoricalPrice(h.club_id, values[i], t);
+      seeded++;
+    }
+  }
+
+  res.json({ ok: true, seededPoints: seeded, clubs: holdings.length });
 });

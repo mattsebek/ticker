@@ -85,6 +85,10 @@ export const usersRepo = {
   setBriefDismissed(id: string, dismissed: boolean) {
     db.prepare("UPDATE users SET brief_dismissed = ?, brief_dismissed_date = ? WHERE id = ?").run(dismissed ? 1 : 0, dismissed ? todayStr() : null, id);
   },
+  /** Demo/screenshot tooling only — backdates an account so first-week gating (30D/YTD lock, etc.) reads as if it were registered earlier. See /internal/backdate-user. */
+  setCreatedAt(id: string, createdAt: number) {
+    db.prepare("UPDATE users SET created_at = ? WHERE id = ?").run(createdAt, id);
+  },
   /** Wipes every registered account (bots aren't rows in this table). Used by the /internal/reset-users ops action. */
   deleteAll(): number {
     return db.prepare("DELETE FROM users").run().changes;
