@@ -8,6 +8,7 @@ import { FONT_SERIF, colorForPct } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { PillRow, Pill } from "../../components/Pill";
 import { PortfolioChart } from "../../components/PortfolioChart";
+import { RollingNumber } from "../../components/RollingNumber";
 import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
@@ -165,7 +166,7 @@ export function PortfolioScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={{ fontSize: 13, color: T.textSecondary, fontWeight: "500", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 14 }}>Portfolio</Text>
-        <Text style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", letterSpacing: -0.3, color: T.text }}>{fmtMoney(scrub ? scrub.v : portfolio.heroValue)}</Text>
+        <RollingNumber text={fmtMoney(scrub ? scrub.v : portfolio.heroValue)} style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", color: T.text }} />
         <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
           <PctChange value={portfolio.weekPct} label="week" />
           <PctChange value={portfolio.seasonPct} label="season" />

@@ -5,6 +5,7 @@ import Svg, { Defs, LinearGradient, Stop, Path, Polyline } from "react-native-sv
 import { useTick } from "../../hooks/useTick";
 import { ClubBadge } from "../../components/ClubBadge";
 import { SparkLine } from "../../components/SparkLine";
+import { RollingNumber } from "../../components/RollingNumber";
 import { Button } from "../../components/Button";
 import { GREEN, RED, FONT_SERIF } from "../../theme/theme";
 import { fmtPct } from "../../utils/format";
@@ -155,7 +156,7 @@ function Slide0Card({ tick }: { tick: number }) {
     <View style={styles.obCard}>
       <Text style={{ color: "#8A8F98", fontSize: 11, marginBottom: 4 }}>Portfolio value</Text>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-        <Text style={{ color: "#fff", fontSize: 26, fontWeight: "700" }}>${portfolioValue.toFixed(2)}</Text>
+        <RollingNumber text={`$${portfolioValue.toFixed(2)}`} style={{ color: "#fff", fontSize: 26, fontWeight: "700" }} />
         <Text style={{ color: GREEN, fontSize: 18, fontWeight: "700" }}>▲</Text>
       </View>
       <Text style={{ color: GREEN, fontSize: 12, fontWeight: "600", marginBottom: 14 }}>{fmtPct(jit(4.8, 0))} today</Text>
