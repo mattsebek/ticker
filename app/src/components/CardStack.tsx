@@ -141,7 +141,7 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
   const behind = remaining.slice(1, 3);
 
   return (
-    <View style={{ marginTop: 16 }}>
+    <View style={{ marginTop: 16, marginHorizontal: -10 }}>
       <View style={{ height: CARD_HEIGHT + behind.length * PEEK_OFFSET }}>
         {behind
           .map((_, i) => i + 1)
@@ -156,6 +156,6 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 22, padding: 22 },
+  card: { borderRadius: 16, padding: 22 },
   close: { position: "absolute", top: 14, right: 14, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });
