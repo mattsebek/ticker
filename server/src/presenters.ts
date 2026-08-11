@@ -9,6 +9,7 @@ import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
 import { fantasyRepo } from "./fantasy/repo";
 import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
+import { breakdownClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
 
@@ -111,4 +112,45 @@ export function clubDetail(club: Club, currentRound: number) {
     fixtures,
     news: { h: headline, m: commentaryService.readTimeLabel(headline) },
   };
+}
+
+/**
+ * Per-club breakdown of a user's held clubs for one gameweek — the
+ * "how did my 4 clubs do this week" view. A club with no round fixture yet
+ * (schedule gap, bye) is simply omitted rather than shown as an error.
+ */
+export function gameweekDetail(userId: string, round: number) {
+  const holdingClubIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
+  return holdingClubIds
+    .map((clubId) => {
+      const club = footballService.getClub(clubId);
+      if (!club) return null;
+      const fixture = footballRepo.listFixturesForClub(clubId).find((f) => f.round === round);
+      if (!fixture) return null;
+
+      const opponent = opponentClub(fixture, clubId);
+      const isHome = fixture.homeClubId === clubId;
+      const winProb = winProbFor(fixture, clubId);
+      const projectedPoints = projectPoints(winProb, fixture.drawProb ?? 0.24);
+      const side = isHome ? "home" : "away";
+      const breakdown = breakdownClubInFixture(fixture, side);
+      const actualPoints = breakdown?.total ?? null;
+
+      return {
+        clubId,
+        name: club.name,
+        code: club.code,
+        color: club.color,
+        opponent: opponent?.name ?? "TBD",
+        isHome,
+        matchText: fixtureMatchText(fixture, clubId, opponent),
+        status: fixture.status,
+        scoreStr: fixture.homeGoals != null && fixture.awayGoals != null ? (isHome ? `${fixture.homeGoals}-${fixture.awayGoals}` : `${fixture.awayGoals}-${fixture.homeGoals}`) : null,
+        projectedPoints,
+        actualPoints,
+        pctOfProjected: actualPoints != null && projectedPoints > 0 ? Math.round((actualPoints / projectedPoints) * 100) : null,
+        breakdown,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null);
 }

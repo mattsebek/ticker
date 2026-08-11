@@ -83,6 +83,38 @@ export interface GameweekResponse {
   nextKickoff: string | null;
 }
 
+export interface ScoreBreakdown {
+  result: "win" | "draw" | "loss";
+  resultPoints: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalPoints: number;
+  cleanSheet: boolean;
+  cleanSheetPoints: number;
+  total: number;
+}
+
+export interface GameweekClubDetail {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  opponent: string;
+  isHome: boolean;
+  matchText: string;
+  status: string;
+  scoreStr: string | null;
+  projectedPoints: number;
+  actualPoints: number | null;
+  pctOfProjected: number | null;
+  breakdown: ScoreBreakdown | null;
+}
+
+export interface GameweekDetailResponse {
+  round: number;
+  clubs: GameweekClubDetail[];
+}
+
 export interface LeagueListRow {
   id: string;
   name: string;

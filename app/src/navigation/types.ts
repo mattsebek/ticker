@@ -5,6 +5,7 @@ export type AppStackParamList = {
   JoinLeague: { code?: string } | undefined;
   Rules: undefined;
   AiBriefing: undefined;
+  GameweekDetail: undefined;
 };
 
 export type MainTabParamList = {

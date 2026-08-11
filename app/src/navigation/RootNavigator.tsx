@@ -12,6 +12,7 @@ import { LeagueDetailScreen } from "../screens/compete/LeagueDetailScreen";
 import { JoinLeagueScreen } from "../screens/compete/JoinLeagueScreen";
 import { RulesScreen } from "../screens/profile/RulesScreen";
 import { AiBriefingScreen } from "../screens/ai/AiBriefingScreen";
+import { GameweekDetailScreen } from "../screens/gameweek/GameweekDetailScreen";
 import type { AppStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -76,6 +77,7 @@ export function RootNavigator() {
                 left-edge swipe-to-dismiss gesture iOS disables by default for
                 fullScreenModal presentations. */}
             <Stack.Screen name="AiBriefing" component={AiBriefingScreen} options={{ presentation: "fullScreenModal" }} />
+            <Stack.Screen name="GameweekDetail" component={GameweekDetailScreen} options={{ presentation: "fullScreenModal" }} />
           </>
         )}
       </Stack.Navigator>

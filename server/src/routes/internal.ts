@@ -2,10 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { scheduler } from "../jobs/scheduler";
 import { footballService } from "../football/service";
+import { footballRepo } from "../football/repo";
 import { marketRepo } from "../market/repo";
 import { fantasyRepo } from "../fantasy/repo";
 import { usersRepo } from "../shared/usersRepo";
 import { gameweekService } from "../fantasy/gameweekService";
+import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
 import { reseedAllOpeningPrices, resetAllUsers } from "../bootstrap";
 
@@ -169,4 +171,49 @@ internalRouter.post("/seed-history", (req, res) => {
   }
 
   res.json({ ok: true, seededPoints: seeded, clubs: holdings.length });
+});
+
+/**
+ * Demo/screenshot tooling only, for building the Game Week detail feature:
+ * finishes ONE of an account's held clubs' current-round fixtures with a
+ * clear win + clean sheet + goals result (so every scoring component shows
+ * up non-zero), then runs it through the real settlement pipeline —
+ * fantasy_points and price impact land exactly like a real finished match
+ * would, nothing about this is faked past the score itself.
+ */
+const simulateFinishSchema = z.object({ email: z.string().trim().email() });
+
+internalRouter.post("/simulate-finish", (req, res) => {
+  const parsed = simulateFinishSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "email required" });
+  const user = usersRepo.getByEmail(parsed.data.email);
+  if (!user) return res.status(404).json({ error: "No account with that email." });
+
+  const holdings = marketRepo.getHoldings(user.id);
+  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't picked 4 clubs yet." });
+
+  const round = gameweekService.currentRound();
+  let target: { fixtureId: string; clubId: string } | null = null;
+  for (const h of holdings) {
+    const fixture = footballRepo.listFixturesForClub(h.club_id).find((f) => f.round === round && f.status !== "finished");
+    if (fixture) {
+      target = { fixtureId: fixture.id, clubId: h.club_id };
+      break;
+    }
+  }
+  if (!target) return res.status(400).json({ error: "None of this account's clubs have an unfinished current-round fixture." });
+
+  const fixture = footballRepo.getFixture(target.fixtureId)!;
+  const isHome = fixture.homeClubId === target.clubId;
+  footballRepo.upsertFixture({
+    ...fixture,
+    status: "finished",
+    homeGoals: isHome ? 2 : 0,
+    awayGoals: isHome ? 0 : 2,
+    homeCleanSheet: isHome,
+    awayCleanSheet: !isHome,
+  });
+  settlementService.settleFixture(target.fixtureId);
+
+  res.json({ ok: true, fixtureId: target.fixtureId, clubId: target.clubId, round });
 });

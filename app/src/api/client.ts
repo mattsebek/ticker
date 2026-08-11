@@ -5,6 +5,7 @@ import type {
   ClubDetail,
   ClubSummary,
   GameweekResponse,
+  GameweekDetailResponse,
   LeagueListRow,
   PortfolioResponse,
   PublicLeagueRow,
@@ -60,6 +61,7 @@ export const api = {
   },
   gameweek: {
     get: (offset: number) => request<GameweekResponse>(`/gameweek?offset=${offset}`),
+    detail: (offset: number = 0) => request<GameweekDetailResponse>(`/gameweek/detail?offset=${offset}`),
   },
   leagues: {
     mine: () => request<{ leagues: LeagueListRow[] }>("/leagues/mine"),

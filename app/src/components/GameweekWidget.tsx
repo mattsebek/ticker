@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useThemeStore } from "../store/themeStore";
 import { api } from "../api/client";
 import type { GameweekResponse } from "../api/types";
+import type { AppStackParamList } from "../navigation/types";
 
 // Always ticks down to the second — even an 11-day-away countdown should
 // visibly move, not just change once an hour.
@@ -23,6 +26,9 @@ function fmtCountdown(targetIso: string, now: number): string | null {
 
 export function GameweekWidget() {
   const T = useThemeStore((s) => s.tokens);
+  // GameweekWidget is nested inside a tab screen, so the nearest navigator
+  // is the tab navigator — GameweekDetail lives one level up, on the stack.
+  const navigation = useNavigation();
   const [data, setData] = useState<GameweekResponse | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -52,13 +58,16 @@ export function GameweekWidget() {
           Your (4) clubs lock in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
         </Text>
       )}
-      <View style={styles.row}>
+      <Pressable
+        onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("GameweekDetail")}
+        style={styles.row}
+      >
         <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Game Week {data.gwNumber}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 20, fontWeight: "600", color: T.text }}>{data.points.toFixed(1)}</Text>
           <Text style={{ fontSize: 18, color: T.chevron }}>›</Text>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
