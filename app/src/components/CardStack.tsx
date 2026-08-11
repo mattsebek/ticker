@@ -28,7 +28,7 @@ const MAX_STACK = 4;
 const PEEK_INSET = 10;
 const PEEK_OFFSET = 10;
 const SLIDE_OUT_X = -480;
-const CARD_HEIGHT = 172;
+const CARD_HEIGHT = 190;
 
 /** Purely decorative — no content, just background/border/shadow peeking out from behind the front card. Fixed height (not minHeight) so it can't ever be covered by a taller front card. */
 function PeekCard({ depth, T }: { depth: number; T: ThemeTokens }) {
@@ -81,13 +81,13 @@ function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexL
         {/* space-between (not absolute positioning) so the counter always gets its own clear row below the text, no matter how many lines the text wraps to. */}
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, paddingRight: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16, paddingRight: 16 }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: T.accent }} />
               <Text style={{ fontSize: 11, fontWeight: "500", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {card.emoji} {card.label}
               </Text>
             </View>
-            <Text style={{ fontSize: 13, lineHeight: 20, color: T.text, paddingRight: 16 }}>
+            <Text style={{ fontSize: 13, lineHeight: 21, color: T.text, paddingRight: 16 }}>
               {card.segments.map((s, j) =>
                 s.tone ? (
                   <Text key={j} style={{ color: s.tone === "pos" ? GREEN : RED, fontWeight: "600" }}>
@@ -157,6 +157,6 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, padding: 20 },
+  card: { borderRadius: 20, padding: 22 },
   close: { position: "absolute", top: 14, right: 14, width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
 });
