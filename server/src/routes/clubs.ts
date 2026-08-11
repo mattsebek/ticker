@@ -2,7 +2,7 @@ import { Router } from "express";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
 import { clubSummary, clubDetail } from "../presenters";
-import { commentaryService } from "../briefing/commentaryService";
+import { newsService } from "../briefing/newsService";
 
 export const clubsRouter = Router();
 
@@ -34,15 +34,18 @@ clubsRouter.get("/top-earners", (req, res) => {
   res.json({ clubs: sorted.slice(0, 6) });
 });
 
-clubsRouter.get("/news", (req, res) => {
-  const round = gameweekService.currentRound();
-  const clubs = footballService.listClubs().slice(0, 3);
-  const news = clubs.map((c) => {
-    const summary = clubSummary(c, round);
-    const headline = commentaryService.clubHeadline(c, summary.form, summary.seasonPct);
-    return { id: c.id, code: c.code, color: c.color, headline, timeStr: commentaryService.readTimeLabel(headline) };
+clubsRouter.get("/news", async (req, res) => {
+  const items = await newsService.getPremierLeagueNews(4);
+  res.json({
+    news: items.map((n) => ({
+      id: n.id,
+      code: n.code,
+      color: n.color,
+      headline: n.title,
+      timeStr: newsService.fmtTimeAgo(n.pubDate),
+      link: n.link,
+    })),
   });
-  res.json({ news });
 });
 
 clubsRouter.get("/:id", (req, res) => {

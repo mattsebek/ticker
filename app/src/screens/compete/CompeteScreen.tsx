@@ -51,7 +51,7 @@ export function CompeteScreen() {
         <GameweekWidget />
 
         <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginTop: 24, marginBottom: 10 }}>Your Leagues</Text>
-        <View style={{ backgroundColor: T.card, borderRadius: 20, overflow: "hidden", marginBottom: 20 }}>
+        <View style={{ backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, overflow: "hidden", marginBottom: 20, ...T.elevatedShadow }}>
           <View style={[styles.headRow, { borderBottomColor: T.borderLight }]}>
             <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, letterSpacing: 0.5, textTransform: "uppercase" }}>Name</Text>
             <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, letterSpacing: 0.5, textTransform: "uppercase" }}>Rank</Text>

@@ -49,7 +49,7 @@ export const api = {
     search: (q: string) => request<{ clubs: ClubSummary[] }>(`/clubs/search?q=${encodeURIComponent(q)}`),
     movers: () => request<{ clubs: ClubSummary[] }>("/clubs/movers"),
     topEarners: (range: "gw" | "ytd") => request<{ clubs: ClubSummary[] }>(`/clubs/top-earners?range=${range}`),
-    news: () => request<{ news: { id: string; code: string; color: string; headline: string; timeStr: string }[] }>("/clubs/news"),
+    news: () => request<{ news: { id: string; code: string | null; color: string | null; headline: string; timeStr: string; link: string }[] }>("/clubs/news"),
     detail: (id: string) => request<{ club: ClubDetail }>(`/clubs/${id}`),
   },
   portfolio: {

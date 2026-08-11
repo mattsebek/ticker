@@ -41,7 +41,7 @@ export function ProfileScreen() {
           </View>
         </View>
 
-        <View style={{ backgroundColor: T.card, borderRadius: 20, overflow: "hidden" }}>
+        <View style={{ backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, overflow: "hidden", ...T.elevatedShadow }}>
           <SettingsRow label="Competitions" value={String(leagueCount)} T={T} />
           <SettingsRow label="Notifications" value="On" T={T} />
           <Pressable onPress={toggleTheme} style={[styles.settingsRow, { borderBottomColor: T.borderLight }]}>
@@ -54,7 +54,7 @@ export function ProfileScreen() {
           </Pressable>
         </View>
 
-        <Pressable onPress={logout} style={[styles.logout, { backgroundColor: T.card }]}>
+        <Pressable onPress={logout} style={[styles.logout, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow }]}>
           <Text style={{ fontSize: 15, fontWeight: "500", color: "#E0393E" }}>Log Out</Text>
         </Pressable>
       </ScrollView>
@@ -74,5 +74,5 @@ function SettingsRow({ label, value, T }: { label: string; value: string; T: any
 const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
   settingsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1 },
-  logout: { marginTop: 20, borderRadius: 20, padding: 16, alignItems: "center" },
+  logout: { marginTop: 20, borderRadius: 16, borderWidth: 1, padding: 16, alignItems: "center" },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -34,7 +34,7 @@ export function MarketScreen() {
   const tick = useTick(500);
   const [search, setSearch] = useState("");
   const [earnersRange, setEarnersRange] = useState<"gw" | "ytd">("gw");
-  const [news, setNews] = useState<{ id: string; code: string; color: string; headline: string; timeStr: string }[]>([]);
+  const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; timeStr: string; link: string }[]>([]);
 
   useEffect(() => {
     api.clubs.news().then((r) => setNews(r.news));
@@ -135,14 +135,22 @@ export function MarketScreen() {
             <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Market News</Text>
             <View style={{ backgroundColor: T.card, borderRadius: 16, overflow: "hidden" }}>
               {news.map((n, i) => (
-                <Pressable key={n.id} onPress={() => open(n.id)} style={[styles.newsRow, { borderBottomColor: T.borderLight, borderBottomWidth: i === news.length - 1 ? 0 : 1 }]}>
+                <Pressable
+                  key={n.id}
+                  onPress={() => Linking.openURL(n.link)}
+                  style={[styles.newsRow, { borderBottomColor: T.borderLight, borderBottomWidth: i === news.length - 1 ? 0 : 1 }]}
+                >
+                  {n.code && n.color ? <ClubBadge code={n.code} color={n.color} size={32} /> : null}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{n.headline}</Text>
-                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 6 }}>{n.timeStr}</Text>
+                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 6 }}>BBC Sport · {n.timeStr}</Text>
                   </View>
                   <ChevronRightIcon color={T.textSecondary} />
                 </Pressable>
               ))}
+              {news.length === 0 && (
+                <Text style={{ padding: 16, fontSize: 13, color: T.textSecondary, textAlign: "center" }}>No news available right now.</Text>
+              )}
             </View>
           </View>
         )}
