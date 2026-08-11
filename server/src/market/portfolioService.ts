@@ -66,9 +66,14 @@ export const portfolioService = {
    * approach) silently broke once clubs could accumulate price_history
    * rows at different rates; merging real events by timestamp is the only
    * way to get a chart that means what "7D"/"30D"/"YTD" claim it means.
-   * Capped to the most recent MAX_POINTS so a long-running account with
-   * frequent jitter doesn't grow this payload unbounded — plenty of
-   * resolution for a phone screen either way.
+   *
+   * Bounded by TIME first (the client never needs more than ~35 days —
+   * covers 30D plus buffer, and YTD for a fresh season), then by point
+   * count via even downsampling if still too dense. An earlier version
+   * capped by raw point count alone (keep the last 500), which silently
+   * discarded the entire calendar span whenever a few actively-jittering
+   * clubs produced more than 500 events combined — a 30-day-old account's
+   * "30D" view could end up showing only the last few minutes.
    */
   getPortfolioSeries(userId: string): { t: number; v: number }[] {
     const holdings = marketRepo.getHoldings(userId);
@@ -92,7 +97,12 @@ export const portfolioService = {
       points.push({ t: e.t, v: round2(total) });
     }
 
-    const MAX_POINTS = 500;
-    return points.length > MAX_POINTS ? points.slice(points.length - MAX_POINTS) : points;
+    const WINDOW_MS = 35 * 86_400_000;
+    const windowed = points.filter((p) => p.t >= Date.now() - WINDOW_MS);
+
+    const MAX_POINTS = 1500;
+    if (windowed.length <= MAX_POINTS) return windowed;
+    const stride = Math.ceil(windowed.length / MAX_POINTS);
+    return windowed.filter((_, i) => i % stride === 0);
   },
 };
