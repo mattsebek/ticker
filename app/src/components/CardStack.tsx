@@ -82,7 +82,7 @@ function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexL
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16, paddingRight: 16 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent }}>
                 {card.emoji} {card.label}
               </Text>
             </View>
