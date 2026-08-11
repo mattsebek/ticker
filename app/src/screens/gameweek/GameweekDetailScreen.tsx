@@ -139,9 +139,9 @@ export function GameweekDetailScreen({ navigation }: Props) {
             <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.accent : T.border }}>›</Text>
           </Pressable>
         </View>
-        {countdown && (
+        {countdown && data && (
           <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24, textAlign: "center" }}>
-            Your clubs lock in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+            Game Week {data.round + 1} team lock: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
           </Text>
         )}
 
