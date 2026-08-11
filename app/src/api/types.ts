@@ -112,6 +112,8 @@ export interface GameweekClubDetail {
 
 export interface GameweekDetailResponse {
   round: number;
+  canPrev: boolean;
+  canNext: boolean;
   clubs: GameweekClubDetail[];
 }
 

@@ -72,20 +72,47 @@ function ClubCard({ club, T }: { club: GameweekClubDetail; T: ReturnType<typeof 
   );
 }
 
+function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnType<typeof useThemeStore.getState>["tokens"] }) {
+  const projectedTotal = data.clubs.reduce((a, c) => a + c.projectedPoints, 0);
+  const actualTotal = data.clubs.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
+  const anyFinished = data.clubs.some((c) => c.actualPoints != null);
+  const pct = projectedTotal > 0 ? Math.round((actualTotal / projectedTotal) * 100) : 0;
+
+  return (
+    <View style={[styles.card, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow, marginTop: 4 }]}>
+      <Text style={{ fontSize: 12, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>
+        Gameweek Total
+      </Text>
+      <View style={{ flexDirection: "row" }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 24, fontWeight: "700", color: T.text }}>{projectedTotal}</Text>
+          <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Projected</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 24, fontWeight: "700", color: anyFinished ? pctColor(pct, T) : T.text }}>{actualTotal}</Text>
+          <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Actual{anyFinished ? ` (${pct}%)` : ""}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export function GameweekDetailScreen({ navigation }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
+  const [offset, setOffset] = useState(0);
   const [data, setData] = useState<GameweekDetailResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    api.gameweek.detail(0).then((r) => {
+    setData(null);
+    api.gameweek.detail(offset).then((r) => {
       if (!cancelled) setData(r);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [offset]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
@@ -93,9 +120,15 @@ export function GameweekDetailScreen({ navigation }: Props) {
         <CloseIcon color={T.text} />
       </Pressable>
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: 40 }}>
-        <Text style={{ fontFamily: FONT_SERIF, fontSize: 30, fontWeight: "600", letterSpacing: -0.3, color: T.text, marginBottom: 4 }}>
-          Game Week {data?.round ?? ""}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
+          <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
+            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canPrev ? T.text : T.border }}>‹</Text>
+          </Pressable>
+          <Text style={{ fontFamily: FONT_SERIF, fontSize: 30, fontWeight: "600", letterSpacing: -0.3, color: T.text }}>Game Week {data?.round ?? ""}</Text>
+          <Pressable onPress={() => data?.canNext && setOffset((o) => o + 1)} hitSlop={10} style={styles.arrowBtn}>
+            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.text : T.border }}>›</Text>
+          </Pressable>
+        </View>
         <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24 }}>How your 4 clubs are doing this week</Text>
 
         {!data ? (
@@ -103,7 +136,12 @@ export function GameweekDetailScreen({ navigation }: Props) {
         ) : data.clubs.length === 0 ? (
           <Text style={{ fontSize: 14, color: T.textSecondary, textAlign: "center", marginTop: 40 }}>No fixtures found for this gameweek yet.</Text>
         ) : (
-          data.clubs.map((club) => <ClubCard key={club.clubId} club={club} T={T} />)
+          <>
+            {data.clubs.map((club) => (
+              <ClubCard key={club.clubId} club={club} T={T} />
+            ))}
+            <TotalsSummary data={data} T={T} />
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -112,6 +150,7 @@ export function GameweekDetailScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   closeBtn: { position: "absolute", top: 16, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 },
+  arrowBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
   card: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 14 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
 });

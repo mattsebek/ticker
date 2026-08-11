@@ -9,7 +9,7 @@ gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
   const current = gameweekService.currentRound();
   const offset = parseInt(String(req.query.offset || "0"), 10) || 0;
   const round = Math.max(1, Math.min(current, current + offset));
-  res.json({ round, clubs: gameweekDetail(req.userId!, round) });
+  res.json({ round, canPrev: round > 1, canNext: round < current, clubs: gameweekDetail(req.userId!, round) });
 });
 
 gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
