@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, AuthedRequest } from "../shared/auth";
-import { usersRepo } from "../shared/usersRepo";
+import { usersRepo, isBriefCurrentlyDismissed } from "../shared/usersRepo";
 import { marketRepo } from "../market/repo";
 import { portfolioService } from "../market/portfolioService";
 import { tradingService, TradingError } from "../market/tradingService";
@@ -37,7 +37,7 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     heroValue,
     weekPct,
     seasonPct,
-    briefDismissed: !!user.brief_dismissed,
+    briefDismissed: isBriefCurrentlyDismissed(user),
     holdings,
   });
 });

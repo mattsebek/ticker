@@ -1,12 +1,24 @@
 import React, { useRef, useState } from "react";
 import { View, Text, Pressable, Animated, LayoutAnimation, Platform, UIManager, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useThemeStore } from "../store/themeStore";
 import { CloseIcon } from "./icons";
 import { api } from "../api/client";
 import { useDataStore } from "../store/dataStore";
+import { useCompeteIntentStore } from "../store/competeIntentStore";
 import { GREEN, RED } from "../theme/theme";
 import type { BriefCard } from "../api/types";
 import type { ThemeTokens } from "../theme/theme";
+import type { MainTabParamList } from "../navigation/types";
+
+/** Card CTAs are declared server-side as an action id (see routes/briefing.ts) rather than a raw route, so the server can add new nudges without the client needing a matching deploy for unrecognized ones (they just render without a working tap). */
+function runCtaAction(action: string, navigation: BottomTabNavigationProp<MainTabParamList>) {
+  if (action === "create-league") {
+    useCompeteIntentStore.getState().requestCreateLeague();
+    navigation.navigate("Compete");
+  }
+}
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -52,6 +64,7 @@ function PeekCard({ depth, T }: { depth: number; T: ThemeTokens }) {
  */
 function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexLabel: string; onDismiss: () => void; T: ThemeTokens }) {
   const slideX = useRef(new Animated.Value(0)).current;
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   function handleDismiss() {
     Animated.timing(slideX, { toValue: SLIDE_OUT_X, duration: 240, useNativeDriver: true }).start(({ finished }) => {
@@ -85,6 +98,11 @@ function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexL
                 )
               )}
             </Text>
+            {card.cta && (
+              <Pressable onPress={() => runCtaAction(card.cta!.action, navigation)} hitSlop={6} style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent }}>{card.cta.text}</Text>
+              </Pressable>
+            )}
           </View>
           <Text style={{ alignSelf: "flex-end", marginTop: 8, fontSize: 11, fontWeight: "600", color: T.textSecondary }}>{indexLabel}</Text>
         </View>

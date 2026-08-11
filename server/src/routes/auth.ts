@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { usersRepo, UserRow } from "../shared/usersRepo";
+import { usersRepo, UserRow, isBriefCurrentlyDismissed } from "../shared/usersRepo";
 import { signToken, requireAuth, AuthedRequest } from "../shared/auth";
 import { marketRepo } from "../market/repo";
 import { leagueService } from "../fantasy/leagueService";
@@ -29,7 +29,7 @@ function publicUser(u: UserRow) {
     theme: u.theme,
     onboarded: !!u.onboarded,
     hasHoldings: marketRepo.getHoldings(u.id).length > 0,
-    briefDismissed: !!u.brief_dismissed,
+    briefDismissed: isBriefCurrentlyDismissed(u),
     joinDateStr: new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     createdAt: u.created_at,
   };

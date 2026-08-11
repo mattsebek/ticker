@@ -115,6 +115,7 @@ export interface BriefCard {
   label: string;
   emoji: string;
   segments: BriefSegment[];
+  cta?: { text: string; action: string };
 }
 
 export interface MorningBrief {

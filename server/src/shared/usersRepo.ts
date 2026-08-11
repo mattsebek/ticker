@@ -17,6 +17,23 @@ CREATE TABLE IF NOT EXISTS users (
 );
 `);
 
+// brief_dismissed_date replaces brief_dismissed's old permanent-forever
+// semantics with a per-day one (see isBriefCurrentlyDismissed below) — added
+// after the table already shipped, so guard the ALTER for databases that
+// already have the column.
+try {
+  db.exec("ALTER TABLE users ADD COLUMN brief_dismissed_date TEXT");
+} catch {
+  // already applied
+}
+
+const DAY_MS = 86_400_000;
+const FIRST_WEEK_MS = 7 * DAY_MS;
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export interface UserRow {
   id: string;
   name: string;
@@ -25,7 +42,23 @@ export interface UserRow {
   theme: string;
   onboarded: number;
   brief_dismissed: number;
+  brief_dismissed_date: string | null;
   created_at: number;
+}
+
+/**
+ * A brand-new account's first week is an onboarding/engagement window — the
+ * "Did You Know?" stack (see routes/briefing.ts) should come back every day
+ * during it even if dismissed, so a user always sees at least a couple of
+ * tips per day rather than swiping it away once and never seeing it again.
+ * After the first week, a dismissal is permanent again (the original
+ * behavior), matching how it'll work once real per-user AI briefing content
+ * replaces the generic tips.
+ */
+export function isBriefCurrentlyDismissed(user: UserRow): boolean {
+  if (!user.brief_dismissed_date) return false;
+  const isFirstWeek = Date.now() - user.created_at < FIRST_WEEK_MS;
+  return isFirstWeek ? user.brief_dismissed_date === todayStr() : true;
 }
 
 export const usersRepo = {
@@ -50,7 +83,7 @@ export const usersRepo = {
     db.prepare("UPDATE users SET onboarded = 1 WHERE id = ?").run(id);
   },
   setBriefDismissed(id: string, dismissed: boolean) {
-    db.prepare("UPDATE users SET brief_dismissed = ? WHERE id = ?").run(dismissed ? 1 : 0, id);
+    db.prepare("UPDATE users SET brief_dismissed = ?, brief_dismissed_date = ? WHERE id = ?").run(dismissed ? 1 : 0, dismissed ? todayStr() : null, id);
   },
   /** Wipes every registered account (bots aren't rows in this table). Used by the /internal/reset-users ops action. */
   deleteAll(): number {

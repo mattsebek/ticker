@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { useThemeStore } from "../../store/themeStore";
+import { useCompeteIntentStore } from "../../store/competeIntentStore";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { GameweekWidget } from "../../components/GameweekWidget";
 import { Button } from "../../components/Button";
@@ -27,6 +28,10 @@ export function CompeteScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      if (useCompeteIntentStore.getState().openCreateLeague) {
+        useCompeteIntentStore.getState().consumeCreateLeague();
+        setCreateOpen(true);
+      }
     }, [load])
   );
 
