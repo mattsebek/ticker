@@ -79,19 +79,17 @@ function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnTyp
   const pct = projectedTotal > 0 ? Math.round((actualTotal / projectedTotal) * 100) : 0;
 
   return (
-    <View style={[styles.card, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow, marginTop: 4 }]}>
-      <Text style={{ fontSize: 12, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>
-        Gameweek Total
-      </Text>
-      <View style={{ flexDirection: "row" }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 24, fontWeight: "700", color: T.text }}>{projectedTotal}</Text>
-          <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Projected</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 24, fontWeight: "700", color: anyFinished ? pctColor(pct, T) : T.text }}>{actualTotal}</Text>
-          <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Actual{anyFinished ? ` (${pct}%)` : ""}</Text>
-        </View>
+    <View>
+      <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 20, marginBottom: 6 }}>Gameweek Total</Text>
+      <View style={styles.plainRow}>
+        <Text style={{ color: T.textSecondary, fontSize: 13 }}>Projected</Text>
+        <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{projectedTotal} pts</Text>
+      </View>
+      <View style={styles.plainRow}>
+        <Text style={{ color: T.textSecondary, fontSize: 13 }}>Actual</Text>
+        <Text style={{ color: anyFinished ? pctColor(pct, T) : T.text, fontSize: 14, fontWeight: "600" }}>
+          {actualTotal} pts{anyFinished ? ` (${pct}%)` : ""}
+        </Text>
       </View>
     </View>
   );
@@ -120,16 +118,16 @@ export function GameweekDetailScreen({ navigation }: Props) {
         <CloseIcon color={T.text} />
       </Pressable>
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: 40 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
           <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
-            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canPrev ? T.text : T.border }}>‹</Text>
+            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canPrev ? T.accent : T.border }}>‹</Text>
           </Pressable>
           <Text style={{ fontFamily: FONT_SERIF, fontSize: 30, fontWeight: "600", letterSpacing: -0.3, color: T.text }}>Game Week {data?.round ?? ""}</Text>
           <Pressable onPress={() => data?.canNext && setOffset((o) => o + 1)} hitSlop={10} style={styles.arrowBtn}>
-            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.text : T.border }}>›</Text>
+            <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.accent : T.border }}>›</Text>
           </Pressable>
         </View>
-        <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24 }}>How your 4 clubs are doing this week</Text>
+        <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24, textAlign: "center" }}>How your 4 clubs are doing this week</Text>
 
         {!data ? (
           <ActivityIndicator color={T.accent} style={{ marginTop: 40 }} />
@@ -153,4 +151,5 @@ const styles = StyleSheet.create({
   arrowBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
   card: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 14 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
+  plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },
 });

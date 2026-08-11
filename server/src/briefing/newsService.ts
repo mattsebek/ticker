@@ -27,6 +27,7 @@ interface RawNewsItem {
   description: string;
   link: string;
   pubDate: string;
+  thumbnail: string | null;
 }
 
 interface NewsItem extends RawNewsItem {
@@ -54,6 +55,12 @@ function tagText(block: string, tag: string): string | undefined {
   return plain ? decodeEntities(plain[1]) : undefined;
 }
 
+/** <media:thumbnail width="240" height="134" url="..."/> — a self-closing tag with attributes, not a <tag>text</tag> pair, so it needs its own extraction. */
+function extractThumbnail(block: string): string | null {
+  const m = block.match(/<media:thumbnail[^>]*\burl="([^"]+)"/);
+  return m ? decodeEntities(m[1]) : null;
+}
+
 function parseRss(xml: string): RawNewsItem[] {
   return xml
     .split("<item>")
@@ -63,6 +70,7 @@ function parseRss(xml: string): RawNewsItem[] {
       description: tagText(block, "description") ?? "",
       link: tagText(block, "link") ?? "",
       pubDate: tagText(block, "pubDate") ?? "",
+      thumbnail: extractThumbnail(block),
     }))
     .filter((item) => item.title && item.link);
 }

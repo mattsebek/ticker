@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Linking } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Linking, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -34,7 +34,7 @@ export function MarketScreen() {
   const tick = useTick(500);
   const [search, setSearch] = useState("");
   const [earnersRange, setEarnersRange] = useState<"gw" | "ytd">("gw");
-  const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; timeStr: string; link: string }[]>([]);
+  const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
 
   useEffect(() => {
     api.clubs.news().then((r) => setNews(r.news));
@@ -140,7 +140,11 @@ export function MarketScreen() {
                   onPress={() => Linking.openURL(n.link)}
                   style={[styles.newsRow, { borderBottomColor: T.borderLight, borderBottomWidth: i === news.length - 1 ? 0 : 1 }]}
                 >
-                  {n.code && n.color ? <ClubBadge code={n.code} color={n.color} size={32} /> : null}
+                  {n.thumbnail ? (
+                    <Image source={{ uri: n.thumbnail }} style={styles.newsThumb} />
+                  ) : n.code && n.color ? (
+                    <ClubBadge code={n.code} color={n.color} size={56} />
+                  ) : null}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{n.headline}</Text>
                     <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 6 }}>BBC Sport · {n.timeStr}</Text>
@@ -165,4 +169,5 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
   moverPill: { width: "47%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 100, paddingVertical: 11, paddingHorizontal: 14 },
   newsRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  newsThumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "#0002" },
 });

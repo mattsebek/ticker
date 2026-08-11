@@ -44,6 +44,7 @@ clubsRouter.get("/news", async (req, res) => {
       headline: n.title,
       timeStr: newsService.fmtTimeAgo(n.pubDate),
       link: n.link,
+      thumbnail: n.thumbnail,
     })),
   });
 });
