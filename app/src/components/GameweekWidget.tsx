@@ -48,12 +48,12 @@ export function GameweekWidget() {
   return (
     <View>
       {countdown && (
-        <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 10, paddingHorizontal: 2 }}>
+        <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 10 }}>
           Your (4) clubs lock in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
         </Text>
       )}
       <View style={styles.row}>
-        <Text style={{ fontSize: 16, color: T.text }}>Game Week {data.gwNumber}</Text>
+        <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Game Week {data.gwNumber}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 20, fontWeight: "600", color: T.text }}>{data.points.toFixed(1)}</Text>
           <Text style={{ fontSize: 18, color: T.chevron }}>›</Text>
@@ -64,5 +64,5 @@ export function GameweekWidget() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4, paddingHorizontal: 2 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
 });
