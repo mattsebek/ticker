@@ -28,7 +28,7 @@ const MAX_STACK = 4;
 const PEEK_INSET = 10;
 const PEEK_OFFSET = 10;
 const SLIDE_OUT_X = -480;
-const CARD_HEIGHT = 190;
+const CARD_HEIGHT = 198;
 
 /** Purely decorative — no content, just background/border/shadow peeking out from behind the front card. Fixed height (not minHeight) so it can't ever be covered by a taller front card. */
 function PeekCard({ depth, T }: { depth: number; T: ThemeTokens }) {
@@ -43,7 +43,7 @@ function PeekCard({ depth, T }: { depth: number; T: ThemeTokens }) {
           right: depth * PEEK_INSET,
           top: depth * PEEK_OFFSET,
           height: CARD_HEIGHT,
-          backgroundColor: T.bg,
+          backgroundColor: T.card,
           borderWidth: 1,
           borderColor: T.border,
           opacity: 1 - depth * 0.18,
@@ -74,19 +74,19 @@ function FrontCard({ card, indexLabel, onDismiss, T }: { card: BriefCard; indexL
 
   return (
     <Animated.View style={{ position: "absolute", left: 0, right: 0, top: 0, transform: [{ translateX: slideX }] }}>
-      <View style={[styles.card, { height: CARD_HEIGHT, backgroundColor: T.bg, borderWidth: 1, borderColor: T.border, ...T.elevatedShadow }]}>
-        <Pressable onPress={handleDismiss} style={styles.close} accessibilityLabel="Dismiss" accessibilityRole="button">
+      <View style={[styles.card, { height: CARD_HEIGHT, backgroundColor: T.card, borderWidth: 1, borderColor: T.border, ...T.elevatedShadow }]}>
+        <Pressable onPress={handleDismiss} style={[styles.close, { backgroundColor: T.elevated }]} accessibilityLabel="Dismiss" accessibilityRole="button">
           <CloseIcon color={T.textSecondary} size={12} />
         </Pressable>
         {/* space-between (not absolute positioning) so the counter always gets its own clear row below the text, no matter how many lines the text wraps to. */}
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16, paddingRight: 16 }}>
-              <Text style={{ fontSize: 11, fontWeight: "500", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {card.emoji} {card.label}
               </Text>
             </View>
-            <Text style={{ fontSize: 13, lineHeight: 21, color: T.text, paddingRight: 16 }}>
+            <Text style={{ fontSize: 14, lineHeight: 22, color: T.text, paddingRight: 16 }}>
               {card.segments.map((s, j) =>
                 s.tone ? (
                   <Text key={j} style={{ color: s.tone === "pos" ? GREEN : RED, fontWeight: "600" }}>
@@ -156,6 +156,6 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, padding: 22 },
-  close: { position: "absolute", top: 14, right: 14, width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  card: { borderRadius: 22, padding: 22 },
+  close: { position: "absolute", top: 14, right: 14, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });
