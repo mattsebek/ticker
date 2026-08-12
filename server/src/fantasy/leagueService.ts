@@ -89,13 +89,18 @@ export const leagueService = {
 /**
  * Season points must reflect whichever lineup was LOCKED for each round,
  * not a single current-holdings snapshot — a club traded away after
- * scoring still counts for the weeks it was actually locked in.
+ * scoring still counts for the weeks it was actually locked in. Only
+ * STARTER clubs count; Bench points are informational only (never league
+ * standings).
  */
 function seasonPointsForMember(memberId: string, throughRound: number): number {
   let total = 0;
   for (let round = 1; round <= throughRound; round++) {
-    const clubIds = fantasyRepo.getLockedLineupClubIds(memberId, round) ?? [];
-    for (const clubId of clubIds) total += fantasyRepo.pointsAtRound(clubId, round);
+    const locked = fantasyRepo.getLockedLineup(memberId, round) ?? [];
+    for (const c of locked) {
+      if (c.status !== "STARTER") continue;
+      total += fantasyRepo.pointsAtRound(c.clubId, round);
+    }
   }
   return total;
 }

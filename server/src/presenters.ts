@@ -7,7 +7,7 @@ import { Club, Fixture } from "./football/types";
 import { footballService } from "./football/service";
 import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
-import { fantasyRepo } from "./fantasy/repo";
+import { fantasyRepo, LineupStatus } from "./fantasy/repo";
 import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
 import { breakdownClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
@@ -92,7 +92,7 @@ export function clubSummary(club: Club, currentRound: number) {
   };
 }
 
-export function clubDetail(club: Club, currentRound: number) {
+export function clubDetail(club: Club, currentRound: number, userId?: string) {
   const summary = clubSummary(club, currentRound);
   const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
   const fixtures = upcoming.map((f) => {
@@ -107,53 +107,74 @@ export function clubDetail(club: Club, currentRound: number) {
     };
   });
   const headline = commentaryService.clubHeadline(club, summary.form, summary.seasonPct);
+
+  // Was this club locked as a STARTER for the currently active round? Only
+  // meaningful when the club isn't currently owned — surfaces the "locked
+  // for GW8 (sold)" club state so a manager can see their sold club is
+  // still earning them points this week.
+  const lockedThisRound = userId ? fantasyRepo.getLockedLineup(userId, currentRound) : null;
+  const wasLockedStarterThisRound = !!lockedThisRound?.some((c) => c.clubId === club.id && c.status === "STARTER");
+
   return {
     ...summary,
     series: marketRepo.getPriceSeries(club.id).map((s) => s.price),
     fixtures,
     news: { h: headline, m: commentaryService.readTimeLabel(headline) },
+    round: currentRound,
+    wasLockedStarterThisRound,
+  };
+}
+
+function gameweekClubDetail(clubId: string, round: number) {
+  const club = footballService.getClub(clubId);
+  if (!club) return null;
+  const fixture = footballRepo.listFixturesForClub(clubId).find((f) => f.round === round);
+  if (!fixture) return null;
+
+  const opponent = opponentClub(fixture, clubId);
+  const isHome = fixture.homeClubId === clubId;
+  const winProb = winProbFor(fixture, clubId);
+  const projectedPoints = projectPoints(winProb, fixture.drawProb ?? 0.24);
+  const side = isHome ? "home" : "away";
+  const breakdown = breakdownClubInFixture(fixture, side);
+  const actualPoints = breakdown?.total ?? null;
+
+  return {
+    clubId,
+    name: club.name,
+    code: club.code,
+    color: club.color,
+    opponent: opponent?.name ?? "TBD",
+    isHome,
+    matchText: fixtureMatchText(fixture, clubId, opponent),
+    status: fixture.status,
+    scoreStr: fixture.homeGoals != null && fixture.awayGoals != null ? (isHome ? `${fixture.homeGoals}-${fixture.awayGoals}` : `${fixture.awayGoals}-${fixture.homeGoals}`) : null,
+    projectedPoints,
+    actualPoints,
+    pctOfProjected: actualPoints != null && projectedPoints > 0 ? Math.round((actualPoints / projectedPoints) * 100) : null,
+    breakdown,
   };
 }
 
 /**
- * Per-club breakdown of a user's held clubs for one gameweek — the
- * "how did my 4 clubs do this week" view. A club with no round fixture yet
+ * Per-club breakdown of a user's locked Gameweek lineup, split into the
+ * Starting Four (scoring) and Bench (informational only — never
+ * contributes to Gameweek/season score). A club with no round fixture yet
  * (schedule gap, bye) is simply omitted rather than shown as an error.
  */
 export function gameweekDetail(userId: string, round: number) {
   // Scoring lineup, not current holdings — a club sold after this round
   // locked still shows here, since it's still what earned the points.
-  const lockedClubIds = fantasyRepo.getLockedLineupClubIds(userId, round) ?? [];
-  return lockedClubIds
-    .map((clubId) => {
-      const club = footballService.getClub(clubId);
-      if (!club) return null;
-      const fixture = footballRepo.listFixturesForClub(clubId).find((f) => f.round === round);
-      if (!fixture) return null;
+  const locked = fantasyRepo.getLockedLineup(userId, round) ?? [];
+  const byStatus = (status: LineupStatus) =>
+    locked
+      .filter((c) => c.status === status)
+      .map((c) => gameweekClubDetail(c.clubId, round))
+      .filter((x): x is NonNullable<typeof x> => x != null);
 
-      const opponent = opponentClub(fixture, clubId);
-      const isHome = fixture.homeClubId === clubId;
-      const winProb = winProbFor(fixture, clubId);
-      const projectedPoints = projectPoints(winProb, fixture.drawProb ?? 0.24);
-      const side = isHome ? "home" : "away";
-      const breakdown = breakdownClubInFixture(fixture, side);
-      const actualPoints = breakdown?.total ?? null;
+  const starters = byStatus("STARTER");
+  const bench = byStatus("BENCH");
+  const benchPoints = bench.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
 
-      return {
-        clubId,
-        name: club.name,
-        code: club.code,
-        color: club.color,
-        opponent: opponent?.name ?? "TBD",
-        isHome,
-        matchText: fixtureMatchText(fixture, clubId, opponent),
-        status: fixture.status,
-        scoreStr: fixture.homeGoals != null && fixture.awayGoals != null ? (isHome ? `${fixture.homeGoals}-${fixture.awayGoals}` : `${fixture.awayGoals}-${fixture.homeGoals}`) : null,
-        projectedPoints,
-        actualPoints,
-        pctOfProjected: actualPoints != null && projectedPoints > 0 ? Math.round((actualPoints / projectedPoints) * 100) : null,
-        breakdown,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x != null);
+  return { starters, bench, benchPoints };
 }

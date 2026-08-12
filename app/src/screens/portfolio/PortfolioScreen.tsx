@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
@@ -13,6 +15,7 @@ import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
 import { useBriefing } from "../../hooks/useBriefing";
+import type { AppStackParamList } from "../../navigation/types";
 
 type Range = "7D" | "30D" | "YTD";
 
@@ -112,6 +115,8 @@ export function PortfolioScreen() {
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
   const user = useAuthStore((s) => s.user);
+  // Nested inside the tab navigator — SetStartingFour lives one level up, on the stack.
+  const navigation = useNavigation();
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
   const [scrub, setScrub] = useState<Point | null>(null);
@@ -162,6 +167,9 @@ export function PortfolioScreen() {
     );
   }
 
+  const starters = portfolio.holdings.filter((h) => h.inStartingFour);
+  const bench = portfolio.holdings.filter((h) => !h.inStartingFour);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -192,20 +200,37 @@ export function PortfolioScreen() {
 
         <View style={{ marginTop: 20 }}>
           <GameweekWidget />
+          <Pressable
+            onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("SetStartingFour")}
+            style={{ marginTop: 6 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>Set Starting Four →</Text>
+          </Pressable>
         </View>
 
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 
         <View style={styles.sectionHeader}>
-          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>
+          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Starting Four</Text>
           <PillRow>
             <Pill label="GW" active={clubsRange === "gw"} onPress={() => setClubsRange("gw")} />
             <Pill label="YTD" active={clubsRange === "year"} onPress={() => setClubsRange("year")} />
           </PillRow>
         </View>
-        {portfolio.holdings.map((h) => (
-          <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
-        ))}
+        {starters.length === 0 ? (
+          <Text style={{ fontSize: 13, color: T.textSecondary }}>You haven't set a Starting Four yet.</Text>
+        ) : (
+          starters.map((h) => <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />)
+        )}
+
+        {bench.length > 0 && (
+          <>
+            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 14 }}>Other Holdings</Text>
+            {bench.map((h) => (
+              <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
+            ))}
+          </>
+        )}
 
         {portfolio.holdings.some((h) => h.nextFixture) && (
           <>

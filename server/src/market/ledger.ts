@@ -15,7 +15,7 @@ export interface LedgerLeg {
  * always independently reconstructable from `ledger_entries` alone
  * (see `marketRepo.auditBalance`).
  */
-export function applyLedgerTransaction(userId: string, kind: "INITIAL_SELECT" | "TRADE", legs: LedgerLeg[]): { transactionId: string; newCash: number } {
+export function applyLedgerTransaction(userId: string, kind: "BUY" | "SELL", legs: LedgerLeg[]): { transactionId: string; newCash: number } {
   return db.transaction(() => {
     const transactionId = marketRepo.createTransaction(userId, kind);
     let cash = marketRepo.getCash(userId);

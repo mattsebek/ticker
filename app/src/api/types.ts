@@ -43,10 +43,15 @@ export interface ClubDetail extends ClubSummary {
   series: number[];
   fixtures: ClubFixture[];
   news: { h: string; m: string };
+  round: number;
+  /** Was this club locked as a STARTER for the currently active round? Only meaningful when not currently owned — surfaces the "Locked for GW{n} (sold)" state. */
+  wasLockedStarterThisRound: boolean;
 }
 
 export interface HoldingView extends ClubSummary {
   purchasePrice: number;
+  /** Whether this club is in the manager's pending (not-yet-locked) Starting Four intent. */
+  inStartingFour: boolean;
 }
 
 export interface User {
@@ -115,7 +120,10 @@ export interface GameweekDetailResponse {
   canPrev: boolean;
   canNext: boolean;
   nextKickoff: string | null;
-  clubs: GameweekClubDetail[];
+  starters: GameweekClubDetail[];
+  bench: GameweekClubDetail[];
+  /** Sum of Bench clubs' actual points so far — informational only, never counted in the Gameweek score. */
+  benchPoints: number;
 }
 
 export interface LeagueListRow {
@@ -159,29 +167,36 @@ export interface MorningBrief {
   label?: string;
 }
 
-export interface TradeCandidateRow extends ClubSummary {
-  canAfford: boolean;
-}
-
-export interface TradeOptionsResponse {
-  mode: "trade" | "buy";
-  fixed: ClubSummary;
-  cash: number;
-  candidates: TradeCandidateRow[];
-}
-
-export interface TradePreviewResponse {
-  canAfford: boolean;
+export interface BuyPreviewResponse {
+  clubName: string;
+  price: number;
+  priceStr: string;
   availableCash: number;
-  budgetImpact: string;
-  budgetColor: "green" | "red" | "gray";
-  aiExplanationText: string | null;
-  release: {
-    purchasePriceStr: string;
-    avgPtsPerGw: string;
-    returnStr: string;
-    returnPctStr: string;
-    positive: boolean;
-  } | null;
+  availableCashStr: string;
+  cashAfter: number;
+  cashAfterStr: string;
+  alreadyOwned: boolean;
+  canAfford: boolean;
   confirmLabel: string;
+}
+
+export interface SellPreviewResponse {
+  clubName: string;
+  currentPrice: number;
+  currentPriceStr: string;
+  purchasePrice: number;
+  purchasePriceStr: string;
+  gain: number;
+  gainStr: string;
+  gainPct: number;
+  gainPctStr: string;
+  cashAfter: number;
+  cashAfterStr: string;
+  owned: boolean;
+  confirmLabel: string;
+}
+
+export interface StartingFourResponse {
+  clubIds: string[];
+  maxStarters: number;
 }

@@ -1,54 +1,46 @@
 import { marketRepo } from "./repo";
+import { fantasyRepo } from "../fantasy/repo";
 import { applyLedgerTransaction } from "./ledger";
 import { round2 } from "../shared/rng";
 
 export class TradingError extends Error {}
 
 /**
- * Layer 4 — Trading Engine. Owns every rule from ticker_rules.md: you may
- * only spend cash you actually have (including proceeds from a simultaneous
- * sale), you may never hold more than 4 clubs, and every trade is atomic —
- * either the whole thing lands in the ledger or none of it does.
+ * Layer 4 — Trading Engine. BUY and SELL are fully independent
+ * transactions — a sale doesn't require a purchase, and a purchase doesn't
+ * require a sale. There is no maximum holdings count; the only
+ * constraints are financial: spend only cash you actually have, never
+ * hold the same club twice, never go negative.
  */
 export const tradingService = {
-  buyingPower(userId: string, sellClubId?: string | null): number {
-    const cash = marketRepo.getCash(userId);
-    const saleProceeds = sellClubId ? marketRepo.getPrice(sellClubId) ?? 0 : 0;
-    return round2(cash + saleProceeds);
+  buyingPower(userId: string): number {
+    return round2(marketRepo.getCash(userId));
   },
 
-  setInitialSelection(userId: string, clubIds: string[], round: number): { cash: number } {
-    if (new Set(clubIds).size !== 4) throw new TradingError("Pick exactly 4 different clubs.");
-    const prices = clubIds.map((id) => marketRepo.getPrice(id) ?? 0);
-    const total = prices.reduce((a, b) => a + b, 0);
-    if (round2(100 - total) < 0) throw new TradingError("That's over your $100.00 budget.");
+  buy(userId: string, clubId: string, round: number): { cash: number } {
+    const holdingIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
+    if (holdingIds.includes(clubId)) throw new TradingError("You already own that club.");
 
-    marketRepo.ensureAccount(userId, 100);
-    marketRepo.setInitialHoldings(userId, clubIds, round);
-    const legs = clubIds.map((id, i) => ({ entryType: "SEED" as const, clubId: id, amount: prices[i], cashDelta: -prices[i] }));
-    const { newCash } = applyLedgerTransaction(userId, "INITIAL_SELECT", legs);
+    const price = marketRepo.getPrice(clubId) ?? 0;
+    const cash = marketRepo.getCash(userId);
+    if (price > cash) throw new TradingError("Insufficient funds.");
+
+    const { newCash } = applyLedgerTransaction(userId, "BUY", [{ entryType: "BUY", clubId, amount: price, cashDelta: -price }]);
+    marketRepo.addHolding(userId, clubId, price, round);
     return { cash: newCash };
   },
 
-  executeTrade(userId: string, sellClubId: string | null, buyClubId: string, round: number): { cash: number } {
-    const holdings = marketRepo.getHoldings(userId);
-    const holdingIds = holdings.map((h) => h.club_id);
-    if (holdingIds.includes(buyClubId)) throw new TradingError("You already own that club.");
-    if (sellClubId && !holdingIds.includes(sellClubId)) throw new TradingError("You don't own that club.");
-    if (!sellClubId && holdingIds.length >= 4) throw new TradingError("You already own 4 clubs — sell one to make room.");
+  sell(userId: string, clubId: string): { cash: number } {
+    const holdingIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
+    if (!holdingIds.includes(clubId)) throw new TradingError("You don't own that club.");
 
-    const buyPrice = marketRepo.getPrice(buyClubId) ?? 0;
-    const sellPrice = sellClubId ? marketRepo.getPrice(sellClubId) ?? 0 : 0;
-    const availableCash = round2(marketRepo.getCash(userId) + sellPrice);
-    if (buyPrice > availableCash) throw new TradingError("Insufficient funds.");
-
-    const legs = [];
-    if (sellClubId) legs.push({ entryType: "SELL" as const, clubId: sellClubId, amount: sellPrice, cashDelta: sellPrice });
-    legs.push({ entryType: "BUY" as const, clubId: buyClubId, amount: buyPrice, cashDelta: -buyPrice });
-
-    const { newCash } = applyLedgerTransaction(userId, "TRADE", legs);
-    if (sellClubId) marketRepo.removeHolding(userId, sellClubId);
-    marketRepo.addHolding(userId, buyClubId, buyPrice, round);
+    const price = marketRepo.getPrice(clubId) ?? 0;
+    const { newCash } = applyLedgerTransaction(userId, "SELL", [{ entryType: "SELL", clubId, amount: price, cashDelta: price }]);
+    marketRepo.removeHolding(userId, clubId);
+    // Can't start a club you no longer own — drop it from the pending
+    // Starting Four intent if it was there. Already-locked Gameweek
+    // history is untouched; this only affects future (unlocked) rounds.
+    fantasyRepo.removeFromStarterSelection(userId, clubId);
     return { cash: newCash };
   },
 };

@@ -29,12 +29,12 @@ interface DidYouKnowTip {
 }
 
 const DID_YOU_KNOW_TIPS: DidYouKnowTip[] = [
-  { label: "Lock-in rule", emoji: "🔒", text: "You must lock in exactly 4 clubs before a gameweek begins to earn points for that week — but the market never closes, so you can trade whenever you want." },
-  { label: "Your budget", emoji: "💵", text: "Every manager starts with the same $100 budget. Splurge on one favorite and you'll have less left for the rest of your four — building a balanced roster is the whole game." },
+  { label: "Starting Four", emoji: "🔒", text: "Before each gameweek, pick up to 4 of your clubs as your Starting Four — only they earn you points that week. Everything else you own is Bench: still an investment, just not scoring." },
+  { label: "Your budget", emoji: "💵", text: "Every manager starts with the same $100 budget. Own as many or as few clubs as you can afford — go all-in on favorites or spread your money across the market." },
   { label: "How prices move", emoji: "📈", text: "Club prices react to real performance — strong results tend to push demand (and price) up, and rough patches tend to pull it back down." },
   { label: "Leagues", emoji: "🏆", text: "You're automatically entered in the Overall League against every manager. You can also create or join private leagues with friends using an invite code." },
   { label: "Ownership", emoji: "👀", text: "Ownership percentage shows how many managers hold a club. A club that's rising but still lightly owned can be one of the best value plays." },
-  { label: "Scoring", emoji: "⚽", text: "Your gameweek score comes from how your 4 clubs actually perform on the pitch that week — the better they do, the more points you earn." },
+  { label: "Scoring", emoji: "⚽", text: "Your gameweek score comes from how your Starting Four actually perform on the pitch that week — the better they do, the more points you earn." },
   {
     label: "Private leagues",
     emoji: "🎉",

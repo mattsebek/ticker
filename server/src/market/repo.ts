@@ -218,15 +218,6 @@ export const marketRepo = {
   getHoldings(userId: string): HoldingRow[] {
     return db.prepare("SELECT * FROM holdings WHERE user_id = ?").all(userId) as HoldingRow[];
   },
-  setInitialHoldings(userId: string, clubIds: string[], round: number) {
-    const del = db.prepare("DELETE FROM holdings WHERE user_id = ?");
-    const ins = db.prepare("INSERT INTO holdings (user_id, club_id, purchase_price, purchased_round) VALUES (?,?,?,?)");
-    del.run(userId);
-    for (const clubId of clubIds) {
-      const price = marketRepo.getPrice(clubId) ?? 0;
-      ins.run(userId, clubId, price, round);
-    }
-  },
   addHolding(userId: string, clubId: string, purchasePrice: number, round: number) {
     db.prepare("INSERT INTO holdings (user_id, club_id, purchase_price, purchased_round) VALUES (?,?,?,?)").run(userId, clubId, purchasePrice, round);
   },
@@ -235,7 +226,7 @@ export const marketRepo = {
   },
 
   // --- transactions / ledger ---
-  createTransaction(userId: string, kind: "INITIAL_SELECT" | "TRADE"): string {
+  createTransaction(userId: string, kind: "BUY" | "SELL"): string {
     const id = randomUUID();
     db.prepare("INSERT INTO transactions (id, user_id, kind, created_at) VALUES (?,?,?,?)").run(id, userId, kind, Date.now());
     return id;

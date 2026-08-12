@@ -43,11 +43,18 @@ export const lineupBackfillService = {
         if (fantasyRepo.hasLockedLineup(userId, round)) continue;
         const clubIds = holdingsAtTimestamp(userId, cutoffMs);
         if (clubIds.length === 0) continue;
+        // Pre-V2 history predates the Starting Four/Bench split — under the
+        // old model everything held WAS the scoring lineup, so every
+        // reconstructed club backfills as STARTER (accurate, not a guess).
         fantasyRepo.lockLineup(
           userId,
           round,
           cutoffMs,
-          clubIds.map((clubId) => ({ clubId, priceAtLock: marketRepo.getPriceAtOrBefore(clubId, cutoffMs) ?? marketRepo.getPrice(clubId) ?? 0 }))
+          clubIds.map((clubId) => ({
+            clubId,
+            priceAtLock: marketRepo.getPriceAtOrBefore(clubId, cutoffMs) ?? marketRepo.getPrice(clubId) ?? 0,
+            status: "STARTER" as const,
+          }))
         );
         locked++;
       }

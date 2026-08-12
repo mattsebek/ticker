@@ -53,46 +53,66 @@ export function RulesScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}>
         <Text style={{ fontFamily: FONT_SERIF, fontSize: 32, fontWeight: "300", letterSpacing: -0.3, color: T.text, marginBottom: 6 }}>Rules of the Game</Text>
         <Text style={{ fontSize: 14, color: T.textSecondary, lineHeight: 21, marginBottom: 24 }}>
-          Ticker is a fantasy Premier League game where you choose clubs, not players. Build a portfolio of four clubs, earn points from their real-world
-          performances, and trade as their market values rise and fall.
+          Ticker is a fantasy Premier League game where you choose clubs, not players. Own as many or as few as you can afford, earn points from your
+          Starting Four's real-world performances, and trade as their market values rise and fall.
         </Text>
         <Callout T={T}>Score the most fantasy points while building the smartest football portfolio.</Callout>
 
-        <H T={T}>1. Selecting Your Initial Portfolio</H>
+        <H T={T}>1. Build Your Portfolio</H>
         <Body T={T}>
-          Every manager begins with <Text style={{ fontWeight: "700" }}>$100.00</Text> in available cash. Use it to purchase exactly{" "}
-          <Text style={{ fontWeight: "700" }}>four Premier League clubs</Text> before the first Gameweek deadline. The combined purchase price of your four
-          clubs may not exceed your available cash.
+          Every manager begins with <Text style={{ fontWeight: "700" }}>$100.00</Text> in cash and <Text style={{ fontWeight: "700" }}>zero holdings</Text>.
+          Buy as many or as few Premier League clubs as you can afford — there's no requirement to spend it all, and no cap on how many different clubs you
+          may own.
         </Body>
         <Card
           T={T}
           accentLast
           rows={[
-            ["Arsenal", "$30.00"],
-            ["Aston Villa", "$25.00"],
-            ["Brighton", "$23.00"],
-            ["Bournemouth", "$18.00"],
-            ["Total Invested", "$96.00"],
-            ["Cash Remaining", "$4.00"],
+            ["Arsenal", "$38.00"],
+            ["Liverpool", "$34.00"],
+            ["Chelsea", "$20.00"],
+            ["Cash", "$8.00"],
+            ["Portfolio Value", "$100.00"],
           ]}
         />
         <Body T={T}>
-          Your initial portfolio must contain exactly four different clubs, no duplicates, and a total purchase price of $100.00 or less. The same club may
-          be owned by multiple managers.
+          That's one valid portfolio — three clubs and some cash held back. So is a single $95 club, or seven clubs at $12-15 each. The only rule is
+          financial: you may never own the same club twice, never spend more cash than you have, and never go negative.
         </Body>
         <Body T={T}>
           Every club has an opening market value reflecting expected performance, schedule strength, recent form, and market expectations. After the season
           begins, values rise or fall based on real-world results — a club's current value may differ from what you paid.
         </Body>
+
+        <H T={T}>2. Pick Your Starting Four</H>
         <Body T={T}>
-          You may make unlimited changes before the first Gameweek deadline. Once it passes, those four clubs are locked in as your first Scoring Lineup —
-          but the market itself never closes, so standard 24/7 trading rules apply from that point on.
+          Before every Gameweek, choose <Text style={{ fontWeight: "700" }}>up to four</Text> of your Holdings as your{" "}
+          <Text style={{ fontWeight: "700" }}>Starting Four</Text>. Only these clubs earn points toward your score that week — from the dedicated Starting
+          Four screen, freely, any time before the deadline.
+        </Body>
+        <Body T={T}>
+          You're never required to fill all four spots. Own only three clubs, or want to sit one out? That's a legitimate strategy — you simply have fewer
+          scoring opportunities that week. Ticker will never auto-fill an empty spot or invent a selection for you.
         </Body>
 
-        <H T={T}>2. Scoring</H>
+        <H T={T}>3. Your Bench</H>
         <Body T={T}>
-          League standings are determined by <Text style={{ fontWeight: "700" }}>fantasy points</Text>, not portfolio value. Every club earns points based on
-          its real Premier League results. Portfolio value affects future spending power but does not directly add points.
+          Every club you own but don't start remains a real investment. Its price still moves, and Ticker still tracks how many points it earned — but
+          those <Text style={{ fontWeight: "700" }}>Bench Points</Text> don't count toward your Gameweek or season score, and never affect league standings.
+          They're there so you can see what you left on the table.
+        </Body>
+        <Card
+          T={T}
+          rows={[
+            ["Starting Four", "26 pts"],
+            ["Bench (informational)", "17 pts"],
+          ]}
+        />
+
+        <H T={T}>4. Scoring</H>
+        <Body T={T}>
+          League standings are determined by <Text style={{ fontWeight: "700" }}>fantasy points</Text>, not portfolio value. Every Premier League club earns
+          points based on its real results — but only your locked Starting Four's points count toward your score.
         </Body>
         <Card
           T={T}
@@ -106,9 +126,9 @@ export function RulesScreen({ navigation }: Props) {
           ]}
         />
         <Body T={T}>
-          Your Gameweek score is the combined total earned by the four clubs locked into your <Text style={{ fontWeight: "700" }}>Scoring Lineup</Text> for
-          that Gameweek — a snapshot taken at the deadline, not necessarily what you currently hold. Points accumulate all season — the manager with the
-          most total fantasy points at the end wins the league.
+          Your Gameweek score is the combined total earned by the clubs locked into your <Text style={{ fontWeight: "700" }}>Starting Four</Text> for that
+          Gameweek — an immutable snapshot taken at the deadline, not necessarily what you currently hold. Points accumulate all season — the manager with
+          the most total fantasy points at the end wins the league.
         </Body>
         <Body T={T}>When a club plays more than once in a Gameweek, points from every eligible match are added together. When it has no eligible match, it earns zero.</Body>
         <Body T={T}>
@@ -116,76 +136,66 @@ export function RulesScreen({ navigation }: Props) {
           result. Ticker may adjust scores when an official statistic is corrected after the final whistle.
         </Body>
 
-        <H T={T}>3. Trading</H>
+        <H T={T}>5. Buy &amp; Sell</H>
         <Body T={T}>
-          After selecting your initial portfolio, you may buy and sell clubs through the market to sell clubs whose outlook has weakened, buy clubs you
-          believe are undervalued, respond to schedule and form changes, and reposition for future Gameweeks.
-        </Body>
-        <Body T={T}>
-          The Ticker market is open <Text style={{ fontWeight: "700" }}>24 hours a day, seven days a week</Text> — before matches, during matches, even at
-          halftime. At each Gameweek deadline, Ticker snapshots the four clubs you currently hold as that week's Scoring Lineup. Trades you make after the
-          deadline update your portfolio and set up your <Text style={{ fontWeight: "700" }}>next</Text> Scoring Lineup — they never change the one that's
-          already locked.
-        </Body>
-        <Callout T={T}>Your lineup locks. Your portfolio never does.</Callout>
-        <Body T={T}>
-          Say Chelsea is in your locked Gameweek Scoring Lineup and falls behind 0-2 at halftime. You can sell Chelsea right then if you think its value is
-          about to drop — that changes your portfolio and cash immediately. It does not change your score: whatever points Chelsea ultimately earns from
-          that match still count toward your Gameweek total, because it was locked in when the match started.
+          Buy and sell clubs <Text style={{ fontWeight: "700" }}>independently</Text> whenever the market is open. You don't need to sell one club to buy
+          another, and selling doesn't require an immediate replacement — a sale becomes cash, and cash can sit untouched for as long as you like, fund one
+          big purchase, or get split across several smaller ones.
         </Body>
         <H2 T={T}>Buying Power</H2>
-        <Body T={T}>
-          You may only purchase a club using available cash — cash already held plus proceeds from selling a club. You may not borrow, use margin, or let
-          your cash balance go negative.
-        </Body>
-        <Card T={T} accentLast rows={[["Sale proceeds", "$30.00"], ["Existing cash", "$5.00"], ["New buying power", "$35.00"]]} />
-        <Body T={T}>The replacement club is not limited to the value of the club you sold — it's limited only by your total available cash.</Body>
-        <H2 T={T}>Selling &amp; Buying</H2>
+        <Body T={T}>Your buying power is simply your available cash. You may not borrow, use margin, or let your cash balance go negative.</Body>
+        <Card T={T} accentLast rows={[["Chelsea sale proceeds", "+$25.00"], ["Existing cash", "+$10.00"], ["Buying power", "$35.00"]]} />
+        <Body T={T}>Spend it on one $34 club, split it across two or three cheaper ones, or keep it all as cash — Ticker supports every combination.</Body>
+        <H2 T={T}>Selling</H2>
         <Body T={T}>
           When you sell a club, you receive its current market value, not your original purchase price. A purchase completes at the club's displayed
-          execution price — Ticker verifies you have enough cash, don't already own the club, the market is open, and the transaction follows all portfolio
-          rules.
+          execution price — Ticker verifies you have enough cash and don't already own the club.
         </Body>
-        <Body T={T}>You may temporarily own fewer than four clubs while trading, but must own exactly four when the Gameweek deadline arrives, and never more than four at one time.</Body>
         <H2 T={T}>Portfolio Value</H2>
         <Body T={T}>
-          Your total account value is the current value of owned clubs plus available cash. It measures your football investments and does not replace
-          fantasy points as the primary league score.
+          Your total account value is the current value of every club you own, Starting Four or Bench, plus available cash. It measures your football
+          investments and does not replace fantasy points as the primary league score.
         </Body>
         <Card
           T={T}
           accentLast
           rows={[
-            ["Liverpool", "$30.00"],
-            ["Aston Villa", "$27.00"],
-            ["Brighton", "$25.00"],
-            ["Bournemouth", "$23.00"],
-            ["Cash", "$5.00"],
-            ["Total Portfolio Value", "$110.00"],
+            ["Arsenal (Starting)", "$31.00"],
+            ["Brentford (Bench)", "$10.00"],
+            ["Cash", "$6.00"],
+            ["Total Portfolio Value", "$47.00"],
           ]}
         />
-        <Body T={T}>Unspent cash stays in your account. It doesn't earn points or change value, but holding it may help you buy later without selling more of your portfolio.</Body>
-        <Body T={T}>
-          Ticker never closes the market just because football is being played. The only thing that locks each week is your Scoring Lineup — your
-          portfolio, cash, and every future trade stay fully available at all times.
-        </Body>
         <Body T={T}>
           Club prices may rise or fall based on match results, goals, clean sheets, form, upcoming schedule, market expectations, and buying/selling
           activity. Ticker determines all official prices — external odds, projections, or third-party valuations are not executable Ticker prices.
         </Body>
+
+        <H T={T}>6. Gameweek Lock &amp; the 24/7 Market</H>
         <Body T={T}>
-          Trades are processed as two separate actions — sell a club for cash, then use available cash to buy another. You are not directly exchanging one
-          club for another; leftover cash stays in your balance.
+          Your <Text style={{ fontWeight: "700" }}>Starting Four locks</Text> at the published Gameweek deadline. Your{" "}
+          <Text style={{ fontWeight: "700" }}>Holdings do not</Text> — the Ticker market stays open{" "}
+          <Text style={{ fontWeight: "700" }}>24 hours a day, seven days a week</Text>, including while matches are being played.
+        </Body>
+        <Callout T={T}>Your lineup locks. Your portfolio never does.</Callout>
+        <Body T={T}>
+          Say Chelsea is in your locked Starting Four and falls behind 0-2 at halftime. If you think its price is about to fall, you can sell it right then
+          — that changes your portfolio and cash immediately. It does not change your score: whatever points Chelsea ultimately earns from that match still
+          count toward your Gameweek total, because it was locked in when the deadline passed. You're just no longer financially exposed to it.
+        </Body>
+        <Body T={T}>
+          Trades made after the deadline update your current Holdings and set up your <Text style={{ fontWeight: "700" }}>next</Text> Starting Four
+          selection — they never change the one that's already locked.
         </Body>
 
-        <H T={T}>4. Fantasy Points vs. Portfolio Value</H>
+        <H T={T}>7. Fantasy Points vs. Portfolio Value</H>
         <Body T={T}>
-          Fantasy points determine your position in the league standings, earned through the real-world performances of clubs you own. Portfolio value
-          determines your financial flexibility — it rises or falls with your clubs' market value and determines which clubs you can afford in future
-          trades.
+          Fantasy points determine your position in the league standings, earned through the real-world performances of your Starting Four. Portfolio value
+          determines your financial flexibility — it rises or falls with every club you own, Starting or Bench, and determines which clubs you can afford
+          in future trades.
         </Body>
         <Text style={{ fontSize: 14, lineHeight: 22, color: T.text, marginBottom: 20 }}>A manager may have the most valuable portfolio without the most fantasy points, and vice versa.</Text>
-        <Callout T={T}>Pick clubs that can score today without sacrificing the value you may need tomorrow.</Callout>
+        <Callout T={T}>Points win the league. Portfolio value gives you more tools to get there.</Callout>
       </ScrollView>
     </SafeAreaView>
   );

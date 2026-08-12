@@ -12,8 +12,9 @@ import type {
   StandingsRow,
   BriefCard,
   MorningBrief,
-  TradeOptionsResponse,
-  TradePreviewResponse,
+  BuyPreviewResponse,
+  SellPreviewResponse,
+  StartingFourResponse,
   User,
 } from "./types";
 
@@ -56,12 +57,15 @@ export const api = {
   portfolio: {
     get: () => request<PortfolioResponse>("/portfolio"),
     chart: () => request<{ points: ChartPoint[] }>("/portfolio/chart"),
-    select: (clubIds: string[]) => request<{ ok: true; cash: number }>("/portfolio/select", { method: "POST", body: JSON.stringify({ clubIds }) }),
+    completeOnboarding: () => request<{ ok: true }>("/portfolio/complete-onboarding", { method: "POST" }),
     setBriefDismissed: (dismissed: boolean) => request("/portfolio/brief-dismissed", { method: "PATCH", body: JSON.stringify({ dismissed }) }),
   },
   gameweek: {
     get: (offset: number) => request<GameweekResponse>(`/gameweek?offset=${offset}`),
     detail: (offset: number = 0) => request<GameweekDetailResponse>(`/gameweek/detail?offset=${offset}`),
+    getStartingFour: () => request<StartingFourResponse>("/gameweek/starting-four"),
+    setStartingFour: (clubIds: string[]) =>
+      request<{ ok: true; clubIds: string[] }>("/gameweek/starting-four", { method: "PUT", body: JSON.stringify({ clubIds }) }),
   },
   leagues: {
     mine: () => request<{ leagues: LeagueListRow[] }>("/leagues/mine"),
@@ -77,10 +81,9 @@ export const api = {
     get: () => request<{ morningBrief: MorningBrief | null; cards: BriefCard[] }>("/briefing"),
   },
   trades: {
-    options: (mode: "trade" | "buy", clubId: string) => request<TradeOptionsResponse>(`/trades/options?mode=${mode}&clubId=${clubId}`),
-    preview: (buyClubId: string, sellClubId: string | null) =>
-      request<TradePreviewResponse>(`/trades/preview?buyClubId=${buyClubId}${sellClubId ? `&sellClubId=${sellClubId}` : ""}`),
-    execute: (buyClubId: string, sellClubId: string | null) =>
-      request<{ ok: true; successText: string; cash: number }>("/trades/execute", { method: "POST", body: JSON.stringify({ buyClubId, sellClubId }) }),
+    buyPreview: (clubId: string) => request<BuyPreviewResponse>(`/trades/buy-preview?clubId=${clubId}`),
+    sellPreview: (clubId: string) => request<SellPreviewResponse>(`/trades/sell-preview?clubId=${clubId}`),
+    buy: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/buy", { method: "POST", body: JSON.stringify({ clubId }) }),
+    sell: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/sell", { method: "POST", body: JSON.stringify({ clubId }) }),
   },
 };

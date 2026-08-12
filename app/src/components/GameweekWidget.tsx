@@ -39,7 +39,7 @@ export function GameweekWidget() {
     <View>
       {countdown && (
         <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 10 }}>
-          Your (4) clubs lock in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+          Your Starting Four locks in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
         </Text>
       )}
       <Pressable

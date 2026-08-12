@@ -74,9 +74,9 @@ function ClubCard({ club, T }: { club: GameweekClubDetail; T: ReturnType<typeof 
 }
 
 function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnType<typeof useThemeStore.getState>["tokens"] }) {
-  const projectedTotal = data.clubs.reduce((a, c) => a + c.projectedPoints, 0);
-  const actualTotal = data.clubs.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
-  const anyFinished = data.clubs.some((c) => c.actualPoints != null);
+  const projectedTotal = data.starters.reduce((a, c) => a + c.projectedPoints, 0);
+  const actualTotal = data.starters.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
+  const anyFinished = data.starters.some((c) => c.actualPoints != null);
   const pct = projectedTotal > 0 ? Math.round((actualTotal / projectedTotal) * 100) : 0;
 
   return (
@@ -92,6 +92,12 @@ function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnTyp
           {actualTotal} pts{anyFinished ? ` (${pct}%)` : ""}
         </Text>
       </View>
+      {data.bench.length > 0 && (
+        <View style={[styles.plainRow, { paddingBottom: 0 }]}>
+          <Text style={{ color: T.textSecondary, fontSize: 13 }}>Bench points</Text>
+          <Text style={{ color: T.textSecondary, fontSize: 14, fontWeight: "600" }}>{data.benchPoints} pts</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -147,14 +153,31 @@ export function GameweekDetailScreen({ navigation }: Props) {
 
         {!data ? (
           <ActivityIndicator color={T.accent} style={{ marginTop: 40 }} />
-        ) : data.clubs.length === 0 ? (
+        ) : data.starters.length === 0 && data.bench.length === 0 ? (
           <Text style={{ fontSize: 14, color: T.textSecondary, textAlign: "center", marginTop: 40 }}>No fixtures found for this gameweek yet.</Text>
         ) : (
           <>
-            {data.clubs.map((club) => (
+            {data.starters.length === 0 && (
+              <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 14 }}>
+                You didn't start any clubs this Gameweek — one or more scoring spots sat empty.
+              </Text>
+            )}
+            {data.starters.map((club) => (
               <ClubCard key={club.clubId} club={club} T={T} />
             ))}
             <TotalsSummary data={data} T={T} />
+
+            {data.bench.length > 0 && (
+              <>
+                <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 34, marginBottom: 6 }}>Bench</Text>
+                <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 14 }}>
+                  Still in your portfolio — these points don't count toward your Gameweek score.
+                </Text>
+                {data.bench.map((club) => (
+                  <ClubCard key={club.clubId} club={club} T={T} />
+                ))}
+              </>
+            )}
           </>
         )}
       </ScrollView>

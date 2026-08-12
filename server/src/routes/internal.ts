@@ -141,7 +141,7 @@ internalRouter.post("/seed-history", (req, res) => {
   if (!user) return res.status(404).json({ error: "No account with that email." });
 
   const holdings = marketRepo.getHoldings(user.id);
-  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't picked 4 clubs yet." });
+  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't bought any clubs yet." });
 
   const { days } = parsed.data;
   const pointsPerDay = parsed.data.pointsPerDay ?? 10;
@@ -190,7 +190,7 @@ internalRouter.post("/simulate-finish", (req, res) => {
   if (!user) return res.status(404).json({ error: "No account with that email." });
 
   const holdings = marketRepo.getHoldings(user.id);
-  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't picked 4 clubs yet." });
+  if (holdings.length === 0) return res.status(400).json({ error: "This account hasn't bought any clubs yet." });
 
   const round = gameweekService.currentRound();
   let target: { fixtureId: string; clubId: string } | null = null;

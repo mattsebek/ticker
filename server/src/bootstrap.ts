@@ -213,11 +213,17 @@ function seedBotManagers() {
     const clubIds = bot.clubCodes.map((code) => idByCode.get(code)).filter((x): x is string => !!x);
     if (clubIds.length !== 4) continue;
     marketRepo.ensureAccount(bot.id, 100);
-    try {
-      tradingService.setInitialSelection(bot.id, clubIds, GENESIS_ROUND);
-    } catch {
+
+    // Pre-check the whole roster's cost up front (same all-or-nothing
+    // guarantee the old single setInitialSelection() call gave) rather
+    // than buying one at a time and leaving a bot half-seeded if a later
+    // club is unaffordable.
+    const total = clubIds.reduce((a, id) => a + (marketRepo.getPrice(id) ?? 0), 0);
+    if (round2(100 - total) < 0) {
       // A bot roster priced over $100 at IPO is a config issue worth surfacing, not silently swallowing forever.
       console.warn(`[bootstrap] bot ${bot.id} roster exceeds starting budget, skipped`);
+      continue;
     }
+    for (const clubId of clubIds) tradingService.buy(bot.id, clubId, GENESIS_ROUND);
   }
 }

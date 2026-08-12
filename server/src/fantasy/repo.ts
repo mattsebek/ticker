@@ -1,5 +1,7 @@
 import { db } from "../db";
 
+export type LineupStatus = "STARTER" | "BENCH";
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS fantasy_points (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,10 +46,12 @@ CREATE TABLE IF NOT EXISTS league_members (
   PRIMARY KEY (league_id, member_id)
 );
 
--- Immutable snapshot of the 4 clubs a manager held at a Gameweek deadline.
--- Scoring must always read from here, never from current (live-trading)
--- holdings — see gameweekService/leagueService/presenters, which all read
--- via getLockedLineupClubIds() rather than marketRepo.getHoldings().
+-- Immutable snapshot of EVERY club a manager held at a Gameweek deadline —
+-- not just starters. Scoring must always read from here, never from
+-- current (live-trading) holdings — see gameweekService/leagueService/
+-- presenters, which all read via getLockedLineup() rather than
+-- marketRepo.getHoldings(). Each club is tagged STARTER or BENCH (see
+-- gameweek_lineup_clubs.status); only STARTER clubs count toward scoring.
 CREATE TABLE IF NOT EXISTS gameweek_lineups (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
@@ -64,7 +68,28 @@ CREATE TABLE IF NOT EXISTS gameweek_lineup_clubs (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_gameweek_lineup_clubs_lineup ON gameweek_lineup_clubs(gameweek_lineup_id);
+
+-- The manager's current, MUTABLE intent for which ≤4 of their holdings
+-- should start next Gameweek — distinct from the immutable lock above.
+-- Freely editable until lockPendingLineups() reads and snapshots it.
+CREATE TABLE IF NOT EXISTS starter_selections (
+  user_id TEXT NOT NULL,
+  club_id TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, club_id)
+);
 `);
+
+// status distinguishes a scoring Starter from an informational-only Bench
+// club within a locked lineup — added after gameweek_lineup_clubs already
+// shipped, so guard the ALTER for databases that already have it. Every
+// pre-existing row predates the Bench concept and WAS the scoring lineup,
+// so it backfills to STARTER (accurate, not a guess).
+try {
+  db.exec("ALTER TABLE gameweek_lineup_clubs ADD COLUMN status TEXT NOT NULL DEFAULT 'STARTER'");
+} catch {
+  // already applied
+}
 
 export interface LeagueRow {
   id: string;
@@ -104,28 +129,48 @@ export const fantasyRepo = {
   hasLockedLineup(userId: string, round: number): boolean {
     return !!db.prepare("SELECT 1 FROM gameweek_lineups WHERE user_id = ? AND round = ?").get(userId, round);
   },
-  /** Locks a manager's current 4 clubs as their scoring lineup for `round`. Idempotent — a second call for the same (userId, round) is a no-op via the unique index. */
-  lockLineup(userId: string, round: number, lockedAt: number, clubs: { clubId: string; priceAtLock: number }[]) {
+  /** Locks every one of a manager's current holdings (tagged STARTER/BENCH) as their Gameweek snapshot for `round`. Idempotent — a second call for the same (userId, round) is a no-op via the unique index. */
+  lockLineup(userId: string, round: number, lockedAt: number, clubs: { clubId: string; priceAtLock: number; status: LineupStatus }[]) {
     const tx = db.transaction(() => {
       const result = db.prepare("INSERT OR IGNORE INTO gameweek_lineups (user_id, round, locked_at) VALUES (?,?,?)").run(userId, round, lockedAt);
       if (result.changes === 0) return; // already locked
       const lineupId = result.lastInsertRowid;
-      const ins = db.prepare("INSERT INTO gameweek_lineup_clubs (gameweek_lineup_id, club_id, price_at_lock, created_at) VALUES (?,?,?,?)");
-      for (const c of clubs) ins.run(lineupId, c.clubId, c.priceAtLock, lockedAt);
+      const ins = db.prepare("INSERT INTO gameweek_lineup_clubs (gameweek_lineup_id, club_id, price_at_lock, status, created_at) VALUES (?,?,?,?,?)");
+      for (const c of clubs) ins.run(lineupId, c.clubId, c.priceAtLock, c.status, lockedAt);
     });
     tx();
   },
-  /** The locked scoring lineup for a round, or null if that round hasn't locked yet. */
-  getLockedLineupClubIds(userId: string, round: number): string[] | null {
+  /** Every club (starter and bench) locked for a round, or null if that round hasn't locked yet. */
+  getLockedLineup(userId: string, round: number): { clubId: string; status: LineupStatus }[] | null {
     const lineup = db.prepare("SELECT id FROM gameweek_lineups WHERE user_id = ? AND round = ?").get(userId, round) as { id: number } | undefined;
     if (!lineup) return null;
-    const rows = db.prepare("SELECT club_id FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").all(lineup.id) as { club_id: string }[];
-    return rows.map((r) => r.club_id);
+    const rows = db.prepare("SELECT club_id, status FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").all(lineup.id) as { club_id: string; status: LineupStatus }[];
+    return rows.map((r) => ({ clubId: r.club_id, status: r.status }));
   },
   /** Every round a user has a locked lineup for, ascending — used by season-points aggregation. */
   lockedRoundsForUser(userId: string): number[] {
     const rows = db.prepare("SELECT round FROM gameweek_lineups WHERE user_id = ? ORDER BY round ASC").all(userId) as { round: number }[];
     return rows.map((r) => r.round);
+  },
+
+  // --- starter selection (mutable, pre-lock intent) ---
+  getStarterSelection(userId: string): string[] {
+    const rows = db.prepare("SELECT club_id FROM starter_selections WHERE user_id = ?").all(userId) as { club_id: string }[];
+    return rows.map((r) => r.club_id);
+  },
+  /** Replaces the manager's full pending Starting Four intent. Caller (routes/gameweek.ts) validates length and current ownership. */
+  setStarterSelection(userId: string, clubIds: string[]) {
+    const tx = db.transaction(() => {
+      db.prepare("DELETE FROM starter_selections WHERE user_id = ?").run(userId);
+      const ins = db.prepare("INSERT INTO starter_selections (user_id, club_id, updated_at) VALUES (?,?,?)");
+      const now = Date.now();
+      for (const clubId of clubIds) ins.run(userId, clubId, now);
+    });
+    tx();
+  },
+  /** Drops a single club from the pending selection — called when a club is sold, since you can't start what you no longer own. No-op if it wasn't selected. */
+  removeFromStarterSelection(userId: string, clubId: string) {
+    db.prepare("DELETE FROM starter_selections WHERE user_id = ? AND club_id = ?").run(userId, clubId);
   },
 
   // --- leagues ---
