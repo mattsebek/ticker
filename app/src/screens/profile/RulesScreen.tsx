@@ -9,7 +9,7 @@ import type { AppStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<AppStackParamList, "Rules">;
 
 function Body({ children, T }: { children: React.ReactNode; T: any }) {
-  return <Text style={{ fontSize: 14, lineHeight: 22, color: T.text, marginBottom: 8 }}>{children}</Text>;
+  return <Text style={{ fontSize: 14, lineHeight: 24, color: T.text, marginBottom: 8 }}>{children}</Text>;
 }
 
 function Card({ rows, T, accentLast }: { rows: [string, string][]; T: any; accentLast?: boolean }) {
@@ -34,10 +34,10 @@ function Callout({ children, T }: { children: string; T: any }) {
 }
 
 function H(props: { children: string; T: any }) {
-  return <Text style={{ fontSize: 20, fontWeight: "600", color: props.T.text, marginBottom: 10 }}>{props.children}</Text>;
+  return <Text style={{ fontSize: 20, fontWeight: "600", color: props.T.text, marginTop: 34, marginBottom: 12 }}>{props.children}</Text>;
 }
 function H2(props: { children: string; T: any }) {
-  return <Text style={{ fontSize: 16, fontWeight: "600", color: props.T.text, marginTop: 18, marginBottom: 8 }}>{props.children}</Text>;
+  return <Text style={{ fontSize: 16, fontWeight: "600", color: props.T.text, marginTop: 24, marginBottom: 8 }}>{props.children}</Text>;
 }
 
 export function RulesScreen({ navigation }: Props) {
