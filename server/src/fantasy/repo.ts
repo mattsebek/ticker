@@ -78,6 +78,19 @@ CREATE TABLE IF NOT EXISTS starter_selections (
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, club_id)
 );
+
+-- Marks that a manager has EVER explicitly saved a Starting Four selection
+-- (even an empty one) — separate from starter_selections itself, which is
+-- delete-then-replace and so can't distinguish "never touched" from
+-- "intentionally cleared." lockPendingLineups() only applies its
+-- default-to-current-holdings safety net while this row doesn't exist,
+-- so a deliberate empty selection is respected on every lock after the
+-- first, per the "Ticker must not auto-assign clubs" rule — the fallback
+-- is strictly a one-time migration/first-timer nicety.
+CREATE TABLE IF NOT EXISTS starter_selection_touched (
+  user_id TEXT PRIMARY KEY,
+  touched_at INTEGER NOT NULL
+);
 `);
 
 // status distinguishes a scoring Starter from an informational-only Bench
@@ -147,12 +160,6 @@ export const fantasyRepo = {
     const rows = db.prepare("SELECT club_id, status FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").all(lineup.id) as { club_id: string; status: LineupStatus }[];
     return rows.map((r) => ({ clubId: r.club_id, status: r.status }));
   },
-  /** Every round a user has a locked lineup for, ascending — used by season-points aggregation. */
-  lockedRoundsForUser(userId: string): number[] {
-    const rows = db.prepare("SELECT round FROM gameweek_lineups WHERE user_id = ? ORDER BY round ASC").all(userId) as { round: number }[];
-    return rows.map((r) => r.round);
-  },
-
   // --- starter selection (mutable, pre-lock intent) ---
   getStarterSelection(userId: string): string[] {
     const rows = db.prepare("SELECT club_id FROM starter_selections WHERE user_id = ?").all(userId) as { club_id: string }[];
@@ -165,12 +172,17 @@ export const fantasyRepo = {
       const ins = db.prepare("INSERT INTO starter_selections (user_id, club_id, updated_at) VALUES (?,?,?)");
       const now = Date.now();
       for (const clubId of clubIds) ins.run(userId, clubId, now);
+      db.prepare("INSERT OR IGNORE INTO starter_selection_touched (user_id, touched_at) VALUES (?,?)").run(userId, now);
     });
     tx();
   },
-  /** Drops a single club from the pending selection — called when a club is sold, since you can't start what you no longer own. No-op if it wasn't selected. */
+  /** Drops a single club from the pending selection — called when a club is sold, since you can't start what you no longer own. No-op if it wasn't selected. Does NOT count as "touching" the selection — an involuntary removal shouldn't disable the first-timer fallback. */
   removeFromStarterSelection(userId: string, clubId: string) {
     db.prepare("DELETE FROM starter_selections WHERE user_id = ? AND club_id = ?").run(userId, clubId);
+  },
+  /** Has this manager ever explicitly saved a Starting Four selection (even an empty one)? Used to gate lockPendingLineups()'s one-time default-to-holdings fallback — see starter_selection_touched. */
+  hasEverSetSelection(userId: string): boolean {
+    return !!db.prepare("SELECT 1 FROM starter_selection_touched WHERE user_id = ?").get(userId);
   },
 
   // --- leagues ---

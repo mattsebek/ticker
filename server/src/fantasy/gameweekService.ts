@@ -65,10 +65,12 @@ export const gameweekService = {
    * MAX_STARTERS of them STARTER (from their pending starter_selections
    * intent) and the rest BENCH. Real users and bots alike — bots never
    * touch the Starting Four screen, so they always fall back to mirroring
-   * their (static) holdings; real users get the same fallback only on
-   * their very first lock ever (covers the pre-V2 exactly-4 migration and
-   * a first-timer who never set a selection) — after that an intentionally
-   * empty selection is respected. Idempotent per (user, round).
+   * their (static) holdings; real users get the same fallback only until
+   * they've EVER explicitly saved a selection (fantasyRepo.hasEverSetSelection
+   * — deliberately not "ever locked before," since the historical backfill
+   * already gives pre-V2 accounts locked rounds without them having used
+   * the new selection screen) — after that, an intentionally empty
+   * selection is respected. Idempotent per (user, round).
    */
   lockPendingLineups(): { round: number; locked: number } | null {
     const nextRound = fantasyRepo.maxScoredRound() + 1;
@@ -92,7 +94,7 @@ export const gameweekService = {
         .filter((id) => holdingIds.has(id))
         .slice(0, fantasyConfig.MAX_STARTERS);
 
-      if (starterIds.length === 0 && (botIds.has(userId) || fantasyRepo.lockedRoundsForUser(userId).length === 0)) {
+      if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
         starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
       }
       const starterSet = new Set(starterIds);
