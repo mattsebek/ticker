@@ -64,7 +64,7 @@ A club's current value may therefore be higher or lower than the price you origi
 
 You may make unlimited changes to your initial portfolio before the first Gameweek deadline.
 
-Once the deadline passes, your portfolio is confirmed for that Gameweek and the standard trading rules apply.
+Once the deadline passes, those four clubs are locked in as your first Gameweek Scoring Lineup — but the market itself never closes, so standard 24/7 trading rules apply from that point on.
 
 ---
 
@@ -115,7 +115,7 @@ Portfolio value affects your future spending power, but it does not directly add
 
 ### Gameweek Score
 
-Your Gameweek score is the combined total earned by every club you owned when its match locked.
+Your Gameweek score is the combined total earned by the four clubs locked into your **Gameweek Scoring Lineup** — a snapshot taken at the deadline, not necessarily what you currently hold.
 
 #### Example
 
@@ -159,20 +159,30 @@ Trading allows you to:
 - Increase your portfolio's overall market value
 - Reposition your portfolio for future Gameweeks
 
-### Gameweek Trading Window
+### The Ticker Market Is Open 24/7
 
-You may make **unlimited trades before each Gameweek deadline**.
+> **Your lineup locks. Your portfolio never does.**
 
-There is no limit to the number of clubs you may buy or sell while the trading window is open, provided that every transaction follows the portfolio and cash rules.
+Unlike traditional fantasy transfer windows, the Ticker market stays open **24 hours a day, seven days a week** — before matches, during matches, even at halftime.
 
-At the Gameweek deadline:
+There is no limit to the number of clubs you may buy or sell, at any time, provided every transaction follows the portfolio and cash rules.
 
-- Your portfolio is locked for the upcoming Gameweek
-- You must own exactly four different clubs
+At each Gameweek deadline, Ticker takes an immutable snapshot of the four clubs you currently hold — this becomes that Gameweek's **Scoring Lineup**:
+
+- Only these four clubs earn fantasy points for that Gameweek
+- You must have owned exactly four different clubs at that moment
 - Your cash balance may remain above $0.00
-- Clubs in your locked portfolio are eligible to earn points from their upcoming matches
 
-Trades submitted after the deadline apply only after the market reopens and do not affect your locked Gameweek portfolio.
+Trades submitted after the deadline update your **portfolio** and set up your **next** Scoring Lineup. They never change the Scoring Lineup that's already locked.
+
+#### Example: selling a locked club during its match
+
+You begin the Gameweek holding Arsenal, Chelsea, Brighton, and Aston Villa — all four lock in as your Scoring Lineup.
+
+Chelsea falls behind 0-2 at halftime. You believe it will underperform and sell it immediately.
+
+- **Fantasy impact:** none. Chelsea is still part of your locked Scoring Lineup, so whatever points it ultimately earns from that match still count toward your Gameweek score.
+- **Financial impact:** immediate. Chelsea leaves your current portfolio at the price you sold it for, and you're free to spend the proceeds on another club right away — before the match, or Ticker's next price settlement, is even over.
 
 ### Buying Power
 
@@ -263,23 +273,11 @@ Cash does not earn fantasy points or change in value, but keeping cash available
 
 ### Match and Gameweek Locks
 
-Trading closes at the published Gameweek deadline.
-
-Once the deadline passes, clubs in your portfolio are locked for scoring purposes until the Gameweek is complete and the market reopens.
-
-Ticker may also temporarily lock an individual club when necessary to process:
-
-- A live match
-- A completed result
-- Fantasy points
-- A club price update
-- A postponed, suspended, or abandoned match
-
-A transaction submitted while a club is locked will not be completed.
+Ticker never closes the market just because football is being played. The only thing that locks each week is your **Scoring Lineup** — your portfolio, cash, and every future trade stay fully available at all times.
 
 ### When Points Transfer
 
-The clubs in your portfolio at the Gameweek deadline earn points for that Gameweek.
+The four clubs locked into your Scoring Lineup at the Gameweek deadline earn points for that Gameweek — regardless of what you do with your portfolio afterward.
 
 #### Example
 
@@ -287,6 +285,7 @@ The clubs in your portfolio at the Gameweek deadline earn points for that Gamewe
 - You buy Brighton before the Gameweek deadline.
 - Arsenal's next eligible match does not count toward your score.
 - Brighton's next eligible match does count toward your score.
+- If instead you sell Arsenal **after** the deadline, while it's already locked into your Scoring Lineup, its points from that Gameweek still count — selling it only changes your portfolio and cash going forward.
 
 Selling a club after it has already earned points for a completed Gameweek does not remove those points from your season total.
 

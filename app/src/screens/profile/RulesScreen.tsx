@@ -84,7 +84,10 @@ export function RulesScreen({ navigation }: Props) {
           Every club has an opening market value reflecting expected performance, schedule strength, recent form, and market expectations. After the season
           begins, values rise or fall based on real-world results — a club's current value may differ from what you paid.
         </Body>
-        <Body T={T}>You may make unlimited changes before the first Gameweek deadline. Once it passes, your portfolio is confirmed and standard trading rules apply.</Body>
+        <Body T={T}>
+          You may make unlimited changes before the first Gameweek deadline. Once it passes, those four clubs are locked in as your first Scoring Lineup —
+          but the market itself never closes, so standard 24/7 trading rules apply from that point on.
+        </Body>
 
         <H T={T}>2. Scoring</H>
         <Body T={T}>
@@ -103,8 +106,9 @@ export function RulesScreen({ navigation }: Props) {
           ]}
         />
         <Body T={T}>
-          Your Gameweek score is the combined total earned by every club you owned when its match locked. Points accumulate all season — the manager with
-          the most total fantasy points at the end wins the league.
+          Your Gameweek score is the combined total earned by the four clubs locked into your <Text style={{ fontWeight: "700" }}>Scoring Lineup</Text> for
+          that Gameweek — a snapshot taken at the deadline, not necessarily what you currently hold. Points accumulate all season — the manager with the
+          most total fantasy points at the end wins the league.
         </Body>
         <Body T={T}>When a club plays more than once in a Gameweek, points from every eligible match are added together. When it has no eligible match, it earns zero.</Body>
         <Body T={T}>
@@ -118,9 +122,16 @@ export function RulesScreen({ navigation }: Props) {
           believe are undervalued, respond to schedule and form changes, and reposition for future Gameweeks.
         </Body>
         <Body T={T}>
-          You may make <Text style={{ fontWeight: "700" }}>unlimited trades before each Gameweek deadline</Text>, provided every transaction follows the
-          portfolio and cash rules. At the deadline, your portfolio locks: you must own exactly four different clubs, your cash may remain above $0.00, and
-          locked clubs are eligible to earn points from their upcoming matches. Trades submitted after the deadline apply only once the market reopens.
+          The Ticker market is open <Text style={{ fontWeight: "700" }}>24 hours a day, seven days a week</Text> — before matches, during matches, even at
+          halftime. At each Gameweek deadline, Ticker snapshots the four clubs you currently hold as that week's Scoring Lineup. Trades you make after the
+          deadline update your portfolio and set up your <Text style={{ fontWeight: "700" }}>next</Text> Scoring Lineup — they never change the one that's
+          already locked.
+        </Body>
+        <Callout T={T}>Your lineup locks. Your portfolio never does.</Callout>
+        <Body T={T}>
+          Say Chelsea is in your locked Gameweek Scoring Lineup and falls behind 0-2 at halftime. You can sell Chelsea right then if you think its value is
+          about to drop — that changes your portfolio and cash immediately. It does not change your score: whatever points Chelsea ultimately earns from
+          that match still count toward your Gameweek total, because it was locked in when the match started.
         </Body>
         <H2 T={T}>Buying Power</H2>
         <Body T={T}>
@@ -155,9 +166,8 @@ export function RulesScreen({ navigation }: Props) {
         />
         <Body T={T}>Unspent cash stays in your account. It doesn't earn points or change value, but holding it may help you buy later without selling more of your portfolio.</Body>
         <Body T={T}>
-          Trading closes at the published Gameweek deadline. Once it passes, clubs are locked for scoring until the Gameweek is complete and the market
-          reopens. Ticker may also temporarily lock an individual club to process a live match, a completed result, points, a price update, or a
-          postponed/suspended/abandoned match. A transaction submitted while a club is locked will not complete.
+          Ticker never closes the market just because football is being played. The only thing that locks each week is your Scoring Lineup — your
+          portfolio, cash, and every future trade stay fully available at all times.
         </Body>
         <Body T={T}>
           Club prices may rise or fall based on match results, goals, clean sheets, form, upcoming schedule, market expectations, and buying/selling
