@@ -86,7 +86,16 @@ export const leagueService = {
   },
 };
 
+/**
+ * Season points must reflect whichever lineup was LOCKED for each round,
+ * not a single current-holdings snapshot — a club traded away after
+ * scoring still counts for the weeks it was actually locked in.
+ */
 function seasonPointsForMember(memberId: string, throughRound: number): number {
-  const holdings = portfolioService.getHoldings(memberId);
-  return holdings.reduce((a, h) => a + fantasyRepo.seasonPointsThroughRound(h.clubId, throughRound), 0);
+  let total = 0;
+  for (let round = 1; round <= throughRound; round++) {
+    const clubIds = fantasyRepo.getLockedLineupClubIds(memberId, round) ?? [];
+    for (const clubId of clubIds) total += fantasyRepo.pointsAtRound(clubId, round);
+  }
+  return total;
 }

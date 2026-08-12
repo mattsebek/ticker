@@ -88,6 +88,10 @@ export const marketRepo = {
     const row = db.prepare("SELECT cash FROM market_accounts WHERE user_id = ?").get(userId) as { cash: number } | undefined;
     return row?.cash ?? 0;
   },
+  /** Every real (non-bot) user id with a market account — used by jobs that need to sweep every manager, e.g. lockGameweekLineups. */
+  listAccountIds(): string[] {
+    return (db.prepare("SELECT user_id FROM market_accounts").all() as { user_id: string }[]).map((r) => r.user_id);
+  },
   setCash(userId: string, cash: number) {
     db.prepare("UPDATE market_accounts SET cash = ? WHERE user_id = ?").run(cash, userId);
   },
@@ -139,6 +143,13 @@ export const marketRepo = {
   },
   getPriceSeries(clubId: string): { round: number; price: number }[] {
     return db.prepare("SELECT round, price FROM price_history WHERE club_id = ? ORDER BY round ASC").all(clubId) as any[];
+  },
+  /** Most recent recorded price at or before a point in time — used to reconstruct historical lineup lock prices during the one-time backfill. `id DESC` (insertion order) breaks ties within the same timestamp. */
+  getPriceAtOrBefore(clubId: string, atMs: number): number | null {
+    const row = db
+      .prepare("SELECT price FROM price_history WHERE club_id = ? AND created_at <= ? ORDER BY id DESC LIMIT 1")
+      .get(clubId, atMs) as { price: number } | undefined;
+    return row?.price ?? null;
   },
   /**
    * Chronological price history for charting — ordered by `id` (insertion

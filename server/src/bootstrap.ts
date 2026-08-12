@@ -4,6 +4,7 @@ import { priceUpdateService } from "./market/priceUpdateService";
 import { tradingService } from "./market/tradingService";
 import { marketRepo } from "./market/repo";
 import { settlementService } from "./fantasy/settlementService";
+import { lineupBackfillService } from "./fantasy/lineupBackfillService";
 import { fantasyRepo } from "./fantasy/repo";
 import { usersRepo } from "./shared/usersRepo";
 import { BOT_ROSTER } from "./shared/bots";
@@ -64,6 +65,9 @@ export async function bootstrap(): Promise<void> {
 
   const settleResult = settlementService.settleAllPending();
   console.log(`[bootstrap] settled ${settleResult.settledCount} previously-unsettled fixtures`);
+
+  const backfillResult = lineupBackfillService.backfillAll();
+  console.log(`[bootstrap] gameweek lineup backfill: checked ${backfillResult.roundsChecked} rounds, locked ${backfillResult.locked} lineups`);
 }
 
 const OPENING_PRICE_FLOOR = 6;

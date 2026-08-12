@@ -120,8 +120,10 @@ export function clubDetail(club: Club, currentRound: number) {
  * (schedule gap, bye) is simply omitted rather than shown as an error.
  */
 export function gameweekDetail(userId: string, round: number) {
-  const holdingClubIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
-  return holdingClubIds
+  // Scoring lineup, not current holdings — a club sold after this round
+  // locked still shows here, since it's still what earned the points.
+  const lockedClubIds = fantasyRepo.getLockedLineupClubIds(userId, round) ?? [];
+  return lockedClubIds
     .map((clubId) => {
       const club = footballService.getClub(clubId);
       if (!club) return null;

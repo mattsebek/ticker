@@ -5,6 +5,7 @@ import * as refreshStandings from "./refreshStandings";
 import * as refreshOdds from "./refreshOdds";
 import * as monitorLiveMatches from "./monitorLiveMatches";
 import * as settleCompletedMatches from "./settleCompletedMatches";
+import * as lockGameweekLineups from "./lockGameweekLineups";
 import * as updateClubPrices from "./updateClubPrices";
 import * as recalculateLeagueStandings from "./recalculateLeagueStandings";
 import * as microPriceJitter from "./microPriceJitter";
@@ -39,6 +40,7 @@ export function registerJobs() {
   scheduler.register({ name: "refreshOdds", intervalMs: intervalFromEnv("JOB_REFRESH_ODDS_MS", 6 * HOUR), run: refreshOdds.run, initialDelayMs: 45_000 });
   scheduler.register({ name: "monitorLiveMatches", intervalMs: intervalFromEnv("JOB_MONITOR_LIVE_MS", 10 * MINUTE), run: monitorLiveMatches.run, initialDelayMs: 60_000 });
   scheduler.register({ name: "settleCompletedMatches", intervalMs: 2 * MINUTE, run: settleCompletedMatches.run });
+  scheduler.register({ name: "lockGameweekLineups", intervalMs: 2 * MINUTE, run: lockGameweekLineups.run });
   scheduler.register({ name: "updateClubPrices", intervalMs: 2 * MINUTE, run: updateClubPrices.run });
   scheduler.register({ name: "recalculateLeagueStandings", intervalMs: 3 * MINUTE, run: recalculateLeagueStandings.run });
   scheduler.register({ name: "microPriceJitter", intervalMs: 20_000, run: microPriceJitter.run });

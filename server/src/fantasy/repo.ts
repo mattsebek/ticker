@@ -43,6 +43,27 @@ CREATE TABLE IF NOT EXISTS league_members (
   joined_at INTEGER NOT NULL,
   PRIMARY KEY (league_id, member_id)
 );
+
+-- Immutable snapshot of the 4 clubs a manager held at a Gameweek deadline.
+-- Scoring must always read from here, never from current (live-trading)
+-- holdings — see gameweekService/leagueService/presenters, which all read
+-- via getLockedLineupClubIds() rather than marketRepo.getHoldings().
+CREATE TABLE IF NOT EXISTS gameweek_lineups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  round INTEGER NOT NULL,
+  locked_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gameweek_lineups_user_round ON gameweek_lineups(user_id, round);
+
+CREATE TABLE IF NOT EXISTS gameweek_lineup_clubs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gameweek_lineup_id INTEGER NOT NULL,
+  club_id TEXT NOT NULL,
+  price_at_lock REAL NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_gameweek_lineup_clubs_lineup ON gameweek_lineup_clubs(gameweek_lineup_id);
 `);
 
 export interface LeagueRow {
@@ -77,6 +98,34 @@ export const fantasyRepo = {
   maxScoredRound(): number {
     const row = db.prepare("SELECT MAX(round) as m FROM fantasy_points").get() as { m: number | null };
     return row.m ?? 0;
+  },
+
+  // --- gameweek scoring lineups (immutable snapshots) ---
+  hasLockedLineup(userId: string, round: number): boolean {
+    return !!db.prepare("SELECT 1 FROM gameweek_lineups WHERE user_id = ? AND round = ?").get(userId, round);
+  },
+  /** Locks a manager's current 4 clubs as their scoring lineup for `round`. Idempotent — a second call for the same (userId, round) is a no-op via the unique index. */
+  lockLineup(userId: string, round: number, lockedAt: number, clubs: { clubId: string; priceAtLock: number }[]) {
+    const tx = db.transaction(() => {
+      const result = db.prepare("INSERT OR IGNORE INTO gameweek_lineups (user_id, round, locked_at) VALUES (?,?,?)").run(userId, round, lockedAt);
+      if (result.changes === 0) return; // already locked
+      const lineupId = result.lastInsertRowid;
+      const ins = db.prepare("INSERT INTO gameweek_lineup_clubs (gameweek_lineup_id, club_id, price_at_lock, created_at) VALUES (?,?,?,?)");
+      for (const c of clubs) ins.run(lineupId, c.clubId, c.priceAtLock, lockedAt);
+    });
+    tx();
+  },
+  /** The locked scoring lineup for a round, or null if that round hasn't locked yet. */
+  getLockedLineupClubIds(userId: string, round: number): string[] | null {
+    const lineup = db.prepare("SELECT id FROM gameweek_lineups WHERE user_id = ? AND round = ?").get(userId, round) as { id: number } | undefined;
+    if (!lineup) return null;
+    const rows = db.prepare("SELECT club_id FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").all(lineup.id) as { club_id: string }[];
+    return rows.map((r) => r.club_id);
+  },
+  /** Every round a user has a locked lineup for, ascending — used by season-points aggregation. */
+  lockedRoundsForUser(userId: string): number[] {
+    const rows = db.prepare("SELECT round FROM gameweek_lineups WHERE user_id = ? ORDER BY round ASC").all(userId) as { round: number }[];
+    return rows.map((r) => r.round);
   },
 
   // --- leagues ---
