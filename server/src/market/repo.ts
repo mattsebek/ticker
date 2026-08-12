@@ -60,6 +60,17 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 CREATE INDEX IF NOT EXISTS idx_ledger_user ON ledger_entries(user_id, created_at);
 `);
 
+// performance_pct/demand_pct split out the combined impact_pct into its two
+// independent drivers, for the "why did this price move" breakdown — added
+// after the table already shipped, so guard the ALTER for databases that
+// already have the columns.
+try {
+  db.exec("ALTER TABLE price_history ADD COLUMN performance_pct REAL");
+  db.exec("ALTER TABLE price_history ADD COLUMN demand_pct REAL");
+} catch {
+  // already applied
+}
+
 export interface HoldingRow {
   user_id: string;
   club_id: string;
@@ -116,10 +127,38 @@ export const marketRepo = {
        ON CONFLICT(club_id) DO UPDATE SET price=excluded.price, updated_at=excluded.updated_at`
     ).run(clubId, price, Date.now());
   },
-  recordPriceHistory(clubId: string, round: number, price: number, impactPct: number, fixtureId: string | null) {
+  recordPriceHistory(
+    clubId: string,
+    round: number,
+    price: number,
+    impactPct: number,
+    fixtureId: string | null,
+    breakdown?: { performancePct: number; demandPct: number }
+  ) {
     db.prepare(
-      `INSERT OR IGNORE INTO price_history (club_id, round, price, impact_pct, fixture_id, created_at) VALUES (?,?,?,?,?,?)`
-    ).run(clubId, round, price, impactPct, fixtureId, Date.now());
+      `INSERT OR IGNORE INTO price_history (club_id, round, price, impact_pct, fixture_id, performance_pct, demand_pct, created_at) VALUES (?,?,?,?,?,?,?,?)`
+    ).run(clubId, round, price, impactPct, fixtureId, breakdown?.performancePct ?? null, breakdown?.demandPct ?? null, Date.now());
+  },
+  /** Most recent settlement breakdown for a club — the "WHY IT MOVED" panel's data source. Null until its first real (fixture-triggered) settlement. */
+  getLatestPriceBreakdown(clubId: string): { performancePct: number; demandPct: number } | null {
+    const row = db
+      .prepare("SELECT performance_pct, demand_pct FROM price_history WHERE club_id = ? AND fixture_id IS NOT NULL ORDER BY id DESC LIMIT 1")
+      .get(clubId) as { performance_pct: number | null; demand_pct: number | null } | undefined;
+    if (!row || row.performance_pct == null || row.demand_pct == null) return null;
+    return { performancePct: row.performance_pct, demandPct: row.demand_pct };
+  },
+  /** Timestamp of a club's last real (fixture-triggered) settlement — the window start for its next demand calculation. Null if it's never settled yet (season start). */
+  getLastSettlementTime(clubId: string): number | null {
+    const row = db.prepare("SELECT MAX(created_at) as t FROM price_history WHERE club_id = ? AND fixture_id IS NOT NULL").get(clubId) as { t: number | null };
+    return row.t ?? null;
+  },
+  /** Unique buyers/sellers for a club since a point in time — the demand signal for pricing. Unique managers, not raw trade count, so one very active trader can't dominate it. */
+  getDemandSince(clubId: string, sinceMs: number): { uniqueBuyers: number; uniqueSellers: number } {
+    const rows = db
+      .prepare("SELECT entry_type, COUNT(DISTINCT user_id) as n FROM ledger_entries WHERE club_id = ? AND created_at > ? GROUP BY entry_type")
+      .all(clubId, sinceMs) as { entry_type: string; n: number }[];
+    const byType = Object.fromEntries(rows.map((r) => [r.entry_type, r.n]));
+    return { uniqueBuyers: byType["BUY"] ?? 0, uniqueSellers: byType["SELL"] ?? 0 };
   },
   /**
    * Sets a club's IPO/opening price. Unlike recordPriceHistory(), this

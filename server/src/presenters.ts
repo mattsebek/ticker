@@ -75,6 +75,7 @@ export function clubSummary(club: Club, currentRound: number) {
     weeklyPct: lastPrice ? round2(((price - lastPrice) / lastPrice) * 100) : 0,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
+    priceBreakdown: marketRepo.getLatestPriceBreakdown(club.id),
     gwPts: fantasyRepo.pointsAtRound(club.id, currentRound),
     seasonPts: fantasyRepo.seasonPointsThroughRound(club.id, currentRound),
     sparkline: series.slice(-20),

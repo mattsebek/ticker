@@ -1,6 +1,7 @@
 import { footballRepo } from "../football/repo";
 import { marketRepo } from "../market/repo";
 import { gameweekService } from "../fantasy/gameweekService";
+import { pricingConfig } from "../market/pricingConfig";
 import { round2, clamp } from "../shared/rng";
 import { JobResult } from "./scheduler";
 
@@ -26,7 +27,7 @@ export async function run(): Promise<JobResult> {
     if (current == null) continue;
 
     const direction = Math.random() < 0.5 ? -1 : 1;
-    const newPrice = round2(clamp(current + direction * MICRO_STEP, 0.5, 999));
+    const newPrice = round2(clamp(current + direction * MICRO_STEP, pricingConfig.MIN_PRICE, pricingConfig.MAX_PRICE));
     if (newPrice === current) continue;
 
     const impactPct = round2(((newPrice - current) / current) * 100);

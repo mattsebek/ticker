@@ -1,6 +1,7 @@
 import { footballService } from "./football/service";
 import { footballRepo } from "./football/repo";
 import { priceUpdateService } from "./market/priceUpdateService";
+import { pricingConfig } from "./market/pricingConfig";
 import { tradingService } from "./market/tradingService";
 import { marketRepo } from "./market/repo";
 import { settlementService } from "./fantasy/settlementService";
@@ -70,8 +71,11 @@ export async function bootstrap(): Promise<void> {
   console.log(`[bootstrap] gameweek lineup backfill: checked ${backfillResult.roundsChecked} rounds, locked ${backfillResult.locked} lineups`);
 }
 
-const OPENING_PRICE_FLOOR = 6;
-const OPENING_PRICE_CEIL = 35;
+// Opening prices seed within the same band as the ongoing trading guardrail
+// (pricingConfig.MIN_PRICE/MAX_PRICE) so a club never opens already outside
+// the range settlement is allowed to move it within.
+const OPENING_PRICE_FLOOR = pricingConfig.MIN_PRICE;
+const OPENING_PRICE_CEIL = pricingConfig.MAX_PRICE;
 
 /**
  * A club's in-season "form" signal for opening-price purposes: the average
