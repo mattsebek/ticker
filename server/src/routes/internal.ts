@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { db } from "../db";
 import { scheduler } from "../jobs/scheduler";
 import { footballService } from "../football/service";
 import { footballRepo } from "../football/repo";
@@ -9,7 +10,35 @@ import { usersRepo } from "../shared/usersRepo";
 import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
-import { reseedAllOpeningPrices, resetAllUsers } from "../bootstrap";
+import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
+
+// Every table in the app, across every domain — see each domain's repo.ts
+// for the owning CREATE TABLE. Kept as one explicit list (rather than
+// introspecting sqlite_master) so a wipe can never silently pick up some
+// future table nobody intended to include.
+const ALL_TABLES = [
+  "starter_selection_touched",
+  "starter_selections",
+  "gameweek_lineup_clubs",
+  "gameweek_lineups",
+  "standings_cache",
+  "league_members",
+  "leagues",
+  "fantasy_points",
+  "ledger_entries",
+  "transactions",
+  "holdings",
+  "price_history",
+  "club_prices",
+  "market_accounts",
+  "football_standings",
+  "provider_mappings",
+  "ticker_fixtures",
+  "ticker_seasons",
+  "ticker_competitions",
+  "ticker_clubs",
+  "users",
+];
 
 const DAY_MS = 86_400_000;
 
@@ -54,6 +83,28 @@ internalRouter.post("/reseed-prices", async (req, res) => {
 internalRouter.post("/reset-users", (req, res) => {
   const result = resetAllUsers();
   res.json({ ok: true, ...result });
+});
+
+/**
+ * Dev/ops only: a true clean slate. Deletes every row in every table —
+ * users, bots, holdings, prices/history, fantasy points, gameweek locks,
+ * standings, fixtures, everything — then re-runs bootstrap() to rebuild a
+ * fresh season (season/fixture import, opening prices, seed leagues, bot
+ * rosters) exactly as if the app were starting for the first time. Costs
+ * one real football-provider season import — expected and fine as a
+ * deliberate, occasional reset, not something to call routinely.
+ */
+internalRouter.post("/wipe-all", async (req, res) => {
+  try {
+    const tx = db.transaction(() => {
+      for (const table of ALL_TABLES) db.prepare(`DELETE FROM ${table}`).run();
+    });
+    tx();
+    await bootstrap();
+    res.json({ ok: true, message: "Wiped every table and reseeded a fresh season." });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
 });
 
 /**

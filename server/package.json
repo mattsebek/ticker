@@ -12,7 +12,8 @@
     "build": "tsc -p tsconfig.json",
     "seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit",
-    "simulate": "bash scripts/simulate-market.sh"
+    "simulate": "bash scripts/simulate-market.sh",
+    "simulate-results": "tsx scripts/simulate.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
