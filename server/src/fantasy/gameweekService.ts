@@ -53,6 +53,21 @@ export const gameweekService = {
     return fixtures.reduce((min, f) => (f.kickoff < min ? f.kickoff : min), fixtures[0].kickoff);
   },
 
+  /**
+   * The smallest round this manager has NOT locked a lineup for yet — i.e.
+   * the one they can still set their Starting Four for. Distinct from
+   * currentRound(), which tracks the last round with actual FINISHED-match
+   * points: at the very start of a season (or right after a round locks
+   * but before its matches finish), currentRound() still floors to that
+   * round's number even though nothing has locked or scored yet, which
+   * would wrongly read as "already locked" if reused here.
+   */
+  firstUnlockedRound(userId: string): number {
+    let round = 1;
+    while (fantasyRepo.hasLockedLineup(userId, round)) round++;
+    return round;
+  },
+
   /** ISO kickoff of the earliest fixture in the next not-yet-scored round — when trading locks for that gameweek. Null once the schedule runs out (or isn't published yet). */
   nextKickoff(): string | null {
     return gameweekService.deadlineForRound(fantasyRepo.maxScoredRound() + 1);

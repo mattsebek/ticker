@@ -10,22 +10,30 @@ import { marketRepo } from "../market/repo";
 export const gameweekRouter = Router();
 
 gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
-  const current = gameweekService.currentRound();
-  // The round after "current" is the pending one — not yet locked, but
-  // viewable/editable here once its fixtures are published, so managers can
-  // set their Starting Four from the same screen they check past scores in.
-  const pendingRound = gameweekService.deadlineForRound(current + 1) != null ? current + 1 : current;
+  const userId = req.userId!;
+  // The one round this manager can still set a Starting Four for — the
+  // smallest round without a locked lineup. Whether it's actually viewable
+  // depends on its fixtures being published yet.
+  const pending = gameweekService.firstUnlockedRound(userId);
+  const pendingHasFixtures = gameweekService.deadlineForRound(pending) != null;
+  const lastLocked = pending - 1;
+  // Land on the last locked round by default (in-progress or finished
+  // results) — or, before the season's very first lock, on the pending
+  // round itself, since that's the only thing there is to show.
+  const defaultRound = lastLocked >= 1 ? lastLocked : pending;
+  const maxRound = pendingHasFixtures ? pending : Math.max(1, lastLocked);
+
   const offset = parseInt(String(req.query.offset || "0"), 10) || 0;
-  const round = Math.max(1, Math.min(pendingRound, current + offset));
-  const isPending = round > current;
-  const { starters, bench, benchPoints } = gameweekDetail(req.userId!, round, isPending);
+  const round = Math.max(1, Math.min(maxRound, defaultRound + offset));
+  const isPending = round === pending && pendingHasFixtures;
+  const { starters, bench, benchPoints } = gameweekDetail(userId, round, isPending);
   res.json({
     round,
     isPending,
     maxStarters: fantasyConfig.MAX_STARTERS,
     canPrev: round > 1,
-    canNext: round < pendingRound,
-    nextKickoff: gameweekService.nextKickoff(),
+    canNext: round < maxRound,
+    nextKickoff: pendingHasFixtures ? gameweekService.deadlineForRound(pending) : null,
     starters,
     bench,
     benchPoints,
