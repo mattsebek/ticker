@@ -3,7 +3,6 @@ import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
 import { clubSummary, clubDetail } from "../presenters";
 import { newsService } from "../briefing/newsService";
-import { requireAuth, AuthedRequest } from "../shared/auth";
 
 export const clubsRouter = Router();
 
@@ -50,8 +49,8 @@ clubsRouter.get("/news", async (req, res) => {
   });
 });
 
-clubsRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
+clubsRouter.get("/:id", (req, res) => {
   const club = footballService.getClub(req.params.id);
   if (!club) return res.status(404).json({ error: "Club not found" });
-  res.json({ club: clubDetail(club, gameweekService.currentRound(), req.userId!) });
+  res.json({ club: clubDetail(club, gameweekService.currentRound()) });
 });

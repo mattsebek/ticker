@@ -43,9 +43,6 @@ export interface ClubDetail extends ClubSummary {
   series: number[];
   fixtures: ClubFixture[];
   news: { h: string; m: string };
-  round: number;
-  /** Was this club locked as a STARTER for the currently active round? Only meaningful when not currently owned — surfaces the "Locked for GW{n} (sold)" state. */
-  wasLockedStarterThisRound: boolean;
 }
 
 export interface HoldingView extends ClubSummary {

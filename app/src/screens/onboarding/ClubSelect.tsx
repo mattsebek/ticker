@@ -64,20 +64,12 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
         <Text style={{ fontSize: 20, color: T.text }}>‹</Text>
       </Pressable>
       <Text style={{ fontFamily: FONT_SERIF, fontSize: 24, fontWeight: "500", color: T.text, marginBottom: 4 }}>Build your portfolio</Text>
-      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }}>Buy as many or as few clubs as you want with your $100.00.</Text>
+      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }} numberOfLines={1}>
+        Spend your $100 however you'd like.
+      </Text>
       <View style={[styles.statsRow, { backgroundColor: T.card }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Available cash</Text>
-          <Text style={{ fontSize: 17, fontWeight: "600", color: cash < 0 ? "#E0393E" : T.text, marginTop: 2 }}>{fmtMoney(cash)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Holdings</Text>
-          <Text style={{ fontSize: 17, fontWeight: "600", color: T.text, marginTop: 2 }}>{ownedIds.length}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Portfolio value</Text>
-          <Text style={{ fontSize: 17, fontWeight: "600", color: T.text, marginTop: 2 }}>{fmtMoney(100)}</Text>
-        </View>
+        <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Remaining balance</Text>
+        <Text style={{ fontSize: 20, fontWeight: "600", color: cash < 0 ? "#E0393E" : T.text, marginTop: 2 }}>{fmtMoney(cash)}</Text>
       </View>
       {error && <Text style={{ color: "#E0393E", fontSize: 13, marginTop: 8 }}>{error}</Text>}
 

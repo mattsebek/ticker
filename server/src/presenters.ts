@@ -92,7 +92,7 @@ export function clubSummary(club: Club, currentRound: number) {
   };
 }
 
-export function clubDetail(club: Club, currentRound: number, userId?: string) {
+export function clubDetail(club: Club, currentRound: number) {
   const summary = clubSummary(club, currentRound);
   const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
   const fixtures = upcoming.map((f) => {
@@ -107,21 +107,11 @@ export function clubDetail(club: Club, currentRound: number, userId?: string) {
     };
   });
   const headline = commentaryService.clubHeadline(club, summary.form, summary.seasonPct);
-
-  // Was this club locked as a STARTER for the currently active round? Only
-  // meaningful when the club isn't currently owned — surfaces the "locked
-  // for GW8 (sold)" club state so a manager can see their sold club is
-  // still earning them points this week.
-  const lockedThisRound = userId ? fantasyRepo.getLockedLineup(userId, currentRound) : null;
-  const wasLockedStarterThisRound = !!lockedThisRound?.some((c) => c.clubId === club.id && c.status === "STARTER");
-
   return {
     ...summary,
     series: marketRepo.getPriceSeries(club.id).map((s) => s.price),
     fixtures,
     news: { h: headline, m: commentaryService.readTimeLabel(headline) },
-    round: currentRound,
-    wasLockedStarterThisRound,
   };
 }
 

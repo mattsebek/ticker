@@ -117,12 +117,6 @@ export function ClubOverlayHost() {
 
   const holding = portfolio?.holdings.find((h) => h.id === clubId);
   const isOwned = !!holding;
-  const isStarter = holding?.inStartingFour ?? false;
-
-  // Club Detail State (see spec): NOT_OWNED, OWNED_STARTER, OWNED_BENCH, or
-  // LOCKED_GAMEWEEK_STARTER_BUT_SOLD — a club no longer owned but still
-  // locked as a scoring Starter for the round in progress.
-  const state = isOwned && isStarter ? "OWNED_STARTER" : isOwned ? "OWNED_BENCH" : detail.wasLockedStarterThisRound ? "LOCKED_BUT_SOLD" : "NOT_OWNED";
 
   function buy() {
     close();
@@ -157,17 +151,6 @@ export function ClubOverlayHost() {
               <Text style={{ color: T.accent, fontSize: 13 }}>{detail.gwPts} pts this week</Text>
               <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
             </View>
-            {state !== "NOT_OWNED" && (
-              <View style={{ paddingHorizontal: 24, marginTop: 10 }}>
-                <View style={[styles.statusBadge, { backgroundColor: state === "OWNED_STARTER" ? T.accentTint : T.elevated }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: state === "OWNED_STARTER" ? T.accent : T.textSecondary }}>
-                    {state === "OWNED_STARTER" && `✓ Starting GW${detail.round}`}
-                    {state === "OWNED_BENCH" && "Holding"}
-                    {state === "LOCKED_BUT_SOLD" && `Locked for GW${detail.round} (sold)`}
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
 
           <ScrollView
@@ -233,10 +216,9 @@ export function ClubOverlayHost() {
               <Text style={{ color: T.text, fontSize: 24, fontWeight: "600", marginTop: 4 }}>{detail.ownershipPct.toFixed(2)}%</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              {(state === "OWNED_STARTER" || state === "OWNED_BENCH") && (
+              {isOwned ? (
                 <Button label="Sell" onPress={sell} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />
-              )}
-              {(state === "NOT_OWNED" || state === "LOCKED_BUT_SOLD") && (
+              ) : (
                 <Button label="Buy" onPress={buy} fullWidth={false} style={{ paddingHorizontal: 44, paddingVertical: 18 }} />
               )}
             </View>
@@ -253,6 +235,5 @@ const styles = StyleSheet.create({
   handle: { alignSelf: "center", width: 36, height: 5, borderRadius: 3, marginBottom: 14 },
   closeBtn: { position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 1 },
   plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },
-  statusBadge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100 },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 24, paddingTop: 22, paddingBottom: 38, borderTopWidth: 1 },
 });
