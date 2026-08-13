@@ -31,11 +31,17 @@ function ResultRow({ label, points, T }: { label: string; points: number; T: Tok
   );
 }
 
-function ClubCard({ club, T }: { club: GameweekClubDetail; T: Tokens }) {
+function ClubCard({ club, isStarter, T }: { club: GameweekClubDetail; isStarter: boolean; T: Tokens }) {
   const finished = club.status === "finished" && club.breakdown;
 
   return (
-    <View style={[styles.card, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow }]}>
+    <View
+      style={[
+        styles.card,
+        isStarter && styles.selectableCard,
+        { backgroundColor: T.card, borderColor: isStarter ? T.accent : T.border, ...T.elevatedShadow },
+      ]}
+    >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <ClubBadge code={club.code} color={club.color} size={40} />
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -162,6 +168,25 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
     return () => clearInterval(id);
   }, []);
 
+  // The countdown is purely a local clock — it doesn't know the moment the
+  // real lock job (server-side, its own polling interval) actually snapshots
+  // this round. Once our clock says time's up, keep re-fetching until the
+  // server agrees (isPending flips false) so the Save button and editing
+  // disappear on their own instead of waiting for the user to leave and
+  // come back.
+  const [lastExpiredRefetch, setLastExpiredRefetch] = useState(0);
+  useEffect(() => {
+    if (!data?.isPending || !data.nextKickoff) return;
+    const deadline = new Date(data.nextKickoff).getTime();
+    if (now < deadline) return;
+    if (now - lastExpiredRefetch < 5000) return;
+    setLastExpiredRefetch(now);
+    api.gameweek.detail(offset).then((fresh) => {
+      setData(fresh);
+      if (fresh.isPending) setSelected(fresh.starters.map((c) => c.clubId));
+    });
+  }, [now, data?.isPending, data?.nextKickoff, offset, lastExpiredRefetch]);
+
   function toggle(clubId: string) {
     setSelected((cur) => {
       if (!cur || !data) return cur;
@@ -192,6 +217,12 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   // once its fixtures kick off, the lock job snapshots it and it becomes
   // "current" server-side, so isPending naturally flips false.
   const countdown = data?.isPending && data.nextKickoff ? fmtCountdown(data.nextKickoff, now) : null;
+  // fmtCountdown itself already returns null once the deadline passes, so
+  // "was pending, still shows pending, but the clock says zero" is exactly
+  // the gap between our local timer expiring and the server confirming the
+  // lock — treat it as locked immediately rather than waiting on that
+  // round-trip, so Save/tapping disappear the instant the timer hits zero.
+  const pendingExpired = !!(data?.isPending && data.nextKickoff && now >= new Date(data.nextKickoff).getTime());
   const allClubs = data ? [...data.starters, ...data.bench] : [];
 
   return (
@@ -214,10 +245,13 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
             Starting Four locks in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
           </Text>
         )}
-        {data?.isPending && (
+        {data?.isPending && !pendingExpired && (
           <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>
             Tap a club to move it between your Starting Four and Bench. Points shown are projected for this Gameweek.
           </Text>
+        )}
+        {data?.isPending && pendingExpired && (
+          <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>Locking in your Starting Four…</Text>
         )}
 
         {!data ? (
@@ -228,7 +262,13 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
           ) : (
             selected &&
             allClubs.map((club) => (
-              <SelectableClubCard key={club.clubId} club={club} isStarter={selected.includes(club.clubId)} onToggle={() => toggle(club.clubId)} T={T} />
+              <SelectableClubCard
+                key={club.clubId}
+                club={club}
+                isStarter={selected.includes(club.clubId)}
+                onToggle={() => !pendingExpired && toggle(club.clubId)}
+                T={T}
+              />
             ))
           )
         ) : data.starters.length === 0 && data.bench.length === 0 ? (
@@ -241,7 +281,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
               </Text>
             )}
             {data.starters.map((club) => (
-              <ClubCard key={club.clubId} club={club} T={T} />
+              <ClubCard key={club.clubId} club={club} isStarter T={T} />
             ))}
             <TotalsSummary data={data} T={T} />
 
@@ -252,7 +292,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
                   Still in your portfolio — these points don't count toward your Gameweek score.
                 </Text>
                 {data.bench.map((club) => (
-                  <ClubCard key={club.clubId} club={club} T={T} />
+                  <ClubCard key={club.clubId} club={club} isStarter={false} T={T} />
                 ))}
               </>
             )}
@@ -260,7 +300,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
         )}
       </ScrollView>
 
-      {data?.isPending && selected && (
+      {data?.isPending && !pendingExpired && selected && (
         <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
           {error && <Text style={{ color: "#E0393E", fontSize: 13, marginBottom: 10 }}>{error}</Text>}
           <Button label={`Save Starting Four (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
