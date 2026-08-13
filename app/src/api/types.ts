@@ -196,4 +196,8 @@ export interface SellPreviewResponse {
 export interface StartingFourResponse {
   clubIds: string[];
   maxStarters: number;
+  /** The Gameweek round this selection will lock in for. */
+  round: number;
+  /** ISO kickoff of that Gameweek's deadline, or null if not yet published. */
+  deadline: string | null;
 }

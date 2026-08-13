@@ -43,8 +43,16 @@ gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
 
 // The pending (mutable, pre-lock) Starting Four intent — not the immutable
 // locked snapshot used for scoring. See fantasyRepo.getStarterSelection.
+// round/deadline describe the NEXT (not-yet-locked) Gameweek this
+// selection will lock in for, so the client can show "Setting Starting
+// Four for Game Week N" and when it locks.
 gameweekRouter.get("/starting-four", requireAuth, (req: AuthedRequest, res) => {
-  res.json({ clubIds: fantasyRepo.getStarterSelection(req.userId!), maxStarters: fantasyConfig.MAX_STARTERS });
+  res.json({
+    clubIds: fantasyRepo.getStarterSelection(req.userId!),
+    maxStarters: fantasyConfig.MAX_STARTERS,
+    round: gameweekService.currentRound() + 1,
+    deadline: gameweekService.nextKickoff(),
+  });
 });
 
 const startingFourSchema = z.object({ clubIds: z.array(z.string()) });

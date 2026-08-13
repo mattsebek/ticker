@@ -10,7 +10,7 @@ import { FormChip } from "../../components/FormChip";
 import { CloseIcon } from "../../components/icons";
 import { Button } from "../../components/Button";
 import { colorForPct } from "../../theme/theme";
-import { fmtPct } from "../../utils/format";
+import { fmtPct, fmtCountdown } from "../../utils/format";
 import type { AppStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<AppStackParamList, "SetStartingFour">;
@@ -24,11 +24,21 @@ export function SetStartingFourScreen({ navigation }: Props) {
   const portfolio = useDataStore((s) => s.portfolio);
   const refreshPortfolio = useDataStore((s) => s.refreshPortfolio);
   const [selected, setSelected] = useState<string[] | null>(null);
+  const [meta, setMeta] = useState<{ round: number; deadline: string | null } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.gameweek.getStartingFour().then((r) => setSelected(r.clubIds));
+    api.gameweek.getStartingFour().then((r) => {
+      setSelected(r.clubIds);
+      setMeta({ round: r.round, deadline: r.deadline });
+    });
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, []);
 
   function toggle(clubId: string) {
@@ -56,6 +66,7 @@ export function SetStartingFourScreen({ navigation }: Props) {
   }
 
   const holdings = portfolio?.holdings ?? [];
+  const countdown = meta?.deadline ? fmtCountdown(meta.deadline, now) : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
@@ -66,24 +77,25 @@ export function SetStartingFourScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {!selected ? (
+      {!selected || !meta ? (
         <ActivityIndicator color={T.accent} style={{ marginTop: 60 }} />
       ) : (
         <>
           <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 8, paddingBottom: 24 }}>
-            <Text style={{ fontSize: 13, color: T.textSecondary }}>
-              Tap a club to move it between your Starting Four and Bench. Only Starters earn points this Gameweek.
-            </Text>
-            {selected.length < MAX_STARTERS && (
-              <View style={[styles.warningCard, { backgroundColor: T.accentTint }]}>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: T.text }}>
-                  You only have {selected.length} club{selected.length === 1 ? "" : "s"} starting this Gameweek.
-                </Text>
-                <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
-                  You can start up to four. {MAX_STARTERS - selected.length} scoring spot{MAX_STARTERS - selected.length === 1 ? " is" : "s are"} currently empty.
-                </Text>
-              </View>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>Game Week {meta.round}</Text>
+            {countdown && (
+              <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
+                Locks in <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+              </Text>
             )}
+            <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 10 }}>Tap a club to move it between your Starting Four and Bench.</Text>
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 20, marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, fontWeight: "500", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Your Holdings</Text>
+              <Text style={{ fontSize: 10, fontWeight: "500", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Projected · GW{meta.round}
+              </Text>
+            </View>
 
             {holdings.length === 0 ? (
               <Text style={{ fontSize: 14, color: T.textSecondary, textAlign: "center", marginTop: 40 }}>You don't own any clubs yet.</Text>
@@ -109,7 +121,7 @@ export function SetStartingFourScreen({ navigation }: Props) {
                       </View>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>{h.nextFixture ? `${h.nextFixture.projPts} pts` : "—"}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>{h.nextFixture ? `${h.nextFixture.projPts} pts proj.` : "—"}</Text>
                       <Text style={{ fontSize: 12, fontWeight: "500", color: colorForPct(h.dailyPct), marginTop: 3 }}>{fmtPct(h.dailyPct)}</Text>
                       <View style={[styles.badge, { backgroundColor: isStarter ? T.accent : T.elevated, marginTop: 6 }]}>
                         <Text style={{ fontSize: 11, fontWeight: "600", color: isStarter ? "#fff" : T.textSecondary }}>{isStarter ? "Starting" : "Bench"}</Text>
@@ -134,7 +146,6 @@ export function SetStartingFourScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
   closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  warningCard: { borderRadius: 14, padding: 14, marginTop: 12, marginBottom: 4 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 2, padding: 14, marginTop: 12 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100 },
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 28, borderTopWidth: 1 },
