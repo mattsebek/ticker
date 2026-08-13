@@ -11,6 +11,7 @@ export const gameweekRouter = Router();
 
 gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
   const userId = req.userId!;
+  gameweekService.catchUpFinishedRounds(userId);
   // The one round this manager can still set a Starting Four for — the
   // smallest round without a locked lineup. Whether it's actually viewable
   // depends on its fixtures being published yet.
@@ -42,6 +43,7 @@ gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
 
 gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   const userId = req.userId!;
+  gameweekService.catchUpFinishedRounds(userId);
   // Same "land on the last round this manager actually locked" default as
   // /detail — see its comment for why this can't just be currentRound().
   const pending = gameweekService.firstUnlockedRound(userId);

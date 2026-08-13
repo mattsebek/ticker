@@ -29,49 +29,63 @@ function pointsForMemberAtRound(memberId: string, round: number): number {
 }
 
 /**
+ * Locks ONE account's entire current holdings as their Gameweek lineup for
+ * `round`, tagging up to MAX_STARTERS of them STARTER (from pending
+ * starter_selections, falling back to their first holdings for a bot or a
+ * manager who's never touched the selection screen) and the rest BENCH.
+ * No-op (returns false) if already locked or the account holds nothing.
+ */
+function lockOneAccountForRound(userId: string, round: number, lockedAt: number): boolean {
+  if (fantasyRepo.hasLockedLineup(userId, round)) return false;
+  const holdings = marketRepo.getHoldings(userId);
+  if (holdings.length === 0) return false;
+
+  const holdingIds = new Set(holdings.map((h) => h.club_id));
+  let starterIds = fantasyRepo
+    .getStarterSelection(userId)
+    .filter((id) => holdingIds.has(id))
+    .slice(0, fantasyConfig.MAX_STARTERS);
+
+  const botIds = new Set(BOT_ROSTER.map((b) => b.id));
+  if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
+    starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
+  }
+  const starterSet = new Set(starterIds);
+
+  fantasyRepo.lockLineup(
+    userId,
+    round,
+    lockedAt,
+    holdings.map((h) => ({
+      clubId: h.club_id,
+      priceAtLock: marketRepo.getPrice(h.club_id) ?? h.purchase_price,
+      status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
+    }))
+  );
+  return true;
+}
+
+/**
  * Snapshots every account's ENTIRE current holdings as their Gameweek
- * lineup for `round`, tagging up to MAX_STARTERS of them STARTER (from
- * pending starter_selections) and the rest BENCH. Shared by the real
- * deadline-gated lock job and the demo/ops force-lock path — see
- * gameweekService.lockPendingLineups() and forceLockRound(). Idempotent
- * per (user, round).
+ * lineup for `round`. Shared by the real deadline-gated lock job and the
+ * demo/ops force-lock path — see gameweekService.lockPendingLineups() and
+ * forceLockRound(). Idempotent per (user, round).
  */
 function lockRoundForAllAccounts(round: number): number {
   const lockedAt = Date.now();
   // listAccountIds() already includes bots — they get a real market_accounts
   // row at bootstrap (see bootstrap.ts) just like any user.
-  const accountIds = marketRepo.listAccountIds();
-  const botIds = new Set(BOT_ROSTER.map((b) => b.id));
   let locked = 0;
-  for (const userId of accountIds) {
-    if (fantasyRepo.hasLockedLineup(userId, round)) continue;
-    const holdings = marketRepo.getHoldings(userId);
-    if (holdings.length === 0) continue;
-
-    const holdingIds = new Set(holdings.map((h) => h.club_id));
-    let starterIds = fantasyRepo
-      .getStarterSelection(userId)
-      .filter((id) => holdingIds.has(id))
-      .slice(0, fantasyConfig.MAX_STARTERS);
-
-    if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
-      starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
-    }
-    const starterSet = new Set(starterIds);
-
-    fantasyRepo.lockLineup(
-      userId,
-      round,
-      lockedAt,
-      holdings.map((h) => ({
-        clubId: h.club_id,
-        priceAtLock: marketRepo.getPrice(h.club_id) ?? h.purchase_price,
-        status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
-      }))
-    );
-    locked++;
+  for (const userId of marketRepo.listAccountIds()) {
+    if (lockOneAccountForRound(userId, round, lockedAt)) locked++;
   }
   return locked;
+}
+
+/** True once every fixture in a round has actually finished. */
+function roundIsFullyPlayed(round: number): boolean {
+  const fixtures = footballRepo.listFixturesByRound(round);
+  return fixtures.length > 0 && fixtures.every((f) => f.status === "finished");
 }
 
 export const gameweekService = {
@@ -122,6 +136,26 @@ export const gameweekService = {
     let round = 1;
     while (fantasyRepo.hasLockedLineup(userId, round)) round++;
     return round;
+  },
+
+  /**
+   * If this manager's next unlocked round has ALREADY been fully played,
+   * lock it now using their current holdings — the same fallback the real
+   * deadline job applies — instead of leaving it stuck offering an
+   * editable "Starting Four" for a round that's already over. This should
+   * only ever be reachable via a demo/testing tool simulating results
+   * ahead of a round's real-world kickoff (or a genuinely late-joining
+   * account); real play always locks a round at its deadline, before any
+   * of its fixtures can finish. Repeats forward in case more than one
+   * round in a row is already played. Call before reading
+   * firstUnlockedRound() for anything user-facing.
+   */
+  catchUpFinishedRounds(userId: string) {
+    let round = gameweekService.firstUnlockedRound(userId);
+    while (roundIsFullyPlayed(round)) {
+      lockOneAccountForRound(userId, round, Date.now());
+      round++;
+    }
   },
 
   /** ISO kickoff of the earliest fixture in the next not-yet-scored round — when trading locks for that gameweek. Null once the schedule runs out (or isn't published yet). */
