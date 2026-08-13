@@ -284,3 +284,42 @@ internalRouter.post("/simulate-finish", (req, res) => {
 
   res.json({ ok: true, fixtureId: target.fixtureId, clubId: target.clubId, round });
 });
+
+/**
+ * Demo/ops only: finishes every not-yet-finished fixture in `round` with a
+ * plausible random scoreline, runs each through real settlement, then
+ * force-locks the round for every account — so a round can be fast-forwarded
+ * to "played" well before its real-world kickoff, with genuine points on the
+ * board and the round after it becoming the pending one to set a Starting
+ * Four for. Mirrors scripts/simulate.ts's finish+settle-all+lock-round
+ * sequence as one call, for environments (like Railway) without direct DB
+ * script access.
+ */
+const simulateRoundSchema = z.object({ round: z.number().int().min(1) });
+
+internalRouter.post("/simulate-round", (req, res) => {
+  const parsed = simulateRoundSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "round required" });
+  const { round } = parsed.data;
+  const fixtures = footballRepo.listFixturesByRound(round);
+  if (fixtures.length === 0) return res.status(400).json({ error: `No fixtures found for round ${round}.` });
+
+  let finished = 0;
+  for (const f of fixtures) {
+    if (f.status === "finished") continue;
+    const homeGoals = Math.floor(Math.random() * 4);
+    const awayGoals = Math.floor(Math.random() * 4);
+    footballRepo.upsertFixture({
+      ...f,
+      status: "finished",
+      homeGoals,
+      awayGoals,
+      homeCleanSheet: awayGoals === 0,
+      awayCleanSheet: homeGoals === 0,
+    });
+    settlementService.settleFixture(f.id);
+    finished++;
+  }
+  const locked = gameweekService.forceLockRound(round);
+  res.json({ ok: true, round, finished, locked });
+});
