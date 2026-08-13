@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, PanResponder } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
@@ -225,11 +225,28 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   const pendingExpired = !!(data?.isPending && data.nextKickoff && now >= new Date(data.nextKickoff).getTime());
   const allClubs = data ? [...data.starters, ...data.bench] : [];
 
+  // Left/right swipe navigates weeks, same as the ‹ › arrows — captured on
+  // the wrapping View (not the ScrollView itself) so only a clearly
+  // horizontal drag claims the gesture; an ordinary vertical scroll is left
+  // alone to reach the ScrollView underneath.
+  const swipeState = useRef({ canPrev: false, canNext: false });
+  swipeState.current = { canPrev: !!data?.canPrev, canNext: !!data?.canNext };
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_evt, gesture) => Math.abs(gesture.dx) > 20 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+      onPanResponderRelease: (_evt, gesture) => {
+        if (gesture.dx <= -50 && swipeState.current.canNext) setOffset((o) => o + 1);
+        else if (gesture.dx >= 50 && swipeState.current.canPrev) setOffset((o) => o - 1);
+      },
+    })
+  ).current;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
       <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { top: insets.top + 16, backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
         <CloseIcon color={T.text} />
       </Pressable>
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: data?.isPending ? 24 : 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: countdown ? 4 : 24 }}>
           <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
@@ -242,7 +259,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
         </View>
         {countdown && (
           <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 20, textAlign: "center" }}>
-            Starting Four locks in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+            Game Week {data?.round} deadline: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
           </Text>
         )}
         {data?.isPending && !pendingExpired && (
@@ -299,6 +316,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
           </>
         )}
       </ScrollView>
+      </View>
 
       {data?.isPending && !pendingExpired && selected && (
         <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
