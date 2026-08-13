@@ -36,7 +36,6 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
         <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{fmtMoney(priceNow)}</Text>
         <Text style={{ fontSize: 13, fontWeight: "500", color: trendColor }}>{fmtPct(pct)}</Text>
       </View>
-      <Text style={{ color: T.chevron, fontSize: 15 }}>›</Text>
     </Pressable>
   );
 }

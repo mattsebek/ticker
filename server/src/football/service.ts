@@ -17,6 +17,23 @@ const ODDS_IMPORT_CAP = 20;
  * FOOTBALL_SEASON_YEAR pins an explicit year; otherwise prefer whichever
  * season the provider marks current, falling back to the most recent.
  */
+/**
+ * `fetchOdds` is a real per-fixture provider call and can fail on its own
+ * (rate limit, transient network error) independent of everything else
+ * that just succeeded (competitions/seasons/clubs/fixtures). Odds are a
+ * best-effort enrichment — normalizeFixture already falls back to a
+ * neutral win-probability when they're missing — so a failure here must
+ * never abort persisting the fixtures that were already fetched.
+ */
+async function fetchOddsBestEffort(providerIds: string[]): Promise<RawOddsDTO[]> {
+  try {
+    return await provider.fetchOdds(providerIds);
+  } catch (err: any) {
+    console.error(`[football] odds fetch failed, continuing without them:`, err?.message || err);
+    return [];
+  }
+}
+
 function pickSeason(seasons: RawSeasonRef[]): RawSeasonRef {
   const pinnedYear = process.env.FOOTBALL_SEASON_YEAR;
   if (pinnedYear) {
@@ -59,7 +76,7 @@ export const footballService = {
     // win-probability when odds are missing, so this is a budget tradeoff,
     // not a correctness one.
     const notYetPlayed = fixturesRaw.filter((f) => f.status === "NS").slice(0, ODDS_IMPORT_CAP);
-    const odds = await provider.fetchOdds(notYetPlayed.map((f) => f.providerId));
+    const odds = await fetchOddsBestEffort(notYetPlayed.map((f) => f.providerId));
     const oddsByFixture = new Map(odds.map((o) => [o.fixtureProviderId, o]));
     for (const f of fixturesRaw) normalizeFixture(provider.name, f, season.id, oddsByFixture.get(f.providerId));
 
@@ -78,7 +95,7 @@ export const footballService = {
     // Same one-request-per-fixture cost as importSeasonSchedule() — only
     // spend odds budget on fixtures that haven't kicked off yet.
     const notYetPlayed = results.filter((f) => f.status === "NS").slice(0, ODDS_IMPORT_CAP);
-    const odds = await provider.fetchOdds(notYetPlayed.map((f) => f.providerId));
+    const odds = await fetchOddsBestEffort(notYetPlayed.map((f) => f.providerId));
     const oddsByFixture = new Map<string, RawOddsDTO>(odds.map((o) => [o.fixtureProviderId, o]));
     for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId, oddsByFixture.get(f.providerId));
     return { updated: results.length };

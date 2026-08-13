@@ -167,9 +167,6 @@ export function PortfolioScreen() {
     );
   }
 
-  const starters = portfolio.holdings.filter((h) => h.inStartingFour);
-  const bench = portfolio.holdings.filter((h) => !h.inStartingFour);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -211,26 +208,15 @@ export function PortfolioScreen() {
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 
         <View style={styles.sectionHeader}>
-          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Starting Four</Text>
+          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>
           <PillRow>
             <Pill label="GW" active={clubsRange === "gw"} onPress={() => setClubsRange("gw")} />
             <Pill label="YTD" active={clubsRange === "year"} onPress={() => setClubsRange("year")} />
           </PillRow>
         </View>
-        {starters.length === 0 ? (
-          <Text style={{ fontSize: 13, color: T.textSecondary }}>You haven't set a Starting Four yet.</Text>
-        ) : (
-          starters.map((h) => <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />)
-        )}
-
-        {bench.length > 0 && (
-          <>
-            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 14 }}>Other Holdings</Text>
-            {bench.map((h) => (
-              <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
-            ))}
-          </>
-        )}
+        {portfolio.holdings.map((h) => (
+          <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
+        ))}
 
         {portfolio.holdings.some((h) => h.nextFixture) && (
           <>

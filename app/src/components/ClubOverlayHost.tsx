@@ -132,10 +132,6 @@ export function ClubOverlayHost() {
     close();
     navigation.navigate("Trade", { mode: "sell", clubId: clubId! });
   }
-  function moveToStartingFour() {
-    close();
-    navigation.navigate("SetStartingFour");
-  }
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
@@ -237,9 +233,6 @@ export function ClubOverlayHost() {
               <Text style={{ color: T.text, fontSize: 24, fontWeight: "600", marginTop: 4 }}>{detail.ownershipPct.toFixed(2)}%</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              {state === "OWNED_BENCH" && (
-                <Button label="Move to Starting Four" onPress={moveToStartingFour} variant="secondary" fullWidth={false} style={{ paddingHorizontal: 14, paddingVertical: 18 }} />
-              )}
               {(state === "OWNED_STARTER" || state === "OWNED_BENCH") && (
                 <Button label="Sell" onPress={sell} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />
               )}
