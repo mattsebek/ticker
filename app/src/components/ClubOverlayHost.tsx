@@ -128,7 +128,7 @@ export function ClubOverlayHost() {
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={close}>
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
       <Pressable style={StyleSheet.absoluteFill} onPress={close}>
         <BlurView intensity={30} tint={T.mode === "dark" ? "dark" : "light"} style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.35)" }]} />

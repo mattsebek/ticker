@@ -203,12 +203,9 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
     try {
       await api.gameweek.setStartingFour(selected);
       await refreshPortfolio();
-      const fresh = await api.gameweek.detail(offset);
-      setData(fresh);
-      if (fresh.isPending) setSelected(fresh.starters.map((c) => c.clubId));
+      navigation.goBack();
     } catch (e: any) {
       setError(e?.message || "Something went wrong.");
-    } finally {
       setSaving(false);
     }
   }

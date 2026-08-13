@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useScrollToTop } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
@@ -117,6 +117,8 @@ export function PortfolioScreen() {
   const user = useAuthStore((s) => s.user);
   // Nested inside the tab navigator — GameweekDetail lives one level up, on the stack.
   const navigation = useNavigation();
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
   const [scrub, setScrub] = useState<Point | null>(null);
@@ -169,7 +171,7 @@ export function PortfolioScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         <Text style={{ fontSize: 13, color: T.textSecondary, fontWeight: "500", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 14 }}>Portfolio</Text>
         <RollingNumber text={fmtMoney(scrub ? scrub.v : portfolio.heroValue)} style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", color: T.text }} />
         <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
