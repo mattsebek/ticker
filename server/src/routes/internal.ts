@@ -11,6 +11,7 @@ import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
 import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
+import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -18,6 +19,8 @@ import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
 // future table nobody intended to include.
 const ALL_TABLES = [
   "otp_codes",
+  "push_tokens",
+  "sent_reminders",
   "starter_selection_touched",
   "starter_selections",
   "gameweek_lineup_clubs",
@@ -350,4 +353,18 @@ internalRouter.post("/relock-round", (req, res) => {
   }
   const locked = gameweekService.forceLockRound(round);
   res.json({ ok: true, round, cleared, locked });
+});
+
+/**
+ * Dev/ops only: runs the Gameweek-deadline push reminder job immediately,
+ * bypassing its own interval — lets the reminder be tested without waiting
+ * for a real round's deadline to actually fall inside the reminder window.
+ */
+internalRouter.post("/trigger-deadline-reminder", async (req, res) => {
+  try {
+    const result = await gameweekDeadlineReminder.run();
+    res.json(result);
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
 });

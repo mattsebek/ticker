@@ -9,6 +9,7 @@ import * as lockGameweekLineups from "./lockGameweekLineups";
 import * as updateClubPrices from "./updateClubPrices";
 import * as recalculateLeagueStandings from "./recalculateLeagueStandings";
 import * as microPriceJitter from "./microPriceJitter";
+import * as gameweekDeadlineReminder from "./gameweekDeadlineReminder";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -44,6 +45,12 @@ export function registerJobs() {
   scheduler.register({ name: "updateClubPrices", intervalMs: 2 * MINUTE, run: updateClubPrices.run });
   scheduler.register({ name: "recalculateLeagueStandings", intervalMs: 3 * MINUTE, run: recalculateLeagueStandings.run });
   scheduler.register({ name: "microPriceJitter", intervalMs: 20_000, run: microPriceJitter.run });
+  scheduler.register({
+    name: "gameweekDeadlineReminder",
+    intervalMs: intervalFromEnv("JOB_DEADLINE_REMINDER_MS", 30 * MINUTE),
+    run: gameweekDeadlineReminder.run,
+    initialDelayMs: 20_000,
+  });
 }
 
 export { scheduler };
