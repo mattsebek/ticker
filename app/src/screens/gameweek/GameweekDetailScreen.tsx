@@ -142,16 +142,42 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Neighboring weeks are fetched ahead of time and cached by offset, so a
+  // swipe to a week already fetched applies instantly (no spinner) instead
+  // of waiting on a round-trip mid-animation.
+  const cacheRef = useRef<Map<number, GameweekDetailResponse>>(new Map());
+
   useEffect(() => {
     let cancelled = false;
-    setData(null);
-    setSelected(null);
     setError(null);
-    api.gameweek.detail(offset).then((r) => {
-      if (cancelled) return;
+
+    const applyOffset = async (targetOffset: number, applyAsCurrent: boolean) => {
+      let r = cacheRef.current.get(targetOffset);
+      if (!r) {
+        r = await api.gameweek.detail(targetOffset);
+        cacheRef.current.set(targetOffset, r);
+      }
+      if (cancelled || !applyAsCurrent) return r;
       setData(r);
-      if (r.isPending) setSelected(r.starters.map((c) => c.clubId));
+      setSelected(r.isPending ? r.starters.map((c) => c.clubId) : null);
+      return r;
+    };
+
+    const cached = cacheRef.current.get(offset);
+    if (cached) {
+      setData(cached);
+      setSelected(cached.isPending ? cached.starters.map((c) => c.clubId) : null);
+    } else {
+      setData(null);
+      setSelected(null);
+    }
+
+    applyOffset(offset, true).then((current) => {
+      if (cancelled || !current) return;
+      if (current.canPrev) applyOffset(offset - 1, false);
+      if (current.canNext) applyOffset(offset + 1, false);
     });
+
     return () => {
       cancelled = true;
     };
@@ -176,6 +202,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
     if (now - lastExpiredRefetch < 5000) return;
     setLastExpiredRefetch(now);
     api.gameweek.detail(offset).then((fresh) => {
+      cacheRef.current.set(offset, fresh);
       setData(fresh);
       if (fresh.isPending) setSelected(fresh.starters.map((c) => c.clubId));
     });
@@ -267,11 +294,12 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
           </Text>
         )}
         {data?.isPending && !pendingExpired && (
-          <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>
-            Tap up to ({data.maxStarters}) clubs to make them <Text style={{ color: GREEN, fontWeight: "600" }}>active for the week</Text>.
-            {"\n"}
-            Only active clubs earn game week points.
-          </Text>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center" }}>
+              Tap up to ({data.maxStarters}) clubs to make them <Text style={{ color: GREEN, fontWeight: "600" }}>active for the week</Text>.
+            </Text>
+            <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginTop: 8 }}>Only active clubs earn game week points.</Text>
+          </View>
         )}
         {data?.isPending && pendingExpired && (
           <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>Locking in your Starting Four…</Text>
@@ -310,9 +338,9 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
 
             {data.bench.length > 0 && (
               <>
-                <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 34, marginBottom: 6 }}>Bench</Text>
+                <Text style={{ fontSize: 20, fontWeight: "600", color: T.text, marginTop: 34, marginBottom: 6 }}>Bench</Text>
                 <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 14 }}>
-                  Still in your portfolio — these points don't count toward your Gameweek score.
+                  Holdings still in your portfolio, but these points don't count towards your game week score.
                 </Text>
                 {data.bench.map((club) => (
                   <ClubCard key={club.clubId} club={club} isStarter={false} T={T} />
