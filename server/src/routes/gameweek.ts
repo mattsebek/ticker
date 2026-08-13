@@ -11,13 +11,20 @@ export const gameweekRouter = Router();
 
 gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
   const current = gameweekService.currentRound();
+  // The round after "current" is the pending one — not yet locked, but
+  // viewable/editable here once its fixtures are published, so managers can
+  // set their Starting Four from the same screen they check past scores in.
+  const pendingRound = gameweekService.deadlineForRound(current + 1) != null ? current + 1 : current;
   const offset = parseInt(String(req.query.offset || "0"), 10) || 0;
-  const round = Math.max(1, Math.min(current, current + offset));
-  const { starters, bench, benchPoints } = gameweekDetail(req.userId!, round);
+  const round = Math.max(1, Math.min(pendingRound, current + offset));
+  const isPending = round > current;
+  const { starters, bench, benchPoints } = gameweekDetail(req.userId!, round, isPending);
   res.json({
     round,
+    isPending,
+    maxStarters: fantasyConfig.MAX_STARTERS,
     canPrev: round > 1,
-    canNext: round < current,
+    canNext: round < pendingRound,
     nextKickoff: gameweekService.nextKickoff(),
     starters,
     bench,
@@ -38,20 +45,6 @@ gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     canPrev: summary.canPrev,
     canNext: summary.canNext,
     nextKickoff: gameweekService.nextKickoff(),
-  });
-});
-
-// The pending (mutable, pre-lock) Starting Four intent — not the immutable
-// locked snapshot used for scoring. See fantasyRepo.getStarterSelection.
-// round/deadline describe the NEXT (not-yet-locked) Gameweek this
-// selection will lock in for, so the client can show "Setting Starting
-// Four for Game Week N" and when it locks.
-gameweekRouter.get("/starting-four", requireAuth, (req: AuthedRequest, res) => {
-  res.json({
-    clubIds: fantasyRepo.getStarterSelection(req.userId!),
-    maxStarters: fantasyConfig.MAX_STARTERS,
-    round: gameweekService.currentRound() + 1,
-    deadline: gameweekService.nextKickoff(),
   });
 });
 

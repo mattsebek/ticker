@@ -8,6 +8,7 @@ import { footballService } from "./football/service";
 import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
 import { fantasyRepo, LineupStatus } from "./fantasy/repo";
+import { fantasyConfig } from "./fantasy/fantasyConfig";
 import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
 import { breakdownClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
@@ -147,23 +148,43 @@ function gameweekClubDetail(clubId: string, round: number) {
 }
 
 /**
- * Per-club breakdown of a user's locked Gameweek lineup, split into the
- * Starting Four (scoring) and Bench (informational only — never
- * contributes to Gameweek/season score). A club with no round fixture yet
- * (schedule gap, bye) is simply omitted rather than shown as an error.
+ * Per-club breakdown of a manager's Gameweek lineup, split into Starting
+ * Four (scoring) and Bench (informational only — never contributes to
+ * Gameweek/season score). A club with no round fixture yet (schedule gap,
+ * bye) is simply omitted rather than shown as an error.
+ *
+ * `isPending` distinguishes two very different data sources for the same
+ * shape: a locked (past or currently-active) round reads the immutable
+ * snapshot — a club sold after locking still shows here, since it's still
+ * what earned the points. A pending (not-yet-locked) round has no
+ * snapshot yet, so it reads CURRENT holdings plus the manager's mutable
+ * pending starter_selections intent instead — this is what the client
+ * renders as the editable "Set Your Starting Four" experience.
  */
-export function gameweekDetail(userId: string, round: number) {
-  // Scoring lineup, not current holdings — a club sold after this round
-  // locked still shows here, since it's still what earned the points.
-  const locked = fantasyRepo.getLockedLineup(userId, round) ?? [];
-  const byStatus = (status: LineupStatus) =>
-    locked
-      .filter((c) => c.status === status)
-      .map((c) => gameweekClubDetail(c.clubId, round))
-      .filter((x): x is NonNullable<typeof x> => x != null);
+export function gameweekDetail(userId: string, round: number, isPending: boolean) {
+  let starterIds: string[];
+  let benchIds: string[];
 
-  const starters = byStatus("STARTER");
-  const bench = byStatus("BENCH");
+  if (isPending) {
+    const holdingIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
+    const pendingStarters = new Set(
+      fantasyRepo
+        .getStarterSelection(userId)
+        .filter((id) => holdingIds.includes(id))
+        .slice(0, fantasyConfig.MAX_STARTERS)
+    );
+    starterIds = holdingIds.filter((id) => pendingStarters.has(id));
+    benchIds = holdingIds.filter((id) => !pendingStarters.has(id));
+  } else {
+    const locked = fantasyRepo.getLockedLineup(userId, round) ?? [];
+    const byStatus = (status: LineupStatus) => locked.filter((c) => c.status === status).map((c) => c.clubId);
+    starterIds = byStatus("STARTER");
+    benchIds = byStatus("BENCH");
+  }
+
+  const resolve = (ids: string[]) => ids.map((id) => gameweekClubDetail(id, round)).filter((x): x is NonNullable<typeof x> => x != null);
+  const starters = resolve(starterIds);
+  const bench = resolve(benchIds);
   const benchPoints = bench.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
 
   return { starters, bench, benchPoints };

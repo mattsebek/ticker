@@ -115,7 +115,7 @@ export function PortfolioScreen() {
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
   const user = useAuthStore((s) => s.user);
-  // Nested inside the tab navigator — SetStartingFour lives one level up, on the stack.
+  // Nested inside the tab navigator — GameweekDetail lives one level up, on the stack.
   const navigation = useNavigation();
   const [range, setRange] = useState<Range>("7D");
   const [clubsRange, setClubsRange] = useState<"gw" | "year">("gw");
@@ -198,7 +198,7 @@ export function PortfolioScreen() {
         <View style={{ marginTop: 20 }}>
           <GameweekWidget />
           <Pressable
-            onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("SetStartingFour")}
+            onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("GameweekDetail", { initialOffset: 1 })}
             style={{ marginTop: 6 }}
           >
             <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>Set Starting Four →</Text>

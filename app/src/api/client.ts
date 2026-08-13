@@ -14,7 +14,6 @@ import type {
   MorningBrief,
   BuyPreviewResponse,
   SellPreviewResponse,
-  StartingFourResponse,
   User,
 } from "./types";
 
@@ -63,7 +62,6 @@ export const api = {
   gameweek: {
     get: (offset: number) => request<GameweekResponse>(`/gameweek?offset=${offset}`),
     detail: (offset: number = 0) => request<GameweekDetailResponse>(`/gameweek/detail?offset=${offset}`),
-    getStartingFour: () => request<StartingFourResponse>("/gameweek/starting-four"),
     setStartingFour: (clubIds: string[]) =>
       request<{ ok: true; clubIds: string[] }>("/gameweek/starting-four", { method: "PUT", body: JSON.stringify({ clubIds }) }),
   },

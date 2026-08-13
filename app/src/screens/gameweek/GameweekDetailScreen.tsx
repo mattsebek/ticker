@@ -3,8 +3,10 @@ import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
+import { useDataStore } from "../../store/dataStore";
 import { CloseIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
+import { Button } from "../../components/Button";
 import { FONT_SERIF, GREEN, RED } from "../../theme/theme";
 import { api } from "../../api/client";
 import type { GameweekDetailResponse, GameweekClubDetail } from "../../api/types";
@@ -12,14 +14,15 @@ import type { AppStackParamList } from "../../navigation/types";
 import { fmtCountdown } from "../../utils/format";
 
 type Props = NativeStackScreenProps<AppStackParamList, "GameweekDetail">;
+type Tokens = ReturnType<typeof useThemeStore.getState>["tokens"];
 
-function pctColor(pct: number, T: ReturnType<typeof useThemeStore.getState>["tokens"]): string {
+function pctColor(pct: number, T: Tokens): string {
   if (pct >= 100) return GREEN;
   if (pct >= 50) return T.text;
   return RED;
 }
 
-function ResultRow({ label, points, T }: { label: string; points: number; T: ReturnType<typeof useThemeStore.getState>["tokens"] }) {
+function ResultRow({ label, points, T }: { label: string; points: number; T: Tokens }) {
   return (
     <View style={styles.resultRow}>
       <Text style={{ fontSize: 13, color: T.textSecondary }}>{label}</Text>
@@ -28,7 +31,7 @@ function ResultRow({ label, points, T }: { label: string; points: number; T: Ret
   );
 }
 
-function ClubCard({ club, T }: { club: GameweekClubDetail; T: ReturnType<typeof useThemeStore.getState>["tokens"] }) {
+function ClubCard({ club, T }: { club: GameweekClubDetail; T: Tokens }) {
   const finished = club.status === "finished" && club.breakdown;
 
   return (
@@ -73,7 +76,33 @@ function ClubCard({ club, T }: { club: GameweekClubDetail; T: ReturnType<typeof 
   );
 }
 
-function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnType<typeof useThemeStore.getState>["tokens"] }) {
+function SelectableClubCard({ club, isStarter, onToggle, T }: { club: GameweekClubDetail; isStarter: boolean; onToggle: () => void; T: Tokens }) {
+  return (
+    <Pressable
+      onPress={onToggle}
+      style={[styles.card, styles.selectableCard, { backgroundColor: T.card, borderColor: isStarter ? T.accent : T.border, ...T.elevatedShadow }]}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <ClubBadge code={club.code} color={club.color} size={40} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{club.name}</Text>
+          <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }} numberOfLines={1}>
+            {club.matchText}
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: T.accent }}>{club.projectedPoints}</Text>
+          <Text style={{ fontSize: 11, color: T.textSecondary, marginTop: 2 }}>proj.</Text>
+        </View>
+      </View>
+      <View style={[styles.badge, { backgroundColor: isStarter ? T.accent : T.elevated, marginTop: 12, alignSelf: "flex-start" }]}>
+        <Text style={{ fontSize: 11, fontWeight: "600", color: isStarter ? "#fff" : T.textSecondary }}>{isStarter ? "Starting" : "Bench"}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: Tokens }) {
   const projectedTotal = data.starters.reduce((a, c) => a + c.projectedPoints, 0);
   const actualTotal = data.starters.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
   const anyFinished = data.starters.some((c) => c.actualPoints != null);
@@ -102,18 +131,26 @@ function TotalsSummary({ data, T }: { data: GameweekDetailResponse; T: ReturnTyp
   );
 }
 
-export function GameweekDetailScreen({ navigation }: Props) {
+export function GameweekDetailScreen({ navigation, route }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
-  const [offset, setOffset] = useState(0);
+  const refreshPortfolio = useDataStore((s) => s.refreshPortfolio);
+  const [offset, setOffset] = useState(route.params?.initialOffset ?? 0);
   const [data, setData] = useState<GameweekDetailResponse | null>(null);
+  const [selected, setSelected] = useState<string[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setData(null);
+    setSelected(null);
+    setError(null);
     api.gameweek.detail(offset).then((r) => {
-      if (!cancelled) setData(r);
+      if (cancelled) return;
+      setData(r);
+      if (r.isPending) setSelected(r.starters.map((c) => c.clubId));
     });
     return () => {
       cancelled = true;
@@ -125,17 +162,44 @@ export function GameweekDetailScreen({ navigation }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  // Only the latest round (not yet locked) has anything to count down to —
-  // once its fixtures kick off, this round becomes "current" server-side
-  // and fmtCountdown naturally returns null, so the row just disappears.
-  const countdown = data && !data.canNext && data.nextKickoff ? fmtCountdown(data.nextKickoff, now) : null;
+  function toggle(clubId: string) {
+    setSelected((cur) => {
+      if (!cur || !data) return cur;
+      if (cur.includes(clubId)) return cur.filter((id) => id !== clubId);
+      if (cur.length >= data.maxStarters) return cur;
+      return [...cur, clubId];
+    });
+  }
+
+  async function save() {
+    if (!selected || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.gameweek.setStartingFour(selected);
+      await refreshPortfolio();
+      const fresh = await api.gameweek.detail(offset);
+      setData(fresh);
+      if (fresh.isPending) setSelected(fresh.starters.map((c) => c.clubId));
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Only the pending round (not yet locked) has anything to count down to —
+  // once its fixtures kick off, the lock job snapshots it and it becomes
+  // "current" server-side, so isPending naturally flips false.
+  const countdown = data?.isPending && data.nextKickoff ? fmtCountdown(data.nextKickoff, now) : null;
+  const allClubs = data ? [...data.starters, ...data.bench] : [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["bottom", "left", "right"]}>
       <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { top: insets.top + 16, backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
         <CloseIcon color={T.text} />
       </Pressable>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: data?.isPending ? 24 : 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: countdown ? 4 : 24 }}>
           <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
             <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canPrev ? T.accent : T.border }}>‹</Text>
@@ -145,14 +209,28 @@ export function GameweekDetailScreen({ navigation }: Props) {
             <Text style={{ fontSize: 22, fontWeight: "600", color: data?.canNext ? T.accent : T.border }}>›</Text>
           </Pressable>
         </View>
-        {countdown && data && (
-          <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 24, textAlign: "center" }}>
-            Game Week {data.round + 1} team lock: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+        {countdown && (
+          <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 20, textAlign: "center" }}>
+            Starting Four locks in: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+          </Text>
+        )}
+        {data?.isPending && (
+          <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>
+            Tap a club to move it between your Starting Four and Bench. Points shown are projected for this Gameweek.
           </Text>
         )}
 
         {!data ? (
           <ActivityIndicator color={T.accent} style={{ marginTop: 40 }} />
+        ) : data.isPending ? (
+          allClubs.length === 0 ? (
+            <Text style={{ fontSize: 14, color: T.textSecondary, textAlign: "center", marginTop: 40 }}>You don't own any clubs yet.</Text>
+          ) : (
+            selected &&
+            allClubs.map((club) => (
+              <SelectableClubCard key={club.clubId} club={club} isStarter={selected.includes(club.clubId)} onToggle={() => toggle(club.clubId)} T={T} />
+            ))
+          )
         ) : data.starters.length === 0 && data.bench.length === 0 ? (
           <Text style={{ fontSize: 14, color: T.textSecondary, textAlign: "center", marginTop: 40 }}>No fixtures found for this gameweek yet.</Text>
         ) : (
@@ -181,6 +259,13 @@ export function GameweekDetailScreen({ navigation }: Props) {
           </>
         )}
       </ScrollView>
+
+      {data?.isPending && selected && (
+        <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
+          {error && <Text style={{ color: "#E0393E", fontSize: 13, marginBottom: 10 }}>{error}</Text>}
+          <Button label={`Save Starting Four (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -189,6 +274,9 @@ const styles = StyleSheet.create({
   closeBtn: { position: "absolute", top: 16, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 },
   arrowBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
   card: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 14 },
+  selectableCard: { borderWidth: 2 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
   plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100 },
+  footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 28, borderTopWidth: 1 },
 });

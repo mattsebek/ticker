@@ -5,8 +5,7 @@ export type AppStackParamList = {
   JoinLeague: { code?: string } | undefined;
   Rules: undefined;
   AiBriefing: undefined;
-  GameweekDetail: undefined;
-  SetStartingFour: undefined;
+  GameweekDetail: { initialOffset?: number } | undefined;
 };
 
 export type MainTabParamList = {

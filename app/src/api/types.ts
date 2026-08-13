@@ -114,6 +114,9 @@ export interface GameweekClubDetail {
 
 export interface GameweekDetailResponse {
   round: number;
+  /** True when this round hasn't locked yet — starters/bench reflect current holdings + mutable pending selection, and the client should let the manager tap to reassign them. */
+  isPending: boolean;
+  maxStarters: number;
   canPrev: boolean;
   canNext: boolean;
   nextKickoff: string | null;
@@ -193,11 +196,3 @@ export interface SellPreviewResponse {
   confirmLabel: string;
 }
 
-export interface StartingFourResponse {
-  clubIds: string[];
-  maxStarters: number;
-  /** The Gameweek round this selection will lock in for. */
-  round: number;
-  /** ISO kickoff of that Gameweek's deadline, or null if not yet published. */
-  deadline: string | null;
-}

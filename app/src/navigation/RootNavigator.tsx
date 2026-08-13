@@ -13,7 +13,6 @@ import { JoinLeagueScreen } from "../screens/compete/JoinLeagueScreen";
 import { RulesScreen } from "../screens/profile/RulesScreen";
 import { AiBriefingScreen } from "../screens/ai/AiBriefingScreen";
 import { GameweekDetailScreen } from "../screens/gameweek/GameweekDetailScreen";
-import { SetStartingFourScreen } from "../screens/gameweek/SetStartingFourScreen";
 import type { AppStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -79,7 +78,6 @@ export function RootNavigator() {
                 fullScreenModal presentations. */}
             <Stack.Screen name="AiBriefing" component={AiBriefingScreen} options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="GameweekDetail" component={GameweekDetailScreen} options={{ presentation: "fullScreenModal" }} />
-            <Stack.Screen name="SetStartingFour" component={SetStartingFourScreen} options={{ presentation: "fullScreenModal" }} />
           </>
         )}
       </Stack.Navigator>
