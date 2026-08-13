@@ -100,10 +100,22 @@ export class ApiFootballProvider implements FootballDataProvider {
     }));
   }
 
+  /**
+   * One provider request per fixture — a single failure (rate limit,
+   * transient error) must not discard predictions that already succeeded
+   * for the other fixtures in this batch, so each call is caught on its
+   * own rather than letting one throw abort the whole loop.
+   */
   async fetchOdds(fixtureProviderIds: string[]): Promise<RawOddsDTO[]> {
     const results: RawOddsDTO[] = [];
     for (const fixtureId of fixtureProviderIds) {
-      const rows = await this.get<any[]>("/predictions", { fixture: fixtureId });
+      let rows: any[];
+      try {
+        rows = await this.get<any[]>("/predictions", { fixture: fixtureId });
+      } catch (err: any) {
+        console.error(`[api-football] predictions fetch failed for fixture ${fixtureId}, skipping:`, err?.message || err);
+        continue;
+      }
       const pct = rows[0]?.predictions?.percent;
       if (!pct) continue;
       const parse = (s: string) => parseFloat(String(s).replace("%", "")) / 100;

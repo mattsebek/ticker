@@ -28,6 +28,52 @@ function pointsForMemberAtRound(memberId: string, round: number): number {
   return clubIds.reduce((a, clubId) => a + fantasyRepo.pointsAtRound(clubId, round), 0);
 }
 
+/**
+ * Snapshots every account's ENTIRE current holdings as their Gameweek
+ * lineup for `round`, tagging up to MAX_STARTERS of them STARTER (from
+ * pending starter_selections) and the rest BENCH. Shared by the real
+ * deadline-gated lock job and the demo/ops force-lock path — see
+ * gameweekService.lockPendingLineups() and forceLockRound(). Idempotent
+ * per (user, round).
+ */
+function lockRoundForAllAccounts(round: number): number {
+  const lockedAt = Date.now();
+  // listAccountIds() already includes bots — they get a real market_accounts
+  // row at bootstrap (see bootstrap.ts) just like any user.
+  const accountIds = marketRepo.listAccountIds();
+  const botIds = new Set(BOT_ROSTER.map((b) => b.id));
+  let locked = 0;
+  for (const userId of accountIds) {
+    if (fantasyRepo.hasLockedLineup(userId, round)) continue;
+    const holdings = marketRepo.getHoldings(userId);
+    if (holdings.length === 0) continue;
+
+    const holdingIds = new Set(holdings.map((h) => h.club_id));
+    let starterIds = fantasyRepo
+      .getStarterSelection(userId)
+      .filter((id) => holdingIds.has(id))
+      .slice(0, fantasyConfig.MAX_STARTERS);
+
+    if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
+      starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
+    }
+    const starterSet = new Set(starterIds);
+
+    fantasyRepo.lockLineup(
+      userId,
+      round,
+      lockedAt,
+      holdings.map((h) => ({
+        clubId: h.club_id,
+        priceAtLock: marketRepo.getPrice(h.club_id) ?? h.purchase_price,
+        status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
+      }))
+    );
+    locked++;
+  }
+  return locked;
+}
+
 export const gameweekService = {
   currentRound(): number {
     return Math.max(1, fantasyRepo.maxScoredRound());
@@ -91,41 +137,17 @@ export const gameweekService = {
     const nextRound = fantasyRepo.maxScoredRound() + 1;
     const kickoff = gameweekService.nextKickoff();
     if (!kickoff || Date.now() < new Date(kickoff).getTime()) return null;
+    return { round: nextRound, locked: lockRoundForAllAccounts(nextRound) };
+  },
 
-    const lockedAt = Date.now();
-    // listAccountIds() already includes bots — they get a real market_accounts
-    // row at bootstrap (see bootstrap.ts) just like any user.
-    const accountIds = marketRepo.listAccountIds();
-    const botIds = new Set(BOT_ROSTER.map((b) => b.id));
-    let locked = 0;
-    for (const userId of accountIds) {
-      if (fantasyRepo.hasLockedLineup(userId, nextRound)) continue;
-      const holdings = marketRepo.getHoldings(userId);
-      if (holdings.length === 0) continue;
-
-      const holdingIds = new Set(holdings.map((h) => h.club_id));
-      let starterIds = fantasyRepo
-        .getStarterSelection(userId)
-        .filter((id) => holdingIds.has(id))
-        .slice(0, fantasyConfig.MAX_STARTERS);
-
-      if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
-        starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
-      }
-      const starterSet = new Set(starterIds);
-
-      fantasyRepo.lockLineup(
-        userId,
-        nextRound,
-        lockedAt,
-        holdings.map((h) => ({
-          clubId: h.club_id,
-          priceAtLock: marketRepo.getPrice(h.club_id) ?? h.purchase_price,
-          status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
-        }))
-      );
-      locked++;
-    }
-    return { round: nextRound, locked };
+  /**
+   * Demo/ops only: force-locks `round` for every account right now,
+   * bypassing the real deadline check lockPendingLineups() enforces. Used
+   * by scripts/simulate.ts so a manually-simulated round can be tested
+   * end-to-end (results visible, next round pending) without waiting for
+   * its real-world kickoff time to actually pass.
+   */
+  forceLockRound(round: number): number {
+    return lockRoundForAllAccounts(round);
   },
 };

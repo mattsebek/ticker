@@ -15,10 +15,11 @@
  * itself is faked.
  *
  * Usage:
- *   npm run simulate -- list-rounds
- *   npm run simulate -- list-fixtures --round 3
- *   npm run simulate -- finish --fixture <id> --home 2 --away 0
- *   npm run simulate -- settle-all
+ *   npm run simulate-results -- list-rounds
+ *   npm run simulate-results -- list-fixtures --round 3
+ *   npm run simulate-results -- finish --fixture <id> --home 2 --away 0
+ *   npm run simulate-results -- settle-all
+ *   npm run simulate-results -- lock-round --round 1
  */
 import { footballRepo } from "../src/football/repo";
 import { footballService } from "../src/football/service";
@@ -85,13 +86,25 @@ function settleAll() {
   console.log(`Settled ${result.settledCount} fixture(s).`);
 }
 
-const USAGE = `Usage: npm run simulate -- <command>
+function lockRound() {
+  const roundArg = arg("round");
+  if (!roundArg) {
+    console.error("Usage: lock-round --round N");
+    process.exit(1);
+  }
+  const round = parseInt(roundArg, 10);
+  const locked = gameweekService.forceLockRound(round);
+  console.log(`Force-locked round ${round} for ${locked} account(s).`);
+}
+
+const USAGE = `Usage: npm run simulate-results -- <command>
 
 Commands:
   list-rounds                                    Show current round and next deadline
   list-fixtures [--round N]                      List fixtures for a round (default: current)
   finish --fixture <id> --home <n> --away <n>    Finish a fixture with this score and run real settlement
   settle-all                                     Settle every finished-but-unsettled fixture
+  lock-round --round N                           Force-lock a round for every account right now (bypasses the real deadline)
 `;
 
 const command = process.argv[2];
@@ -107,6 +120,9 @@ switch (command) {
     break;
   case "settle-all":
     settleAll();
+    break;
+  case "lock-round":
+    lockRound();
     break;
   default:
     console.log(USAGE);
