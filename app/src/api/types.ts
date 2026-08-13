@@ -79,6 +79,8 @@ export interface PortfolioResponse {
 
 export interface GameweekResponse {
   gwNumber: number;
+  /** The round nextKickoff's countdown refers to — one ahead of gwNumber once real history exists. */
+  pendingRound: number;
   points: number;
   average: number;
   best: number;

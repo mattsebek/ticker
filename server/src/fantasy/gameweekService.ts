@@ -79,17 +79,27 @@ export const gameweekService = {
     return Math.max(1, fantasyRepo.maxScoredRound());
   },
 
+  /**
+   * Keyed off this manager's OWN lock history, not the global
+   * currentRound() — a manager with nothing locked yet (brand new, or the
+   * season's very first round hasn't reached its deadline) has no scored
+   * Gameweek to report, so every total reads 0 rather than falling back to
+   * a globally-scored round that may have nothing to do with them.
+   */
   summary(userId: string, round: number): GameweekSummary {
-    const current = gameweekService.currentRound();
-    const clamped = Math.max(1, Math.min(current, round));
+    const pending = gameweekService.firstUnlockedRound(userId);
+    const lastLocked = pending - 1;
+    const hasHistory = lastLocked >= 1;
+    const maxRound = hasHistory ? lastLocked : pending;
+    const clamped = Math.max(1, Math.min(maxRound, round));
 
     const rosterIds = [userId, ...BOT_ROSTER.map((b) => b.id)];
-    const allPoints = rosterIds.map((id) => pointsForMemberAtRound(id, clamped));
+    const allPoints = hasHistory ? rosterIds.map((id) => pointsForMemberAtRound(id, clamped)) : rosterIds.map(() => 0);
     const myPoints = allPoints[0];
     const average = Math.round(allPoints.reduce((a, b) => a + b, 0) / allPoints.length);
     const best = Math.max(...allPoints);
 
-    return { round: clamped, points: myPoints, average, best, canPrev: clamped > 1, canNext: clamped < current };
+    return { round: clamped, points: myPoints, average, best, canPrev: clamped > 1, canNext: clamped < maxRound };
   },
 
   /** ISO kickoff of the earliest fixture in a round — that round's Gameweek deadline. Null if the round has no published fixtures yet. */

@@ -41,18 +41,26 @@ gameweekRouter.get("/detail", requireAuth, (req: AuthedRequest, res) => {
 });
 
 gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
-  const current = gameweekService.currentRound();
+  const userId = req.userId!;
+  // Same "land on the last round this manager actually locked" default as
+  // /detail — see its comment for why this can't just be currentRound().
+  const pending = gameweekService.firstUnlockedRound(userId);
+  const lastLocked = pending - 1;
+  const defaultRound = lastLocked >= 1 ? lastLocked : pending;
   const offset = parseInt(String(req.query.offset || "0"), 10) || 0;
-  const round = Math.max(1, Math.min(current, current + offset));
-  const summary = gameweekService.summary(req.userId!, round);
+  const summary = gameweekService.summary(userId, defaultRound + offset);
   res.json({
     gwNumber: summary.round,
+    // The round nextKickoff's countdown actually refers to — distinct from
+    // gwNumber once real history exists (gwNumber shows the last LOCKED
+    // round's score, one behind the round still open to set).
+    pendingRound: pending,
     points: summary.points,
     average: summary.average,
     best: summary.best,
     canPrev: summary.canPrev,
     canNext: summary.canNext,
-    nextKickoff: gameweekService.nextKickoff(),
+    nextKickoff: gameweekService.deadlineForRound(pending),
   });
 });
 

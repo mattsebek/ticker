@@ -259,12 +259,12 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
         </View>
         {countdown && (
           <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 20, textAlign: "center" }}>
-            Game Week {data?.round} deadline: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
+            Deadline: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
           </Text>
         )}
         {data?.isPending && !pendingExpired && (
           <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>
-            Tap a club to move it between your Starting Four and Bench. Points shown are projected for this Gameweek.
+            Tap up to ({data.maxStarters}) clubs to make them active for the week. Only active clubs earn game week points.
           </Text>
         )}
         {data?.isPending && pendingExpired && (
