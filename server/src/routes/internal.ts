@@ -323,3 +323,30 @@ internalRouter.post("/simulate-round", (req, res) => {
   const locked = gameweekService.forceLockRound(round);
   res.json({ ok: true, round, finished, locked });
 });
+
+/**
+ * Ops-only, one-off repair: clears every account's locked lineup for
+ * `round` and re-derives it fresh from current holdings + starter
+ * selection via forceLockRound(). Fixes lock records that predate a
+ * correctness fix (e.g. lineupBackfillService previously locking a round
+ * before its deadline had passed, tagging every held club STARTER with no
+ * MAX_STARTERS cap) — real fantasy_points already recorded for the round
+ * are untouched, only which clubs count as STARTER vs BENCH is redone.
+ */
+const relockRoundSchema = z.object({ round: z.number().int().min(1) });
+
+internalRouter.post("/relock-round", (req, res) => {
+  const parsed = relockRoundSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "round required" });
+  const { round } = parsed.data;
+  const accountIds = marketRepo.listAccountIds();
+  let cleared = 0;
+  for (const userId of accountIds) {
+    if (fantasyRepo.hasLockedLineup(userId, round)) {
+      fantasyRepo.deleteLockedLineup(userId, round);
+      cleared++;
+    }
+  }
+  const locked = gameweekService.forceLockRound(round);
+  res.json({ ok: true, round, cleared, locked });
+});

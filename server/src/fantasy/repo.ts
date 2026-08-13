@@ -160,6 +160,16 @@ export const fantasyRepo = {
     const rows = db.prepare("SELECT club_id, status FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").all(lineup.id) as { club_id: string; status: LineupStatus }[];
     return rows.map((r) => ({ clubId: r.club_id, status: r.status }));
   },
+  /** Ops-only: clears an incorrectly-locked (user, round) snapshot so it can be re-derived. See /internal/relock-round. */
+  deleteLockedLineup(userId: string, round: number) {
+    const lineup = db.prepare("SELECT id FROM gameweek_lineups WHERE user_id = ? AND round = ?").get(userId, round) as { id: number } | undefined;
+    if (!lineup) return;
+    const tx = db.transaction(() => {
+      db.prepare("DELETE FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").run(lineup.id);
+      db.prepare("DELETE FROM gameweek_lineups WHERE id = ?").run(lineup.id);
+    });
+    tx();
+  },
   // --- starter selection (mutable, pre-lock intent) ---
   getStarterSelection(userId: string): string[] {
     const rows = db.prepare("SELECT club_id FROM starter_selections WHERE user_id = ?").all(userId) as { club_id: string }[];

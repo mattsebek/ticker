@@ -38,6 +38,16 @@ export const lineupBackfillService = {
       const deadline = gameweekService.deadlineForRound(round);
       if (!deadline) continue;
       const cutoffMs = new Date(deadline).getTime();
+      // A round's deadline being published doesn't mean it's happened yet —
+      // currentRound() floors to 1 from the very start of a season, before
+      // round 1 has even kicked off. Backfilling early would lock a round
+      // that hasn't actually started, snapshotting whatever holdings exist
+      // at boot time as an all-STARTER lineup with no MAX_STARTERS cap,
+      // bypassing the real pending-selection flow entirely. Only rounds
+      // that have genuinely already locked (by wall-clock time) are this
+      // service's concern — anything still pending belongs to
+      // gameweekService.lockPendingLineups() instead.
+      if (Date.now() < cutoffMs) continue;
 
       for (const userId of accountIds) {
         if (fantasyRepo.hasLockedLineup(userId, round)) continue;
