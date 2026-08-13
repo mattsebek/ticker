@@ -34,18 +34,27 @@ export function GameweekWidget() {
   if (!data) return null;
 
   const countdown = data.nextKickoff ? fmtCountdown(data.nextKickoff, now) : null;
+  // pendingRound only differs from gwNumber once real history exists — for
+  // a brand new account they're the same round, so the single row below
+  // already IS the active/settable week and there's nothing separate to show.
+  const hasActiveWeek = data.pendingRound !== data.gwNumber;
+  const stackNav = navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
 
   return (
     <View>
-      {countdown && (
-        <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 10 }}>
-          Game Week {data.pendingRound} deadline: <Text style={{ fontWeight: "700", color: T.accent }}>{countdown}</Text>
-        </Text>
+      {hasActiveWeek && countdown && (
+        <Text style={{ fontSize: 12, fontWeight: "700", color: T.accent, marginBottom: 10 }}>{countdown}</Text>
       )}
-      <Pressable
-        onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("GameweekDetail")}
-        style={styles.row}
-      >
+      {hasActiveWeek && (
+        <Pressable
+          onPress={() => stackNav?.navigate("GameweekDetail", { initialOffset: data.pendingRound - data.gwNumber })}
+          style={[styles.row, { marginBottom: 4 }]}
+        >
+          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Game Week {data.pendingRound}</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>Set Starting Four →</Text>
+        </Pressable>
+      )}
+      <Pressable onPress={() => stackNav?.navigate("GameweekDetail")} style={styles.row}>
         <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Game Week {data.gwNumber}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 20, fontWeight: "600", color: T.text }}>{data.points.toFixed(1)}</Text>

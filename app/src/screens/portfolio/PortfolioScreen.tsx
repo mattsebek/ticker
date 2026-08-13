@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useScrollToTop } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useScrollToTop } from "@react-navigation/native";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
@@ -15,7 +14,6 @@ import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
 import { useBriefing } from "../../hooks/useBriefing";
-import type { AppStackParamList } from "../../navigation/types";
 
 type Range = "7D" | "30D" | "YTD";
 
@@ -115,8 +113,6 @@ export function PortfolioScreen() {
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
   const user = useAuthStore((s) => s.user);
-  // Nested inside the tab navigator — GameweekDetail lives one level up, on the stack.
-  const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
   const [range, setRange] = useState<Range>("7D");
@@ -199,12 +195,6 @@ export function PortfolioScreen() {
 
         <View style={{ marginTop: 20 }}>
           <GameweekWidget />
-          <Pressable
-            onPress={() => navigation.getParent<NativeStackNavigationProp<AppStackParamList>>()?.navigate("GameweekDetail", { initialOffset: 1 })}
-            style={{ marginTop: 6 }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: "600", color: T.accent }}>Set Starting Four →</Text>
-          </Pressable>
         </View>
 
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
