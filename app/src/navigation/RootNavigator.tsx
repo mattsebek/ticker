@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import { useDataStore } from "../store/dataStore";
+import { useNotificationsStore } from "../store/notificationsStore";
 import { MainTabsScreen } from "./MainTabs";
 import { OnboardingScreen } from "../screens/onboarding/OnboardingScreen";
 import { TradeScreen } from "../screens/trade/TradeScreen";
@@ -36,6 +37,15 @@ export function RootNavigator() {
     else stopPolling();
     return () => stopPolling();
   }, [user?.onboarded]);
+
+  // A push token requested pre-auth (from the onboarding carousel) can only
+  // be registered server-side once we actually have a session — flush it
+  // (and pull the real enabled state) the moment `user` first appears.
+  useEffect(() => {
+    if (!user) return;
+    useNotificationsStore.getState().flushPendingTokenIfAny();
+    useNotificationsStore.getState().hydrate();
+  }, [user?.id]);
 
   if (!hydrated) {
     return (

@@ -86,4 +86,10 @@ export const api = {
     buy: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/buy", { method: "POST", body: JSON.stringify({ clubId }) }),
     sell: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/sell", { method: "POST", body: JSON.stringify({ clubId }) }),
   },
+  notifications: {
+    status: () => request<{ enabled: boolean }>("/notifications/status"),
+    registerToken: (token: string, platform: "ios" | "android") =>
+      request<{ ok: true }>("/notifications/register-token", { method: "POST", body: JSON.stringify({ token, platform }) }),
+    setEnabled: (enabled: boolean) => request<{ ok: true }>("/notifications/enabled", { method: "PATCH", body: JSON.stringify({ enabled }) }),
+  },
 };

@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthStore } from "../../store/authStore";
 import { useThemeStore } from "../../store/themeStore";
+import { useNotificationsStore } from "../../store/notificationsStore";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { api } from "../../api/client";
 import type { AppStackParamList } from "../../navigation/types";
@@ -17,10 +18,15 @@ export function ProfileScreen() {
   const themeMode = useThemeStore((s) => s.mode);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [leagueCount, setLeagueCount] = useState(0);
+  const notifEnabled = useNotificationsStore((s) => s.enabled);
+  const notifBusy = useNotificationsStore((s) => s.busy);
+  const enableNotifications = useNotificationsStore((s) => s.enable);
+  const disableNotifications = useNotificationsStore((s) => s.disable);
 
   useFocusEffect(
     useCallback(() => {
       api.leagues.mine().then((r) => setLeagueCount(r.leagues.filter((l) => l.id !== "overall").length));
+      useNotificationsStore.getState().hydrate();
     }, [])
   );
 
@@ -43,7 +49,13 @@ export function ProfileScreen() {
 
         <View style={{ backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, overflow: "hidden", ...T.elevatedShadow }}>
           <SettingsRow label="Competitions" value={String(leagueCount)} T={T} />
-          <SettingsRow label="Notifications" value="On" T={T} />
+          <Pressable
+            onPress={() => (notifBusy ? undefined : notifEnabled ? disableNotifications() : enableNotifications())}
+            style={[styles.settingsRow, { borderBottomColor: T.borderLight }]}
+          >
+            <Text style={{ fontSize: 15, color: T.text }}>Notifications</Text>
+            <Text style={{ fontSize: 15, color: T.textSecondary }}>{notifBusy ? "…" : notifEnabled ? "On" : "Off"}</Text>
+          </Pressable>
           <Pressable onPress={toggleTheme} style={[styles.settingsRow, { borderBottomColor: T.borderLight }]}>
             <Text style={{ fontSize: 15, color: T.text }}>Appearance</Text>
             <Text style={{ fontSize: 15, color: T.textSecondary }}>{themeMode === "dark" ? "Dark" : "Light"}</Text>

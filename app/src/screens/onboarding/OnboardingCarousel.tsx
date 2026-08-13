@@ -9,6 +9,7 @@ import { RollingNumber } from "../../components/RollingNumber";
 import { Button } from "../../components/Button";
 import { GREEN, RED, FONT_SERIF } from "../../theme/theme";
 import { fmtPct } from "../../utils/format";
+import { useNotificationsStore } from "../../store/notificationsStore";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -217,6 +218,33 @@ function Slide1Notifs({ active }: { active: boolean }) {
   );
 }
 
+/**
+ * The real ask behind slide 1's mocked notification cards — device-level
+ * only (see notificationsStore.requestPermissionOnly), since the user isn't
+ * registered/logged in yet at this point in onboarding. The resulting
+ * token is stashed and flushed to the server once auth completes
+ * (RootNavigator's user-driven effect).
+ */
+function NotifsCTA() {
+  const requestPermissionOnly = useNotificationsStore((s) => s.requestPermissionOnly);
+  const [state, setState] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
+
+  async function handlePress() {
+    if (state !== "idle") return;
+    setState("requesting");
+    const granted = await requestPermissionOnly();
+    setState(granted ? "granted" : "denied");
+  }
+
+  const label = state === "granted" ? "✓ Notifications enabled" : state === "denied" ? "Notifications off — enable later in Profile" : "Enable notifications →";
+
+  return (
+    <Pressable onPress={handlePress} disabled={state !== "idle"} style={{ marginTop: 12 }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: state === "granted" ? GREEN : OB_TEXT }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function Slide2Standings({ active }: { active: boolean }) {
   const flip = useRef(new Animated.Value(0)).current;
   const arrowPop = useRef(new Animated.Value(0)).current;
@@ -347,6 +375,7 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
                   <Text style={{ fontSize: 15, fontWeight: "600", color: OB_TEXT }}>Swipe to learn more →</Text>
                 </Pressable>
               )}
+              {i === 1 && <NotifsCTA />}
             </View>
           </View>
         ))}
