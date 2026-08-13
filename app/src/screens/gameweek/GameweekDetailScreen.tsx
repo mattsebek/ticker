@@ -264,7 +264,9 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
         )}
         {data?.isPending && !pendingExpired && (
           <Text style={{ fontSize: 13, color: T.textSecondary, textAlign: "center", marginBottom: 20 }}>
-            Tap up to ({data.maxStarters}) clubs to make them active for the week. Only active clubs earn game week points.
+            Tap up to ({data.maxStarters}) clubs to make them <Text style={{ color: GREEN, fontWeight: "600" }}>active for the week</Text>.
+            {"\n"}
+            Only active clubs earn game week points.
           </Text>
         )}
         {data?.isPending && pendingExpired && (
