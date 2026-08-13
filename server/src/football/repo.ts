@@ -8,6 +8,17 @@ CREATE TABLE IF NOT EXISTS ticker_clubs (
   code TEXT NOT NULL,
   color TEXT NOT NULL
 );
+`);
+
+// Added after ticker_clubs shipped — same safe-ALTER pattern as the
+// gameweek_lineup_clubs `status` column (see fantasy/repo.ts).
+try {
+  db.exec("ALTER TABLE ticker_clubs ADD COLUMN prior_season_points REAL");
+} catch {
+  // already applied
+}
+
+db.exec(`
 
 CREATE TABLE IF NOT EXISTS ticker_competitions (
   id TEXT PRIMARY KEY,
@@ -116,6 +127,11 @@ export const footballRepo = {
     ).run(club.id, club.name, club.code, club.color);
   },
 
+  /** Set once at bootstrap from the provider's prior-season table — see computeOpeningPrices() in bootstrap.ts. */
+  setPriorSeasonPoints(clubId: string, points: number | null) {
+    db.prepare("UPDATE ticker_clubs SET prior_season_points = ? WHERE id = ?").run(points, clubId);
+  },
+
   upsertCompetition(c: Competition) {
     db.prepare(`INSERT INTO ticker_competitions (id, name) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name`).run(c.id, c.name);
   },
@@ -154,11 +170,13 @@ export const footballRepo = {
   },
 
   getClub(id: string): Club | undefined {
-    return db.prepare("SELECT * FROM ticker_clubs WHERE id = ?").get(id) as Club | undefined;
+    return db.prepare("SELECT id, name, code, color, prior_season_points as priorSeasonPoints FROM ticker_clubs WHERE id = ?").get(id) as
+      | Club
+      | undefined;
   },
 
   listClubs(): Club[] {
-    return db.prepare("SELECT * FROM ticker_clubs ORDER BY name").all() as Club[];
+    return db.prepare("SELECT id, name, code, color, prior_season_points as priorSeasonPoints FROM ticker_clubs ORDER BY name").all() as Club[];
   },
 
   getFixture(id: string): Fixture | undefined {

@@ -37,7 +37,7 @@ export function normalizeSeason(provider: string, raw: RawSeasonRef, competition
 
 export function normalizeClub(provider: string, raw: RawTeamRef): Club {
   const { id } = findOrCreateTickerId(provider, "club", raw.providerId, () => `club_${slug(raw.code || raw.name)}`);
-  const club: Club = { id, name: raw.name, code: raw.code, color: raw.color || lookupClubColor(raw.name) || "#666666" };
+  const club: Club = { id, name: raw.name, code: raw.code, color: raw.color || lookupClubColor(raw.name) || "#666666", priorSeasonPoints: null };
   footballRepo.upsertClub(club);
   return club;
 }

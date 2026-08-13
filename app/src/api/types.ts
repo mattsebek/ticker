@@ -19,6 +19,8 @@ export interface ClubSummary {
   name: string;
   code: string;
   color: string;
+  /** Final points from the club's last top-flight campaign — a stable proxy for preseason title expectations. Null for newly-promoted clubs or when unavailable. */
+  priorSeasonPoints: number | null;
   price: number;
   dailyPct: number;
   weeklyPct: number;

@@ -10,6 +10,8 @@ export interface Club {
   name: string;
   code: string;
   color: string;
+  /** Final points from the club's last top-flight campaign — a stable proxy for preseason title expectations, independent of live market price. Null for a newly-promoted club or when the provider has no prior-season data (e.g. the mock provider). See bootstrap.ts's computeOpeningPrices(). */
+  priorSeasonPoints: number | null;
 }
 
 export interface Competition {

@@ -131,6 +131,13 @@ async function computeOpeningPrices(clubIds: string[]): Promise<Map<string, numb
   const normPoints = norm(points);
   const formMid = forms.length ? forms.reduce((a, b) => a + b, 0) / forms.length : 0.33;
 
+  // Persisted separately from the price it feeds into — price keeps moving
+  // with demand/performance after this, but "how good was this club last
+  // season" is a fixed fact, useful on its own (e.g. ranking the onboarding
+  // club picker by preseason expectations rather than a live, demand-skewed
+  // price).
+  for (const r of rows) footballRepo.setPriorSeasonPoints(r.id, r.priorPoints ?? null);
+
   return new Map(
     rows.map((r) => {
       const formT = normForm(r.form ?? formMid);

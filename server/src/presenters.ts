@@ -71,6 +71,7 @@ export function clubSummary(club: Club, currentRound: number) {
     name: club.name,
     code: club.code,
     color: club.color,
+    priorSeasonPoints: club.priorSeasonPoints,
     price,
     dailyPct: lastPrice ? round2(((price - lastPrice) / lastPrice) * 100) : 0,
     weeklyPct: lastPrice ? round2(((price - lastPrice) / lastPrice) * 100) : 0,
