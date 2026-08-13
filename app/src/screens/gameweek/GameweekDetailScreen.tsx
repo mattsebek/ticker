@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, PanResponder, Animated } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, PanResponder } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
@@ -243,31 +243,18 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   const pendingExpired = !!(data?.isPending && data.nextKickoff && now >= new Date(data.nextKickoff).getTime());
   const allClubs = data ? [...data.starters, ...data.bench] : [];
 
-  // Left/right swipe navigates weeks, same as the ‹ › arrows, and follows
-  // the finger like a real card (matches ClubOverlayHost's paging feel) —
-  // captured on the wrapping Animated.View (not the ScrollView itself) so
-  // only a clearly horizontal drag claims the gesture; an ordinary vertical
-  // scroll is left alone to reach the ScrollView underneath.
+  // Left/right swipe navigates weeks, same as the ‹ › arrows — captured on
+  // the wrapping View (not the ScrollView itself) so only a clearly
+  // horizontal drag claims the gesture; an ordinary vertical scroll is left
+  // alone to reach the ScrollView underneath.
   const swipeState = useRef({ canPrev: false, canNext: false });
   swipeState.current = { canPrev: !!data?.canPrev, canNext: !!data?.canNext };
-  const translateX = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    translateX.setValue(0);
-  }, [offset]);
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponderCapture: (_evt, gesture) => Math.abs(gesture.dx) > 20 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
-      onPanResponderMove: (_evt, gesture) => translateX.setValue(gesture.dx),
       onPanResponderRelease: (_evt, gesture) => {
-        const goNext = gesture.dx <= -50 && swipeState.current.canNext;
-        const goPrev = gesture.dx >= 50 && swipeState.current.canPrev;
-        if (goNext || goPrev) {
-          Animated.timing(translateX, { toValue: goNext ? -500 : 500, duration: 180, useNativeDriver: true }).start(() => {
-            setOffset((o) => o + (goNext ? 1 : -1));
-          });
-          return;
-        }
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
+        if (gesture.dx <= -50 && swipeState.current.canNext) setOffset((o) => o + 1);
+        else if (gesture.dx >= 50 && swipeState.current.canPrev) setOffset((o) => o - 1);
       },
     })
   ).current;
@@ -277,7 +264,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
       <Pressable onPress={() => navigation.goBack()} style={[styles.closeBtn, { top: insets.top + 16, backgroundColor: T.card }]} accessibilityLabel="Close" accessibilityRole="button">
         <CloseIcon color={T.text} />
       </Pressable>
-      <Animated.View style={{ flex: 1, transform: [{ translateX }] }} {...panResponder.panHandlers}>
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: data?.isPending ? 24 : 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: countdown ? 4 : 24 }}>
           <Pressable onPress={() => data?.canPrev && setOffset((o) => o - 1)} hitSlop={10} style={styles.arrowBtn}>
@@ -350,7 +337,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
           </>
         )}
       </ScrollView>
-      </Animated.View>
+      </View>
 
       {data?.isPending && !pendingExpired && selected && (
         <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
