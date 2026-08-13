@@ -14,6 +14,7 @@ import { briefingRouter } from "./routes/briefing";
 import { internalRouter } from "./routes/internal";
 import { fixturesRouter } from "./routes/fixtures";
 import { standingsRouter } from "./routes/standings";
+import { adminRouter } from "./routes/admin";
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,7 @@ app.use("/briefing", briefingRouter);
 app.use("/fixtures", fixturesRouter);
 app.use("/standings", standingsRouter);
 app.use("/internal", internalRouter);
+app.use("/admin", adminRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

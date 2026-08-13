@@ -96,4 +96,8 @@ export const usersRepo = {
   listIds(): string[] {
     return (db.prepare("SELECT id FROM users").all() as { id: string }[]).map((r) => r.id);
   },
+  /** Admin CMS only — every registered account's full row. See routes/admin.ts. */
+  listAll(): UserRow[] {
+    return db.prepare("SELECT * FROM users ORDER BY created_at DESC").all() as UserRow[];
+  },
 };
