@@ -7,7 +7,7 @@ import { Button } from "../../components/Button";
 import { api } from "../../api/client";
 import type { ClubSummary } from "../../api/types";
 import { fmtMoney } from "../../utils/format";
-import { FONT_SERIF } from "../../theme/theme";
+import { FONT_SERIF, GREEN } from "../../theme/theme";
 
 const STARTING_CASH = 100;
 
@@ -73,9 +73,10 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
       <Pressable onPress={onBack} style={[styles.backBtn, { backgroundColor: T.card }]}>
         <Text style={{ fontSize: 20, color: T.text }}>‹</Text>
       </Pressable>
-      <Text style={{ fontFamily: FONT_SERIF, fontSize: 24, fontWeight: "500", color: T.text, marginBottom: 4 }}>Build your portfolio</Text>
-      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }} numberOfLines={1}>
-        Spend your $100 however you'd like.
+      <Text style={{ fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "500", color: T.text, marginBottom: 4 }}>Build your portfolio</Text>
+      <Text style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16, lineHeight: 19 }}>
+        You can own as many teams as you want to build value, but you can only{" "}
+        <Text style={{ color: GREEN, fontWeight: "600" }}>play (4) teams per game week</Text> to earn points. Spend wisely.
       </Text>
       <View style={[styles.statsRow, { backgroundColor: T.card }]}>
         <Text style={{ fontSize: 11, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Remaining balance</Text>
@@ -124,7 +125,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
 const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   statsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 10, borderBottomWidth: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
   ownedPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100 },
   buyPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 100, borderWidth: 1 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, alignItems: "center" },
