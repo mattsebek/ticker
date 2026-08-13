@@ -41,8 +41,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   auth: {
     register: (name: string, email: string, birthday: string) =>
-      request<{ token: string; user: User }>("/auth/register", { method: "POST", body: JSON.stringify({ name, email, birthday }) }),
-    login: (email: string) => request<{ token: string; user: User }>("/auth/login", { method: "POST", body: JSON.stringify({ email }) }),
+      request<{ ok: true; email: string }>("/auth/register", { method: "POST", body: JSON.stringify({ name, email, birthday }) }),
+    login: (email: string) => request<{ ok: true; email: string }>("/auth/login", { method: "POST", body: JSON.stringify({ email }) }),
+    verifyCode: (email: string, code: string) =>
+      request<{ token: string; user: User }>("/auth/verify", { method: "POST", body: JSON.stringify({ email, code }) }),
     me: () => request<{ user: User }>("/auth/me"),
   },
   clubs: {

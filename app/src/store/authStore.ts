@@ -9,9 +9,12 @@ interface AuthState {
   user: User | null;
   error: string | null;
   busy: boolean;
+  /** Email a code was just sent to — set by requestRegisterCode/requestLoginCode, consumed by verifyCode. */
+  pendingEmail: string | null;
   hydrate: () => Promise<void>;
-  register: (name: string, email: string, birthday: string) => Promise<boolean>;
-  login: (email: string) => Promise<boolean>;
+  requestRegisterCode: (name: string, email: string, birthday: string) => Promise<boolean>;
+  requestLoginCode: (email: string) => Promise<boolean>;
+  verifyCode: (code: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: (user: User) => void;
@@ -23,6 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   error: null,
   busy: false,
+  pendingEmail: null,
 
   hydrate: async () => {
     const token = await loadStoredToken();
@@ -36,12 +40,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (name, email, birthday) => {
+  requestRegisterCode: async (name, email, birthday) => {
     set({ busy: true, error: null });
     try {
-      const { token, user } = await api.auth.register(name, email, birthday);
-      await storeToken(token);
-      set({ user, busy: false });
+      const { email: confirmedEmail } = await api.auth.register(name, email, birthday);
+      set({ busy: false, pendingEmail: confirmedEmail });
       return true;
     } catch (e) {
       set({ busy: false, error: e instanceof ApiError ? e.message : "Something went wrong. Try again." });
@@ -49,12 +52,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  login: async (email) => {
+  requestLoginCode: async (email) => {
     set({ busy: true, error: null });
     try {
-      const { token, user } = await api.auth.login(email);
+      const { email: confirmedEmail } = await api.auth.login(email);
+      set({ busy: false, pendingEmail: confirmedEmail });
+      return true;
+    } catch (e) {
+      set({ busy: false, error: e instanceof ApiError ? e.message : "Something went wrong. Try again." });
+      return false;
+    }
+  },
+
+  verifyCode: async (code) => {
+    const email = get().pendingEmail;
+    if (!email) {
+      set({ error: "Request a new code and try again." });
+      return false;
+    }
+    set({ busy: true, error: null });
+    try {
+      const { token, user } = await api.auth.verifyCode(email, code);
       await storeToken(token);
-      set({ user, busy: false });
+      set({ user, busy: false, pendingEmail: null });
       return true;
     } catch (e) {
       set({ busy: false, error: e instanceof ApiError ? e.message : "Something went wrong. Try again." });

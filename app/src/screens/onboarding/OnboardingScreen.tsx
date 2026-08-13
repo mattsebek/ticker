@@ -4,23 +4,27 @@ import { useAuthStore } from "../../store/authStore";
 import { useThemeStore } from "../../store/themeStore";
 import { OnboardingCarousel } from "./OnboardingCarousel";
 import { RegisterForm, RegStage } from "./RegisterForm";
+import { CodeEntry } from "./CodeEntry";
 import { ClubSelect } from "./ClubSelect";
 import { WelcomeStep } from "./WelcomeStep";
 import { Button } from "../../components/Button";
 
-type Stage = "carousel" | "login" | RegStage | "clubs" | "done";
+type Stage = "carousel" | "login" | RegStage | "code" | "clubs" | "done";
 
 export function OnboardingScreen() {
   const T = useThemeStore((s) => s.tokens);
   const user = useAuthStore((s) => s.user);
-  const register = useAuthStore((s) => s.register);
-  const login = useAuthStore((s) => s.login);
+  const requestRegisterCode = useAuthStore((s) => s.requestRegisterCode);
+  const requestLoginCode = useAuthStore((s) => s.requestLoginCode);
+  const verifyCode = useAuthStore((s) => s.verifyCode);
+  const pendingEmail = useAuthStore((s) => s.pendingEmail);
   const busy = useAuthStore((s) => s.busy);
   const authError = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
   const setUser = useAuthStore((s) => s.setUser);
 
   const [stage, setStage] = useState<Stage>(user && !user.onboarded ? "clubs" : "carousel");
+  const [codeFlow, setCodeFlow] = useState<"register" | "login" | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -33,8 +37,11 @@ export function OnboardingScreen() {
     if (stage === "name" && name.trim()) setStage("email");
     else if (stage === "email" && /\S+@\S+\.\S+/.test(email)) setStage("birthday");
     else if (stage === "birthday" && birthday.trim() && agreedToTerms) {
-      const ok = await register(name, email, birthday);
-      if (ok) setStage("clubs");
+      const ok = await requestRegisterCode(name, email, birthday);
+      if (ok) {
+        setCodeFlow("register");
+        setStage("code");
+      }
     }
   }
 
@@ -47,8 +54,20 @@ export function OnboardingScreen() {
 
   async function handleLogin() {
     clearError();
-    const ok = await login(loginEmail);
+    const ok = await requestLoginCode(loginEmail);
     if (ok) {
+      setCodeFlow("login");
+      setStage("code");
+    }
+  }
+
+  async function handleVerifyCode(code: string) {
+    clearError();
+    const ok = await verifyCode(code);
+    if (!ok) return;
+    if (codeFlow === "register") {
+      setStage("clubs");
+    } else {
       const u = useAuthStore.getState().user;
       setStage(u && !u.onboarded ? "clubs" : "carousel");
     }
@@ -99,10 +118,29 @@ export function OnboardingScreen() {
     );
   }
 
+  if (stage === "code") {
+    return (
+      <CodeEntry
+        email={pendingEmail || (codeFlow === "register" ? email : loginEmail)}
+        busy={busy}
+        error={authError}
+        onSubmit={handleVerifyCode}
+        onBack={() => {
+          clearError();
+          setStage(codeFlow === "register" ? "birthday" : "login");
+        }}
+        onResend={() => {
+          if (codeFlow === "register") requestRegisterCode(name, email, birthday);
+          else requestLoginCode(loginEmail);
+        }}
+      />
+    );
+  }
+
   if (stage === "clubs") {
     return (
       <ClubSelect
-        onBack={() => setStage("birthday")}
+        onBack={() => setStage("code")}
         onDone={(cash) => {
           setRemaining(cash);
           setStage("done");

@@ -17,6 +17,7 @@ import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
 // introspecting sqlite_master) so a wipe can never silently pick up some
 // future table nobody intended to include.
 const ALL_TABLES = [
+  "otp_codes",
   "starter_selection_touched",
   "starter_selections",
   "gameweek_lineup_clubs",
