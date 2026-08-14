@@ -68,12 +68,12 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
   });
 });
 
-// Deliberately minimal, transparency-not-surveillance: only the last LOCKED
-// round's starters (never bench, never live/current holdings) and a
-// portfolio value trend + YTD% (aggregate only — never itemized by club),
-// so a manager can't reverse-engineer another manager's current trade
-// secrets from this. Scoped under the league so a requester can only look
-// up managers they actually share a league with, not any user id.
+// Deliberately minimal, transparency-not-surveillance: the last LOCKED
+// round's starters (never bench, never live/current holdings) plus current
+// portfolio value/trend/YTD% (aggregate only — never itemized by club, so a
+// manager can't see WHICH clubs make up another manager's current value,
+// only the total). Scoped under the league so a requester can only look up
+// managers they actually share a league with, not any user id.
 leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, res) => {
   const lg = leagueService.getLeague(req.params.id);
   if (!lg) return res.status(404).json({ error: "League not found" });
@@ -92,6 +92,8 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
 
   res.json({
     name: member.member_name,
+    currentValue,
+    currentValueStr: fmtMoney(currentValue),
     portfolioSeries: portfolioSeries.map((p) => ({ t: p.t, v: p.v })),
     ytdPct,
     lastLockedRound: hasLockedRound ? lastLockedRound : null,

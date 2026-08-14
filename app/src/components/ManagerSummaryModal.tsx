@@ -11,11 +11,11 @@ import { colorForPct, FONT_SERIF } from "../theme/theme";
 import { fmtPct } from "../utils/format";
 
 /**
- * Deliberately minimal — transparency without exposing trade secrets. Shows
- * a portfolio value trend + YTD% (aggregate only, never itemized by club or
- * labeled with the current dollar figure) and the clubs that earned points
- * in the manager's last LOCKED Gameweek (immutable snapshot; never bench,
- * never current/live holdings). See routes/leagues.ts's :id/members/:memberId.
+ * Shows a manager's current portfolio value + trend/YTD% (aggregate only —
+ * never itemized by club, so which specific clubs make up that value stays
+ * hidden) and the clubs that earned points in their last LOCKED Gameweek
+ * (immutable snapshot; never bench, never their mutable pending selection).
+ * See routes/leagues.ts's :id/members/:memberId.
  */
 export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId: string; memberId: string | null; onClose: () => void }) {
   const T = useThemeStore((s) => s.tokens);
@@ -63,8 +63,9 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 6, paddingBottom: 36 }}>
-              <Text style={{ fontFamily: FONT_SERIF, fontSize: 24, fontWeight: "600", color: T.text, marginBottom: 6 }}>{summary.name}</Text>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: colorForPct(summary.ytdPct) }}>{fmtPct(summary.ytdPct)} YTD</Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 20, fontWeight: "600", color: T.text, marginBottom: 6 }}>{summary.name}</Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 32, fontWeight: "500", color: T.text, letterSpacing: -0.3 }}>{summary.currentValueStr}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colorForPct(summary.ytdPct), marginTop: 4 }}>{fmtPct(summary.ytdPct)} YTD</Text>
 
               {summary.portfolioSeries.length >= 2 ? (
                 <View style={{ marginTop: 18 }}>

@@ -148,6 +148,8 @@ export interface ManagerStarterClub {
 
 export interface ManagerSummary {
   name: string;
+  currentValue: number;
+  currentValueStr: string;
   portfolioSeries: { t: number; v: number }[];
   ytdPct: number;
   /** Null if this manager has never had a round lock yet. */
