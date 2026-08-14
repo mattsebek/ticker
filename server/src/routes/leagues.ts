@@ -118,13 +118,33 @@ leaguesRouter.post("/join", requireAuth, (req: AuthedRequest, res) => {
   res.json({ ok: true, league: { id: lg.id, name: lg.name } });
 });
 
-const createSchema = z.object({ name: z.string().trim().min(1).max(60), isPrivate: z.boolean().optional().default(true) });
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  isPrivate: z.boolean().optional().default(false),
+  // Only required (and meaningful) for private leagues — the commissioner
+  // picks their own memorable code rather than getting a random one, since
+  // they're the one who'll be handing it out. Public leagues still get an
+  // auto-generated code under the hood (getLeagueByCode/join-by-code work
+  // the same for both), it's just never surfaced for sharing.
+  code: z
+    .string()
+    .trim()
+    .min(3, "Codes must be at least 3 characters.")
+    .max(12, "Codes can be at most 12 characters.")
+    .regex(/^[a-zA-Z0-9]+$/, "Codes can only contain letters and numbers.")
+    .optional(),
+});
 
 leaguesRouter.post("/create", requireAuth, (req: AuthedRequest, res) => {
   const user = usersRepo.getById(req.userId!);
   if (!user) return res.status(404).json({ error: "User not found" });
   const parsed = createSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Give your league a name." });
-  const lg = leagueService.create(parsed.data.name, user.id, user.name, parsed.data.isPrivate);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || "Give your league a name." });
+  const { name, isPrivate, code } = parsed.data;
+  if (isPrivate) {
+    if (!code) return res.status(400).json({ error: "Enter a code for your private league." });
+    if (leagueService.getLeagueByCode(code)) return res.status(409).json({ error: "That code is already taken — try another." });
+  }
+  const lg = leagueService.create(name, user.id, user.name, isPrivate, code);
   res.json({ ok: true, league: { id: lg.id, name: lg.name, isPrivate: !!lg.is_private, code: lg.code } });
 });

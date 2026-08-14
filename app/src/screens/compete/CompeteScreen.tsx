@@ -19,7 +19,10 @@ export function CompeteScreen() {
   const [leagues, setLeagues] = useState<LeagueListRow[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newIsPrivate, setNewIsPrivate] = useState(true);
+  const [newIsPrivate, setNewIsPrivate] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api.leagues.mine().then((r) => setLeagues(r.leagues));
@@ -35,13 +38,35 @@ export function CompeteScreen() {
     }, [load])
   );
 
-  async function handleCreate() {
-    if (!newName.trim()) return;
-    await api.leagues.create(newName.trim(), newIsPrivate);
-    setNewName("");
-    setNewIsPrivate(true);
+  function closeCreateModal() {
     setCreateOpen(false);
-    load();
+    setNewName("");
+    setNewIsPrivate(false);
+    setNewCode("");
+    setCreateError(null);
+  }
+
+  async function handleCreate() {
+    if (!newName.trim() || creating) return;
+    if (newIsPrivate && !newCode.trim()) {
+      setCreateError("Enter a code for your private league.");
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const { league } = await api.leagues.create(newName.trim(), newIsPrivate, newIsPrivate ? newCode.trim() : undefined);
+      closeCreateModal();
+      load();
+      // Land straight on the new league so sharing its code/link is the
+      // natural next step, instead of leaving the manager on the list to
+      // hunt for it themselves.
+      navigation.navigate("LeagueDetail", { leagueId: league.id, name: league.name });
+    } catch (e: any) {
+      setCreateError(e?.message || "Something went wrong.");
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -80,8 +105,8 @@ export function CompeteScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={createOpen} transparent animationType="fade" onRequestClose={() => setCreateOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setCreateOpen(false)}>
+      <Modal visible={createOpen} transparent animationType="fade" onRequestClose={closeCreateModal}>
+        <Pressable style={styles.modalBackdrop} onPress={closeCreateModal}>
           <Pressable style={[styles.modalCard, { backgroundColor: T.bg }]} onPress={(e) => e.stopPropagation()}>
             <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 12, textAlign: "center" }}>Name your league</Text>
             <TextInput
@@ -93,27 +118,44 @@ export function CompeteScreen() {
             />
             <View style={[styles.visibilityToggle, { backgroundColor: T.card }]}>
               <Pressable
-                onPress={() => setNewIsPrivate(true)}
-                style={[styles.visibilityOption, newIsPrivate && { backgroundColor: T.accent }]}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: newIsPrivate ? "#fff" : T.text }}>Private</Text>
-              </Pressable>
-              <Pressable
                 onPress={() => setNewIsPrivate(false)}
                 style={[styles.visibilityOption, !newIsPrivate && { backgroundColor: T.accent }]}
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: !newIsPrivate ? "#fff" : T.text }}>Public</Text>
               </Pressable>
+              <Pressable
+                onPress={() => setNewIsPrivate(true)}
+                style={[styles.visibilityOption, newIsPrivate && { backgroundColor: T.accent }]}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: newIsPrivate ? "#fff" : T.text }}>Private</Text>
+              </Pressable>
             </View>
             <Text
-              style={{ fontSize: 12, color: T.textSecondary, marginBottom: 16, textAlign: "center" }}
+              style={{ fontSize: 12, color: T.textSecondary, marginBottom: newIsPrivate ? 16 : 20, textAlign: "center" }}
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {newIsPrivate ? "Only people you add with a code/link can join." : "Anyone can find and join this league from the public list."}
+              {newIsPrivate ? "Only people you invite with your code/link can join." : "Anyone can find and join this league from the public list."}
             </Text>
-            <Button label="Create League" onPress={handleCreate} disabled={!newName.trim()} />
-            <Button label="Cancel" onPress={() => setCreateOpen(false)} variant="secondary" style={{ marginTop: 10 }} />
+            {newIsPrivate && (
+              <TextInput
+                value={newCode}
+                onChangeText={(v) => setNewCode(v.replace(/[^a-zA-Z0-9]/g, ""))}
+                placeholder="Invite code (e.g. FRIENDS26)"
+                placeholderTextColor={T.textSecondary}
+                autoCapitalize="characters"
+                maxLength={12}
+                style={{ borderWidth: 1, borderColor: T.border, borderRadius: 12, padding: 12, fontSize: 15, color: T.text, marginBottom: 20 }}
+              />
+            )}
+            {createError && <Text style={{ fontSize: 12, color: "#E0393E", marginBottom: 12, textAlign: "center" }}>{createError}</Text>}
+            <Button
+              label="Create League"
+              onPress={handleCreate}
+              disabled={!newName.trim() || (newIsPrivate && !newCode.trim())}
+              loading={creating}
+            />
+            <Button label="Cancel" onPress={closeCreateModal} variant="secondary" style={{ marginTop: 10 }} />
           </Pressable>
         </Pressable>
       </Modal>

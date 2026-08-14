@@ -76,8 +76,8 @@ export const api = {
       request<{ league: { id: string; name: string; commissioner: string; isPrivate: boolean; code: string; createdStr: string }; standings: StandingsRow[] }>(`/leagues/${id}?sort=${sort}`),
     member: (leagueId: string, memberId: string) => request<ManagerSummary>(`/leagues/${leagueId}/members/${memberId}`),
     join: (params: { leagueId?: string; code?: string }) => request<{ ok: true; league: { id: string; name: string } }>("/leagues/join", { method: "POST", body: JSON.stringify(params) }),
-    create: (name: string, isPrivate: boolean) =>
-      request<{ ok: true; league: { id: string; name: string; isPrivate: boolean; code: string } }>("/leagues/create", { method: "POST", body: JSON.stringify({ name, isPrivate }) }),
+    create: (name: string, isPrivate: boolean, code?: string) =>
+      request<{ ok: true; league: { id: string; name: string; isPrivate: boolean; code: string } }>("/leagues/create", { method: "POST", body: JSON.stringify({ name, isPrivate, code }) }),
   },
   briefing: {
     get: () => request<{ morningBrief: MorningBrief | null; cards: BriefCard[] }>("/briefing"),
