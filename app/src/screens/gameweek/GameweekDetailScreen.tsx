@@ -342,7 +342,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
       {data?.isPending && !pendingExpired && selected && (
         <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
           {error && <Text style={{ color: "#E0393E", fontSize: 13, marginBottom: 10 }}>{error}</Text>}
-          <Button label={`Save Starting Four (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
+          <Button label={`Save Lineup (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
         </View>
       )}
     </SafeAreaView>

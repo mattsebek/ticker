@@ -35,7 +35,7 @@ clubsRouter.get("/top-earners", (req, res) => {
 });
 
 clubsRouter.get("/news", async (req, res) => {
-  const items = await newsService.getPremierLeagueNews(4);
+  const items = await newsService.getPremierLeagueNews(6);
   res.json({
     news: items.map((n) => ({
       id: n.id,

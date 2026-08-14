@@ -188,7 +188,7 @@ function seedLeagues() {
       fantasyRepo.updateLeagueSeedFields(lg.id, { name: lg.name, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount });
       continue;
     }
-    fantasyRepo.insertLeague({ id: lg.id, name: lg.name, is_private: lg.isPrivate ? 1 : 0, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount });
+    fantasyRepo.insertLeague({ id: lg.id, name: lg.name, is_private: lg.isPrivate ? 1 : 0, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount, created_at: Date.now() });
     for (const botId of lg.botMemberIds) {
       const bot = BOT_ROSTER.find((b) => b.id === botId);
       if (bot) fantasyRepo.addMember(lg.id, botId, bot.name, true);

@@ -72,7 +72,7 @@ export const api = {
     public: () => request<{ leagues: PublicLeagueRow[] }>("/leagues/public"),
     lookupCode: (code: string) => request<{ league: PublicLeagueRow | null }>(`/leagues/lookup-code?code=${encodeURIComponent(code)}`),
     detail: (id: string, sort: "portfolio" | "points") =>
-      request<{ league: { id: string; name: string; commissioner: string; isPrivate: boolean; code: string }; standings: StandingsRow[] }>(`/leagues/${id}?sort=${sort}`),
+      request<{ league: { id: string; name: string; commissioner: string; isPrivate: boolean; code: string; createdStr: string }; standings: StandingsRow[] }>(`/leagues/${id}?sort=${sort}`),
     join: (params: { leagueId?: string; code?: string }) => request<{ ok: true; league: { id: string; name: string } }>("/leagues/join", { method: "POST", body: JSON.stringify(params) }),
     create: (name: string, isPrivate: boolean) =>
       request<{ ok: true; league: { id: string; name: string; isPrivate: boolean; code: string } }>("/leagues/create", { method: "POST", body: JSON.stringify({ name, isPrivate }) }),

@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS leagues (
   is_private INTEGER NOT NULL DEFAULT 0,
   code TEXT,
   commissioner TEXT NOT NULL,
-  base_member_count INTEGER NOT NULL DEFAULT 0
+  base_member_count INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT 0
 );
 
 -- Materialized by the recalculateLeagueStandings job; reads prefer this and
@@ -104,6 +105,16 @@ try {
   // already applied
 }
 
+// Added after leagues already existed in production — their true creation
+// time is unrecoverable, so pre-existing rows backfill to "now" (the
+// migration's run time) rather than a misleading epoch-0 date.
+try {
+  db.exec("ALTER TABLE leagues ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0");
+} catch {
+  // already applied
+}
+db.prepare("UPDATE leagues SET created_at = ? WHERE created_at = 0").run(Date.now());
+
 export interface LeagueRow {
   id: string;
   name: string;
@@ -111,6 +122,7 @@ export interface LeagueRow {
   code: string | null;
   commissioner: string;
   base_member_count: number;
+  created_at: number;
 }
 
 export const fantasyRepo = {
@@ -215,13 +227,14 @@ export const fantasyRepo = {
     return result.changes;
   },
   insertLeague(lg: LeagueRow) {
-    db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count) VALUES (?,?,?,?,?,?)").run(
+    db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count, created_at) VALUES (?,?,?,?,?,?,?)").run(
       lg.id,
       lg.name,
       lg.is_private,
       lg.code,
       lg.commissioner,
-      lg.base_member_count
+      lg.base_member_count,
+      lg.created_at
     );
   },
   /** Re-syncs seed-derived display fields on an already-seeded league (name/code/commissioner/display count), so editing bootstrap.ts's LEAGUE_SEEDS takes effect without a database reset. Never touches membership. */

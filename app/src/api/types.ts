@@ -87,6 +87,7 @@ export interface GameweekResponse {
   canPrev: boolean;
   canNext: boolean;
   nextKickoff: string | null;
+  lineupSet: boolean;
 }
 
 export interface ScoreBreakdown {

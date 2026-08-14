@@ -181,10 +181,22 @@ function Slide0Card({ tick }: { tick: number }) {
   );
 }
 
+/**
+ * Real notification permission is requested here, tied to this slide
+ * becoming active (i.e. the user scrolling to it) rather than a visible
+ * "Enable notifications" CTA — device-level only (see
+ * notificationsStore.requestPermissionOnly), since the user isn't
+ * registered/logged in yet at this point in onboarding. The resulting
+ * token is stashed and flushed to the server once auth completes
+ * (RootNavigator's user-driven effect). requestedRef guards against
+ * re-firing if the user swipes back and forth across this slide.
+ */
 function Slide1Notifs({ active }: { active: boolean }) {
   const a1 = useRef(new Animated.Value(0)).current;
   const a2 = useRef(new Animated.Value(0)).current;
   const a3 = useRef(new Animated.Value(0)).current;
+  const requestPermissionOnly = useNotificationsStore((s) => s.requestPermissionOnly);
+  const requestedRef = useRef(false);
   useEffect(() => {
     if (!active) return;
     a1.setValue(0);
@@ -193,6 +205,10 @@ function Slide1Notifs({ active }: { active: boolean }) {
     Animated.timing(a1, { toValue: 1, duration: 400, delay: 100, useNativeDriver: true }).start();
     Animated.timing(a2, { toValue: 1, duration: 400, delay: 900, useNativeDriver: true }).start();
     Animated.timing(a3, { toValue: 1, duration: 400, delay: 1700, useNativeDriver: true }).start();
+    if (!requestedRef.current) {
+      requestedRef.current = true;
+      requestPermissionOnly();
+    }
   }, [active]);
   const notifStyle = (v: Animated.Value) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] });
   return (
@@ -215,33 +231,6 @@ function Slide1Notifs({ active }: { active: boolean }) {
         <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Your portfolio moved +4.8% today.</Text>
       </Animated.View>
     </View>
-  );
-}
-
-/**
- * The real ask behind slide 1's mocked notification cards — device-level
- * only (see notificationsStore.requestPermissionOnly), since the user isn't
- * registered/logged in yet at this point in onboarding. The resulting
- * token is stashed and flushed to the server once auth completes
- * (RootNavigator's user-driven effect).
- */
-function NotifsCTA() {
-  const requestPermissionOnly = useNotificationsStore((s) => s.requestPermissionOnly);
-  const [state, setState] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
-
-  async function handlePress() {
-    if (state !== "idle") return;
-    setState("requesting");
-    const granted = await requestPermissionOnly();
-    setState(granted ? "granted" : "denied");
-  }
-
-  const label = state === "granted" ? "✓ Notifications enabled" : state === "denied" ? "Notifications off — enable later in Profile" : "Enable notifications →";
-
-  return (
-    <Pressable onPress={handlePress} disabled={state !== "idle"} style={{ marginTop: 12 }}>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: state === "granted" ? GREEN : OB_TEXT }}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -375,7 +364,6 @@ export function OnboardingCarousel({ onLogin, onSignup }: { onLogin: () => void;
                   <Text style={{ fontSize: 15, fontWeight: "600", color: OB_TEXT }}>Swipe to learn more →</Text>
                 </Pressable>
               )}
-              {i === 1 && <NotifsCTA />}
             </View>
           </View>
         ))}

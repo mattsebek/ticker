@@ -17,12 +17,14 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   const [sort, setSort] = useState<"portfolio" | "points">("points");
   const [standings, setStandings] = useState<StandingsRow[]>([]);
   const [commissioner, setCommissioner] = useState("");
+  const [createdStr, setCreatedStr] = useState("");
   const [code, setCode] = useState("");
 
   useEffect(() => {
     api.leagues.detail(leagueId, sort).then((r) => {
       setStandings(r.standings);
       setCommissioner(r.league.commissioner);
+      setCreatedStr(r.league.createdStr);
       setCode(r.league.code);
     });
   }, [leagueId, sort]);
@@ -56,16 +58,16 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.headLabel, { width: 28, color: T.textSecondary }]}>Pos</Text>
             <Text style={[styles.headLabel, { flex: 1, color: T.textSecondary }]}>Manager</Text>
             <Pressable onPress={() => setSort("portfolio")}>
-              <Text style={[styles.headLabel, { width: 80, textAlign: "center", color: T.textSecondary }]}>Portfolio</Text>
+              <Text style={[styles.headLabel, { width: 80, textAlign: "center", color: T.textSecondary, fontWeight: sort === "portfolio" ? "800" : "600" }]}>Portfolio</Text>
             </Pressable>
             <Pressable onPress={() => setSort("points")}>
-              <Text style={[styles.headLabel, { width: 64, textAlign: "center", color: T.textSecondary }]}>Points</Text>
+              <Text style={[styles.headLabel, { width: 64, textAlign: "center", color: T.textSecondary, fontWeight: sort === "points" ? "800" : "600" }]}>Points</Text>
             </Pressable>
           </View>
           {standings.map((r, i) => (
             <View key={r.memberId} style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}>
               <Text style={{ width: 28, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.rank}</Text>
-              <Text style={{ flex: 1, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
+              <Text style={{ flex: 1, fontSize: 15, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
               <Text style={{ width: 80, textAlign: "center", fontSize: 12, fontWeight: "500", color: T.textSecondary }}>{r.portfolioStr}</Text>
               <Text style={{ width: 64, textAlign: "center", fontSize: 12, fontWeight: "700", color: T.text }}>{r.points}</Text>
             </View>
@@ -74,6 +76,11 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
         <Text style={{ textAlign: "center", fontSize: 12, color: T.textSecondary }}>
           Commissioner: <Text style={{ fontWeight: "600", color: T.text }}>{commissioner}</Text>
         </Text>
+        {!!createdStr && (
+          <Text style={{ textAlign: "center", fontSize: 12, color: T.textSecondary, marginTop: 4 }}>
+            Started <Text style={{ fontWeight: "600", color: T.text }}>{createdStr}</Text>
+          </Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

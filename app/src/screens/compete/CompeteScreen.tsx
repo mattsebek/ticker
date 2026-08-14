@@ -63,7 +63,7 @@ export function CompeteScreen() {
               style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === leagues.length - 1 ? 0 : 1 }]}
             >
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 13, fontWeight: "400", color: T.text }}>{lg.name}</Text>
+                <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{lg.name}</Text>
                 {!!lg.membersStr && <Text style={{ fontSize: 11, color: T.textSecondary, marginTop: 2 }}>{lg.membersStr}</Text>}
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

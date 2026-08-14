@@ -218,7 +218,7 @@ export function MarketScreen() {
 }
 
 const styles = StyleSheet.create({
-  search: { width: "100%", borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 38, fontSize: 15 },
+  search: { width: "100%", borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 38, fontSize: 15, letterSpacing: 0 },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
   moverPill: { width: "47%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 100, paddingVertical: 11, paddingHorizontal: 14 },

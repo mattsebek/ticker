@@ -63,6 +63,11 @@ gameweekRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     canPrev: summary.canPrev,
     canNext: summary.canNext,
     nextKickoff: gameweekService.deadlineForRound(pending),
+    // "Set" for widget purposes as soon as any club is queued as a starter
+    // for the pending round — an intentional lower bar than MAX_STARTERS,
+    // so the button reflects real progress rather than only a
+    // fully-complete Starting Four.
+    lineupSet: fantasyRepo.getStarterSelection(userId).length > 0,
   });
 });
 

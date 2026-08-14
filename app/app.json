@@ -25,7 +25,18 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      ["expo-notifications", { "color": "#00C805" }]
-    ]
+      [
+        "expo-notifications",
+        {
+          "color": "#00C805"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "03009cd1-e294-46aa-b156-a0311500b429"
+      }
+    },
+    "owner": "mattsebek"
   }
 }
