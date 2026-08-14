@@ -9,6 +9,7 @@ import type { StandingsRow } from "../../api/types";
 import type { AppStackParamList } from "../../navigation/types";
 import { ShareIcon } from "../../components/icons";
 import { ManagerSummaryModal } from "../../components/ManagerSummaryModal";
+import { PillRow, Pill } from "../../components/Pill";
 
 type Props = NativeStackScreenProps<AppStackParamList, "LeagueDetail">;
 
@@ -54,17 +55,21 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
-        <Text style={{ fontFamily: FONT_SERIF, fontSize: 26, fontWeight: "600", letterSpacing: -0.3, color: T.text, marginBottom: 20 }}>{name}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <Text style={{ flex: 1, fontFamily: FONT_SERIF, fontSize: 26, fontWeight: "600", letterSpacing: -0.3, color: T.text }} numberOfLines={1}>
+            {name}
+          </Text>
+          <PillRow>
+            <Pill label="Value" active={sort === "portfolio"} onPress={() => setSort("portfolio")} />
+            <Pill label="Points" active={sort === "points"} onPress={() => setSort("points")} />
+          </PillRow>
+        </View>
         <View style={{ backgroundColor: T.card, borderRadius: 20, overflow: "hidden", marginBottom: 16 }}>
           <View style={[styles.headRow, { borderBottomColor: T.borderLight }]}>
             <Text style={[styles.headLabel, { width: 28, color: T.textSecondary }]}>Pos</Text>
             <Text style={[styles.headLabel, { flex: 1, color: T.textSecondary }]}>Manager</Text>
-            <Pressable onPress={() => setSort("portfolio")}>
-              <Text style={[styles.headLabel, { width: 80, textAlign: "center", color: T.textSecondary, fontWeight: sort === "portfolio" ? "800" : "600" }]}>Portfolio</Text>
-            </Pressable>
-            <Pressable onPress={() => setSort("points")}>
-              <Text style={[styles.headLabel, { width: 64, textAlign: "center", color: T.textSecondary, fontWeight: sort === "points" ? "800" : "600" }]}>Points</Text>
-            </Pressable>
+            <Text style={[styles.headLabel, { width: 80, textAlign: "center", color: T.textSecondary }]}>Value</Text>
+            <Text style={[styles.headLabel, { width: 64, textAlign: "center", color: T.textSecondary }]}>Points</Text>
           </View>
           {standings.map((r, i) => (
             <Pressable
@@ -100,5 +105,5 @@ const styles = StyleSheet.create({
   shareBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   headRow: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1 },
   headLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase" },
-  row: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 16 },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 },
 });
