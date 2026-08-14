@@ -4,6 +4,10 @@ import { requireAuth, AuthedRequest } from "../shared/auth";
 import { usersRepo } from "../shared/usersRepo";
 import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
+import { fantasyRepo } from "../fantasy/repo";
+import { portfolioService } from "../market/portfolioService";
+import { gameweekDetail } from "../presenters";
+import { round2 } from "../shared/rng";
 
 export const leaguesRouter = Router();
 
@@ -61,6 +65,38 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
       createdStr: new Date(lg.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
     },
     standings: standings.map((r) => ({ memberId: r.memberId, rank: r.rank, name: r.name, you: r.memberId === req.userId, portfolio: r.portfolio, portfolioStr: fmtMoney(r.portfolio), points: r.points })),
+  });
+});
+
+// Deliberately minimal, transparency-not-surveillance: only the last LOCKED
+// round's starters (never bench, never live/current holdings) and a
+// portfolio value trend + YTD% (aggregate only — never itemized by club),
+// so a manager can't reverse-engineer another manager's current trade
+// secrets from this. Scoped under the league so a requester can only look
+// up managers they actually share a league with, not any user id.
+leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, res) => {
+  const lg = leagueService.getLeague(req.params.id);
+  if (!lg) return res.status(404).json({ error: "League not found" });
+  const member = fantasyRepo.getMembers(lg.id).find((m) => m.member_id === req.params.memberId);
+  if (!member) return res.status(404).json({ error: "Manager not found in this league" });
+
+  const portfolioSeries = portfolioService.getPortfolioSeries(member.member_id);
+  const currentValue = portfolioService.getPortfolioValue(member.member_id);
+  const firstValue = portfolioSeries[0]?.v ?? currentValue;
+  const ytdPct = firstValue ? round2(((currentValue - firstValue) / firstValue) * 100) : 0;
+
+  const lastLockedRound = gameweekService.firstUnlockedRound(member.member_id) - 1;
+  const hasLockedRound = lastLockedRound >= 1;
+  const { starters } = hasLockedRound ? gameweekDetail(member.member_id, lastLockedRound, false) : { starters: [] };
+  const points = starters.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
+
+  res.json({
+    name: member.member_name,
+    portfolioSeries: portfolioSeries.map((p) => ({ t: p.t, v: p.v })),
+    ytdPct,
+    lastLockedRound: hasLockedRound ? lastLockedRound : null,
+    points,
+    starters: starters.map((c) => ({ clubId: c.clubId, name: c.name, code: c.code, color: c.color, points: c.actualPoints ?? 0 })),
   });
 });
 

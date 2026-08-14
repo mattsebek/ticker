@@ -8,6 +8,7 @@ import { api } from "../../api/client";
 import type { StandingsRow } from "../../api/types";
 import type { AppStackParamList } from "../../navigation/types";
 import { ShareIcon } from "../../components/icons";
+import { ManagerSummaryModal } from "../../components/ManagerSummaryModal";
 
 type Props = NativeStackScreenProps<AppStackParamList, "LeagueDetail">;
 
@@ -19,6 +20,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   const [commissioner, setCommissioner] = useState("");
   const [createdStr, setCreatedStr] = useState("");
   const [code, setCode] = useState("");
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     api.leagues.detail(leagueId, sort).then((r) => {
@@ -65,12 +67,17 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
           {standings.map((r, i) => (
-            <View key={r.memberId} style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}>
+            <Pressable
+              key={r.memberId}
+              disabled={r.you}
+              onPress={() => setSelectedMemberId(r.memberId)}
+              style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}
+            >
               <Text style={{ width: 28, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.rank}</Text>
               <Text style={{ flex: 1, fontSize: 15, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
-              <Text style={{ width: 80, textAlign: "center", fontSize: 12, fontWeight: "500", color: T.textSecondary }}>{r.portfolioStr}</Text>
-              <Text style={{ width: 64, textAlign: "center", fontSize: 12, fontWeight: "700", color: T.text }}>{r.points}</Text>
-            </View>
+              <Text style={{ width: 80, textAlign: "center", fontSize: 13, fontWeight: "500", color: T.textSecondary }}>{r.portfolioStr}</Text>
+              <Text style={{ width: 64, textAlign: "center", fontSize: 13, fontWeight: "700", color: T.text }}>{r.points}</Text>
+            </Pressable>
           ))}
         </View>
         <Text style={{ textAlign: "center", fontSize: 12, color: T.textSecondary }}>
@@ -82,6 +89,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
           </Text>
         )}
       </ScrollView>
+      <ManagerSummaryModal leagueId={leagueId} memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} />
     </SafeAreaView>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, PanResponder } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, PanResponder, Animated, Easing, Dimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
@@ -15,6 +15,30 @@ import { fmtCountdown } from "../../utils/format";
 
 type Props = NativeStackScreenProps<AppStackParamList, "GameweekDetail">;
 type Tokens = ReturnType<typeof useThemeStore.getState>["tokens"];
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+/** r/WallStreetBets-style flourish on a successful save — 🚀 flies from the bottom-left corner off the top-right, then hands off to onDone (navigates back). Blocks touches for its brief duration so a second tap can't land mid-celebration. */
+function RocketLaunch({ onDone }: { onDone: () => void }) {
+  const pos = useRef(new Animated.ValueXY({ x: -40, y: SCREEN_H - 140 })).current;
+
+  useEffect(() => {
+    Animated.timing(pos, {
+      toValue: { x: SCREEN_W + 60, y: -140 },
+      duration: 1150,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onDone();
+    });
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <Animated.Text style={{ position: "absolute", fontSize: 64, transform: [{ translateX: pos.x }, { translateY: pos.y }, { rotate: "45deg" }] }}>🚀</Animated.Text>
+    </View>
+  );
+}
 
 function pctColor(pct: number, T: Tokens): string {
   if (pct >= 100) return GREEN;
@@ -141,6 +165,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   const [now, setNow] = useState(() => Date.now());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
 
   // Neighboring weeks are fetched ahead of time and cached by offset, so a
   // swipe to a week already fetched applies instantly (no spinner) instead
@@ -224,7 +249,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
     try {
       await api.gameweek.setStartingFour(selected);
       await refreshPortfolio();
-      navigation.goBack();
+      setLaunching(true);
     } catch (e: any) {
       setError(e?.message || "Something went wrong.");
       setSaving(false);
@@ -345,6 +370,8 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
           <Button label={`Save Lineup (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
         </View>
       )}
+
+      {launching && <RocketLaunch onDone={() => navigation.goBack()} />}
     </SafeAreaView>
   );
 }

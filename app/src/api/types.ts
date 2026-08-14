@@ -138,6 +138,24 @@ export interface LeagueListRow {
   membersStr: string;
 }
 
+export interface ManagerStarterClub {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  points: number;
+}
+
+export interface ManagerSummary {
+  name: string;
+  portfolioSeries: { t: number; v: number }[];
+  ytdPct: number;
+  /** Null if this manager has never had a round lock yet. */
+  lastLockedRound: number | null;
+  points: number;
+  starters: ManagerStarterClub[];
+}
+
 export interface PublicLeagueRow {
   id: string;
   name: string;
