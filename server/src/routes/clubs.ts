@@ -42,6 +42,7 @@ clubsRouter.get("/news", async (req, res) => {
       code: n.code,
       color: n.color,
       headline: n.title,
+      source: n.source,
       timeStr: newsService.fmtTimeAgo(n.pubDate),
       link: n.link,
       thumbnail: n.thumbnail,

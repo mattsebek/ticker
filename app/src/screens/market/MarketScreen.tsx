@@ -46,7 +46,7 @@ export function MarketScreen() {
   const tick = useTick(500);
   const [search, setSearch] = useState("");
   const [earnersRange, setEarnersRange] = useState<"gw" | "ytd">("gw");
-  const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
+  const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; source: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
 
   useEffect(() => {
     api.clubs.news().then((r) => setNews(r.news));
@@ -201,7 +201,7 @@ export function MarketScreen() {
                   ) : null}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{n.headline}</Text>
-                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 6 }}>BBC Sport · {n.timeStr}</Text>
+                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 6 }}>{n.source} · {n.timeStr}</Text>
                   </View>
                   <ChevronRightIcon color={T.textSecondary} />
                 </Pressable>
