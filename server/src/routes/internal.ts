@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { db } from "../db";
 import { scheduler } from "../jobs/scheduler";
@@ -46,8 +46,30 @@ const ALL_TABLES = [
 
 const DAY_MS = 86_400_000;
 
-/** Basic job observability — not authenticated, intended for local/ops use only. */
+/**
+ * Ops/debug surface (job status, DB wipe, result simulation, history
+ * seeding) — was mounted with zero auth despite exposing destructive
+ * routes like wipe-all/reset-users. Gated the same way /admin already
+ * gates itself, but with its own token rather than reusing
+ * ADMIN_PASSWORD: /admin is read-only and meant for a human in a
+ * browser, this is write-capable and meant for scripted/curl use, so a
+ * bearer token fits better than a Basic Auth password prompt. Fails
+ * closed (503) if INTERNAL_TOKEN isn't set, rather than falling open.
+ */
+function requireInternalToken(req: Request, res: Response, next: NextFunction) {
+  const expected = process.env.INTERNAL_TOKEN;
+  if (!expected) return res.status(503).json({ error: "INTERNAL_TOKEN not configured." });
+
+  const header = req.headers.authorization || "";
+  const [scheme, token] = header.split(" ");
+  if (scheme !== "Bearer" || token !== expected) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+  next();
+}
+
 export const internalRouter = Router();
+internalRouter.use(requireInternalToken);
 
 internalRouter.get("/jobs", (req, res) => {
   res.json({ jobs: scheduler.getStatus() });
