@@ -204,7 +204,7 @@ export function PortfolioScreen() {
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 
         <View style={styles.sectionHeader}>
-          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>
+          <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>
           <PillRow>
             <Pill label="GW" active={clubsRange === "gw"} onPress={() => setClubsRange("gw")} />
             <Pill label="YTD" active={clubsRange === "year"} onPress={() => setClubsRange("year")} />
@@ -217,7 +217,7 @@ export function PortfolioScreen() {
         {portfolio.holdings.some((h) => h.nextFixture) && (
           <>
             <View style={[styles.sectionHeader, { alignItems: "baseline" }]}>
-              <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Upcoming fixtures</Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text }}>Upcoming fixtures</Text>
               <Text style={{ fontSize: 10, fontWeight: "500", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>Projected Points</Text>
             </View>
             {portfolio.holdings
