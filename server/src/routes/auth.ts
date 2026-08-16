@@ -47,7 +47,11 @@ function ageFromBirthday(birthday: string): number {
   return age;
 }
 
-const OTP_TTL_MS = 10 * 60_000;
+// 30 min, not the more typical 10 — Resend deliveries to this inbox have
+// been arriving several minutes late, and a code that's already expired by
+// the time it lands is worse than a slightly wider guess window (still
+// capped by otpRepo.maxAttempts).
+const OTP_TTL_MS = 30 * 60_000;
 const OTP_COOLDOWN_MS = 60_000;
 
 function generateCode(): string {
