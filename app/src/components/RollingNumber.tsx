@@ -4,7 +4,19 @@ import { View, Text, Animated, Easing, StyleSheet, StyleProp, TextStyle } from "
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ROLL_DURATION = 260;
 
-function RollingDigit({ digit, rowHeight, digitWidth, textStyle }: { digit: number; rowHeight: number; digitWidth: number; textStyle: StyleProp<TextStyle> }) {
+function RollingDigit({
+  digit,
+  rowHeight,
+  digitWidth,
+  charSpacing,
+  textStyle,
+}: {
+  digit: number;
+  rowHeight: number;
+  digitWidth: number;
+  charSpacing: number;
+  textStyle: StyleProp<TextStyle>;
+}) {
   const translateY = useRef(new Animated.Value(-digit * rowHeight)).current;
   const didMount = useRef(false);
 
@@ -23,7 +35,7 @@ function RollingDigit({ digit, rowHeight, digitWidth, textStyle }: { digit: numb
   }, [digit, rowHeight]);
 
   return (
-    <View style={{ height: rowHeight, width: digitWidth, overflow: "hidden" }}>
+    <View style={{ height: rowHeight, width: digitWidth, marginRight: charSpacing, overflow: "hidden" }}>
       <Animated.View style={{ transform: [{ translateY }] }}>
         {DIGITS.map((d) => (
           <Text key={d} style={[textStyle, { height: rowHeight, lineHeight: rowHeight, width: digitWidth, textAlign: "center" }]}>
@@ -38,9 +50,12 @@ function RollingDigit({ digit, rowHeight, digitWidth, textStyle }: { digit: numb
 /**
  * Renders a formatted number/money string with each digit spinning like a
  * cash-register reel when it changes, instead of snapping straight to the
- * new value. Non-digit characters ($, ., ,) render statically.
+ * new value. Non-digit characters ($, ., ,) render statically. Each
+ * character sits in its own box, so a plain CSS letterSpacing on `style`
+ * has no effect here — use charSpacing (extra px per character, negative
+ * to tighten) instead.
  */
-export function RollingNumber({ text, style }: { text: string; style: StyleProp<TextStyle> }) {
+export function RollingNumber({ text, style, charSpacing = 0 }: { text: string; style: StyleProp<TextStyle>; charSpacing?: number }) {
   const flat = StyleSheet.flatten(style) as TextStyle;
   const fontSize = flat.fontSize ?? 16;
   const rowHeight = Math.ceil(fontSize * 1.2);
@@ -51,9 +66,9 @@ export function RollingNumber({ text, style }: { text: string; style: StyleProp<
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       {text.split("").map((ch, i) =>
         /[0-9]/.test(ch) ? (
-          <RollingDigit key={i} digit={parseInt(ch, 10)} rowHeight={rowHeight} digitWidth={digitWidth} textStyle={tabularStyle} />
+          <RollingDigit key={i} digit={parseInt(ch, 10)} rowHeight={rowHeight} digitWidth={digitWidth} charSpacing={charSpacing} textStyle={tabularStyle} />
         ) : (
-          <Text key={i} style={[tabularStyle, { height: rowHeight, lineHeight: rowHeight }]}>
+          <Text key={i} style={[tabularStyle, { height: rowHeight, lineHeight: rowHeight, marginRight: charSpacing }]}>
             {ch}
           </Text>
         )

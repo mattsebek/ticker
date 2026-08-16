@@ -169,7 +169,11 @@ export function PortfolioScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         <Text style={{ fontSize: 13, color: T.textSecondary, fontWeight: "500", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 14 }}>Portfolio</Text>
-        <RollingNumber text={fmtMoney(scrub ? scrub.v : portfolio.heroValue)} style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", color: T.text }} />
+        <RollingNumber
+          text={fmtMoney(scrub ? scrub.v : portfolio.heroValue)}
+          style={{ fontFamily: FONT_SERIF, fontSize: 34, fontWeight: "500", color: T.text }}
+          charSpacing={-1}
+        />
         <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
           <PctChange value={portfolio.weekPct} label="week" />
           <PctChange value={portfolio.seasonPct} label="season" />
