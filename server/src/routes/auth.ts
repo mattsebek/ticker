@@ -98,6 +98,14 @@ authRouter.post("/login", async (req, res) => {
 
 const verifySchema = z.object({ email: z.string().trim().email(), code: z.string().trim().min(1) });
 
+// Opt-in escape hatch for Resend's current delivery latency (see the OTP_TTL_MS
+// note above) — inert unless OTP_BYPASS_CODE is explicitly set on the server.
+// Still requires a genuine active OTP request for the target email (i.e. you
+// must have already called /login or /register for it), so it can't be used
+// to sign into an email that was never requested. Remove the env var once
+// email delivery is reliable again; every use is logged.
+const OTP_BYPASS_CODE = process.env.OTP_BYPASS_CODE;
+
 authRouter.post("/verify", (req, res) => {
   const parsed = verifySchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Enter the code from your email." });
@@ -106,7 +114,10 @@ authRouter.post("/verify", (req, res) => {
   const otp = otpRepo.getLatestActive(email);
   if (!otp) return res.status(400).json({ error: "That code has expired. Request a new one." });
   if (otp.attempts >= otpRepo.maxAttempts) return res.status(400).json({ error: "Too many incorrect attempts. Request a new code." });
-  if (otp.code !== code) {
+  const bypassed = !!OTP_BYPASS_CODE && code === OTP_BYPASS_CODE;
+  if (bypassed) {
+    console.warn(`[auth] OTP bypass code used for ${email}`);
+  } else if (otp.code !== code) {
     otpRepo.incrementAttempts(otp.id);
     return res.status(400).json({ error: "Incorrect code." });
   }
