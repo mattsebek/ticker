@@ -5,6 +5,7 @@ import { usersRepo } from "../shared/usersRepo";
 import { fantasyRepo } from "../fantasy/repo";
 import { marketRepo } from "../market/repo";
 import { footballRepo } from "../football/repo";
+import { formLettersForClub } from "../presenters";
 import { deleteUser } from "../bootstrap";
 import { renderAdminLoginPage } from "../admin/adminLoginPage";
 import { renderAdminUsersPage } from "../admin/adminUsersPage";
@@ -166,7 +167,18 @@ adminRouter.get("/clubs", (req, res) => {
     const startingPrice = series[0]?.price ?? 0;
     const currentPrice = marketRepo.getPrice(c.id) ?? startingPrice;
     const pctChange = startingPrice > 0 ? ((currentPrice - startingPrice) / startingPrice) * 100 : 0;
-    return { name: c.name, code: c.code, startingPrice, currentPrice, pctChange, ownershipPct: marketRepo.getOwnershipPct(c.id) };
+    const demand = marketRepo.getDemandSince(c.id, marketRepo.getLastSettlementTime(c.id) ?? 0);
+    const netDemand: "buying" | "selling" | "flat" = demand.uniqueBuyers > demand.uniqueSellers ? "buying" : demand.uniqueBuyers < demand.uniqueSellers ? "selling" : "flat";
+    return {
+      name: c.name,
+      code: c.code,
+      startingPrice,
+      currentPrice,
+      pctChange,
+      ownershipPct: marketRepo.getOwnershipPct(c.id),
+      netDemand,
+      form: formLettersForClub(c.id, 3),
+    };
   });
   res.type("html").send(renderAdminClubsPage(clubs));
 });

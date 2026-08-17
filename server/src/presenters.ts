@@ -59,7 +59,7 @@ function fixtureMatchTextNoTime(fixture: Fixture, clubId: string, opponent?: Clu
   return `${isHome ? "vs" : "@"} ${opponent?.name ?? "TBD"} · ${formatKickoffDateOnly(fixture.kickoff)}`;
 }
 
-function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
+export function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
   return footballService.getRecentResultsForClub(clubId, n).map((f) => {
     const isHome = f.homeClubId === clubId;
     const gf = (isHome ? f.homeGoals : f.awayGoals) ?? 0;
