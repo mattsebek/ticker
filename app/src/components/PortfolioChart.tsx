@@ -113,7 +113,7 @@ export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[];
               <Path d={areaPath} fill="url(#portfolioGrad)" stroke="none" />
               {showReference && <Line x1={0} y1={referenceY} x2={width} y2={referenceY} stroke={REFERENCE_COLOR} strokeWidth={1} strokeDasharray="4,4" />}
               <Polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              {hoverPt && <Line x1={hoverPt.x} y1={0} x2={hoverPt.x} y2={CHART_H} stroke={T.border} strokeWidth={1} strokeDasharray="3,3" />}
+              {hoverPt && <Line x1={hoverPt.x} y1={0} x2={hoverPt.x} y2={CHART_H} stroke={T.text} strokeOpacity={0.55} strokeWidth={1} strokeDasharray="3,3" />}
               {hoverPt && <Circle cx={hoverPt.x} cy={hoverPt.y} r={4} fill={T.accent} stroke={T.bg} strokeWidth={2} />}
             </Svg>
           </View>

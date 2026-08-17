@@ -141,7 +141,7 @@ export function ClubOverlayHost() {
             <Pressable onPress={close} style={[styles.closeBtn, { backgroundColor: T.elevated }]} accessibilityLabel="Close" accessibilityRole="button">
               <CloseIcon color={T.text} />
             </Pressable>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingRight: 40, paddingBottom: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingRight: 64, paddingBottom: 14 }}>
               <ClubBadge code={detail.code} color={detail.color} size={52} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: T.text, fontSize: 16, fontWeight: "500", marginBottom: 6 }}>{detail.name}</Text>
@@ -150,9 +150,9 @@ export function ClubOverlayHost() {
               {detail.monthSeries.length > 1 && (
                 <SparkLine
                   values={detail.monthSeries}
-                  width={76}
+                  width={64}
                   height={34}
-                  strokeWidth={2}
+                  strokeWidth={1.25}
                   color={colorForPct(detail.monthSeries[detail.monthSeries.length - 1] - detail.monthSeries[0])}
                 />
               )}

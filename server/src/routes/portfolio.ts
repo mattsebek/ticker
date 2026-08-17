@@ -28,8 +28,28 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
 
   const cash = marketRepo.getCash(user.id);
   const heroValue = round2(holdings.reduce((a, c) => a + c.price, 0) + cash);
-  const weekPct = holdings.length ? round2(holdings.reduce((a, c) => a + c.weeklyPct, 0) / holdings.length) : 0;
-  const seasonPct = holdings.length ? round2(holdings.reduce((a, c) => a + c.seasonPct, 0) / holdings.length) : 0;
+
+  // Dollar-weighted, not an average of each club's own %: an unweighted
+  // average of weeklyPct treats a $5 club's move the same as a $50 club's,
+  // which doesn't answer "how much did MY portfolio move." Reconstructing
+  // each holding's pre-settlement value from its own (already-correct,
+  // real-settlement) weeklyPct and summing the dollar deltas gives the
+  // portfolio's actual blended return, with cash implicitly diluting it
+  // (present in both heroValue and priorHeroValue, unchanged).
+  const weekDollarChange = holdings.reduce((a, c) => {
+    if (c.weeklyPct === 0) return a;
+    const priorPrice = c.price / (1 + c.weeklyPct / 100);
+    return a + (c.price - priorPrice);
+  }, 0);
+  const priorHeroValue = heroValue - weekDollarChange;
+  const weekPct = priorHeroValue > 0 ? round2((weekDollarChange / priorHeroValue) * 100) : 0;
+
+  // Every account starts with exactly $100 cash (see ClubPickerModal /
+  // ClubSelect's STARTING_CASH) and never adds/withdraws real money, so
+  // season/YTD is just the total value against that fixed baseline — no
+  // need to reconstruct anything the way weekPct does.
+  const STARTING_CASH = 100;
+  const seasonPct = round2(((heroValue - STARTING_CASH) / STARTING_CASH) * 100);
 
   res.json({
     cash,

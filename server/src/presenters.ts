@@ -47,6 +47,18 @@ function fixtureMatchText(fixture: Fixture, clubId: string, opponent?: Club): st
   return `${isHome ? "vs" : "@"} ${opponent?.name ?? "TBD"} · ${formatKickoff(fixture.kickoff)}`;
 }
 
+function formatKickoffDateOnly(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", { timeZone: KICKOFF_DISPLAY_TZ, weekday: "short", month: "short", day: "numeric" }).format(d);
+}
+
+/** Same as fixtureMatchText, minus the kickoff time — the club detail card's Past/Upcoming Fixtures rows only need opponent + date. */
+function fixtureMatchTextNoTime(fixture: Fixture, clubId: string, opponent?: Club): string {
+  const isHome = fixture.homeClubId === clubId;
+  return `${isHome ? "vs" : "@"} ${opponent?.name ?? "TBD"} · ${formatKickoffDateOnly(fixture.kickoff)}`;
+}
+
 function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
   return footballService.getRecentResultsForClub(clubId, n).map((f) => {
     const isHome = f.homeClubId === clubId;
@@ -105,7 +117,7 @@ const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function clubDetail(club: Club, currentRound: number) {
   const summary = clubSummary(club, currentRound);
-  const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
+  const upcoming = footballService.getUpcomingFixturesForClub(club.id, 2);
   const fixtures = upcoming.map((f) => {
     const opponent = opponentClub(f, club.id);
     const winProb = winProbFor(f, club.id);
@@ -113,7 +125,7 @@ export function clubDetail(club: Club, currentRound: number) {
       opp: opponent?.name ?? "TBD",
       home: f.homeClubId === club.id,
       diff: difficultyFromWinProb(winProb),
-      matchText: fixtureMatchText(f, club.id, opponent),
+      matchText: fixtureMatchTextNoTime(f, club.id, opponent),
       projPts: projectPoints(winProb, f.drawProb ?? 0.24),
     };
   });
@@ -127,7 +139,7 @@ export function clubDetail(club: Club, currentRound: number) {
     const winProb = winProbFor(f, club.id);
     const projPts = projectPoints(winProb, f.drawProb ?? 0.24);
     const actualPts = scoreClubInFixture(f, isHome ? "home" : "away");
-    return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchText(f, club.id, opponent), actualPts, projPts };
+    return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchTextNoTime(f, club.id, opponent), actualPts, projPts };
   });
   const now = Date.now();
   const monthSeries = marketRepo
