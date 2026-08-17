@@ -249,6 +249,42 @@ export async function reseedAllOpeningPrices(): Promise<{ priced: number; skippe
   return { priced: clubs.length, skipped: all.length - clubs.length };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Admin-only, high-impact ops action: resets the whole season back to
+ * right before Game Week 1 for a clean end-to-end re-simulation of Market
+ * Pricing V2 + the synthetic ecosystem. Touches:
+ *  - every fixture: reverted to unplayed, kickoffs shifted forward so round
+ *    1's deadline lands `daysUntilFirstKickoff` days out (see
+ *    footballRepo.resetAllFixtureResults's doc comment for why this isn't
+ *    optional — leaving a past kickoff in place gets round 1 silently
+ *    auto-locked from current holdings on the very next boot)
+ *  - every fantasy point and locked Gameweek lineup: cleared
+ *  - the league standings cache: cleared (repopulates on its own job tick)
+ *  - every club's price and price history: reset to its opening value via
+ *    reseedAllOpeningPrices(), exactly like the very first bootstrap
+ * Deliberately leaves alone: users, market_accounts (cash), holdings,
+ * ledger/transaction history, leagues/membership, and pending
+ * starter_selections — this resets RESULTS and MARKET STATE, not who owns
+ * what. Exposed via POST /internal/reset-to-pregameweek1.
+ */
+export async function resetToPreGameweek1(daysUntilFirstKickoff = 2): Promise<{ fixturesReset: number; pricesReset: number; newRound1KickoffMs: number }> {
+  const round1 = footballRepo.listFixturesByRound(1);
+  if (round1.length === 0) throw new Error("No round 1 fixtures found — has the season been imported?");
+  const earliestKickoffMs = Math.min(...round1.map((f) => new Date(f.kickoff).getTime()));
+  const targetMs = Date.now() + daysUntilFirstKickoff * DAY_MS;
+  const offsetMs = targetMs - earliestKickoffMs;
+
+  const { fixturesReset } = footballRepo.resetAllFixtureResults(offsetMs);
+  fantasyRepo.clearAllFantasyPoints();
+  fantasyRepo.clearAllLockedLineups();
+  fantasyRepo.clearStandingsCache();
+  const { priced } = await reseedAllOpeningPrices();
+
+  return { fixturesReset, pricesReset: priced, newRound1KickoffMs: targetMs };
+}
+
 function retireOldDemoLeagues() {
   for (const id of RETIRED_LEAGUE_IDS) {
     if (fantasyRepo.getLeagueById(id)) fantasyRepo.deleteLeague(id);

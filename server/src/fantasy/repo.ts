@@ -149,6 +149,10 @@ export const fantasyRepo = {
     const row = db.prepare("SELECT MAX(round) as m FROM fantasy_points").get() as { m: number | null };
     return row.m ?? 0;
   },
+  /** Ops-only: clears every recorded fantasy point — see resetToPreGameweek1() in bootstrap.ts. */
+  clearAllFantasyPoints() {
+    db.prepare("DELETE FROM fantasy_points").run();
+  },
 
   // --- gameweek scoring lineups (immutable snapshots) ---
   hasLockedLineup(userId: string, round: number): boolean {
@@ -179,6 +183,14 @@ export const fantasyRepo = {
     const tx = db.transaction(() => {
       db.prepare("DELETE FROM gameweek_lineup_clubs WHERE gameweek_lineup_id = ?").run(lineup.id);
       db.prepare("DELETE FROM gameweek_lineups WHERE id = ?").run(lineup.id);
+    });
+    tx();
+  },
+  /** Ops-only: clears every locked Gameweek lineup snapshot for every account — leaves starter_selections (mutable pending intent) untouched, since that carries forward. See resetToPreGameweek1() in bootstrap.ts. */
+  clearAllLockedLineups() {
+    const tx = db.transaction(() => {
+      db.prepare("DELETE FROM gameweek_lineup_clubs").run();
+      db.prepare("DELETE FROM gameweek_lineups").run();
     });
     tx();
   },
@@ -305,6 +317,10 @@ export const fantasyRepo = {
   },
 
   // --- standings cache (recalculateLeagueStandings job) ---
+  /** Ops-only: clears the whole materialized cache — repopulates on the next recalculateLeagueStandings job tick. See resetToPreGameweek1() in bootstrap.ts. */
+  clearStandingsCache() {
+    db.prepare("DELETE FROM standings_cache").run();
+  },
   writeStandingsCache(leagueId: string, rows: { memberId: string; name: string; rank: number; points: number; portfolio: number }[]) {
     const tx = db.transaction(() => {
       db.prepare("DELETE FROM standings_cache WHERE league_id = ?").run(leagueId);

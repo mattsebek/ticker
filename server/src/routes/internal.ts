@@ -10,7 +10,7 @@ import { usersRepo } from "../shared/usersRepo";
 import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
-import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
+import { reseedAllOpeningPrices, resetAllUsers, resetToPreGameweek1, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
 import { runMarketTick } from "../market/marketDemandService";
 import { ensureSyntheticPopulation } from "../synthetic/syntheticSeedService";
@@ -193,6 +193,26 @@ internalRouter.post("/set-account-type", (req, res) => {
 
   usersRepo.setAccountType(user.id, accountType);
   res.json({ ok: true, id: user.id, email: user.email, accountType });
+});
+
+/**
+ * Admin-only, high-impact ops action: resets the whole season back to right
+ * before Game Week 1 for a clean re-simulation — see resetToPreGameweek1's
+ * doc comment in bootstrap.ts for exactly what this touches (and, just as
+ * importantly, what it deliberately leaves alone: users, holdings, cash,
+ * and leagues). Follow up with /internal/simulate-round to play out round 1.
+ */
+const resetToPreGw1Schema = z.object({ daysUntilFirstKickoff: z.number().min(0).max(30).optional() });
+
+internalRouter.post("/reset-to-pregameweek1", async (req, res) => {
+  try {
+    const parsed = resetToPreGw1Schema.safeParse(req.body ?? {});
+    const days = parsed.success ? (parsed.data.daysUntilFirstKickoff ?? 2) : 2;
+    const result = await resetToPreGameweek1(days);
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
 });
 
 /**

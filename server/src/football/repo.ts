@@ -204,6 +204,35 @@ export const footballRepo = {
     return row.m ?? 0;
   },
 
+  /**
+   * Ops-only: reverts EVERY fixture to unplayed (status back to
+   * "scheduled", scores/clean-sheets cleared) and shifts every kickoff
+   * forward by `offsetMs`, preserving the season's relative round-to-round
+   * spacing — used to reset the whole schedule back to "right before Game
+   * Week 1". Win-probability predictions are left untouched (still valid
+   * pre-match signals, no provider call needed to restore them). Shifting
+   * kickoffs isn't cosmetic: gameweekService.lockPendingLineups() (the
+   * periodic job) and lineupBackfillService.backfillAll() (runs on every
+   * boot) both auto-lock a round the instant its earliest kickoff is in the
+   * past — leaving round 1's real, already-elapsed kickoff in place would
+   * get it silently re-locked from current holdings on the very next
+   * deploy. See resetToPreGameweek1() in bootstrap.ts for the full reset.
+   */
+  resetAllFixtureResults(offsetMs: number): { fixturesReset: number } {
+    const rows = db.prepare("SELECT id, kickoff FROM ticker_fixtures").all() as { id: string; kickoff: string }[];
+    const tx = db.transaction(() => {
+      const upd = db.prepare(
+        `UPDATE ticker_fixtures SET status = 'scheduled', home_goals = NULL, away_goals = NULL, home_clean_sheet = NULL, away_clean_sheet = NULL, kickoff = ? WHERE id = ?`
+      );
+      for (const r of rows) {
+        const newKickoff = new Date(new Date(r.kickoff).getTime() + offsetMs).toISOString();
+        upd.run(newKickoff, r.id);
+      }
+    });
+    tx();
+    return { fixturesReset: rows.length };
+  },
+
   countFixtures(): number {
     return (db.prepare("SELECT COUNT(*) as n FROM ticker_fixtures").get() as { n: number }).n;
   },
