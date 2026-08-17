@@ -13,6 +13,11 @@ import { round2, clamp } from "../shared/rng";
 import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
 import { runMarketTick } from "../market/marketDemandService";
+import { ensureSyntheticPopulation } from "../synthetic/syntheticSeedService";
+import { syntheticRepo } from "../synthetic/syntheticRepo";
+import { runOrchestratorBatch, forceEvaluateUser } from "../synthetic/orchestrator";
+import { reconcilePopulation } from "../synthetic/populationManager";
+import { reconcileLeagues } from "../synthetic/leagueManager";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -100,6 +105,47 @@ internalRouter.post("/reseed-prices", async (req, res) => {
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err?.message || String(err) });
   }
+});
+
+/**
+ * Production-safe synthetic ecosystem seed (spec §57). Idempotent — tops up
+ * the shortfall against synthetic_system_config.target_active_users (or an
+ * explicit `target` override), never re-creates the whole population.
+ */
+internalRouter.post("/seed-synthetic-ecosystem", (req, res) => {
+  try {
+    const target = typeof req.body?.target === "number" ? req.body.target : syntheticRepo.getConfig().targetActiveUsers;
+    const report = ensureSyntheticPopulation(target);
+    res.json({ ok: true, ...report });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/** Dev/ops only: fires the hourly synthetic orchestrator on demand instead of waiting for its interval. */
+internalRouter.post("/run-synthetic-orchestrator", (req, res) => {
+  try {
+    res.json({ ok: true, ...runOrchestratorBatch() });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/** Dev/ops only: force-evaluates one synthetic user right now (admin "force evaluate" also calls this path). */
+internalRouter.post("/force-evaluate-synthetic-user", (req, res) => {
+  const userId = typeof req.body?.userId === "string" ? req.body.userId : "";
+  if (!userId) return res.status(400).json({ ok: false, error: "userId required." });
+  const result = forceEvaluateUser(userId);
+  if (!result) return res.status(404).json({ ok: false, error: "No synthetic profile for that user." });
+  res.json({ ok: true, ...result });
+});
+
+/** Dev/ops only: fires the daily population/league manager jobs on demand. */
+internalRouter.post("/run-synthetic-population-manager", (req, res) => {
+  res.json({ ok: true, ...reconcilePopulation() });
+});
+internalRouter.post("/run-synthetic-league-manager", (req, res) => {
+  res.json({ ok: true, ...reconcileLeagues() });
 });
 
 /**

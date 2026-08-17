@@ -5,7 +5,7 @@ import { gameweekService } from "../fantasy/gameweekService";
 import { gameweekDetail } from "../presenters";
 import { fantasyRepo } from "../fantasy/repo";
 import { fantasyConfig } from "../fantasy/fantasyConfig";
-import { marketRepo } from "../market/repo";
+import { setLineup } from "../fantasy/lineupService";
 
 export const gameweekRouter = Router();
 
@@ -76,14 +76,7 @@ const startingFourSchema = z.object({ clubIds: z.array(z.string()) });
 gameweekRouter.put("/starting-four", requireAuth, (req: AuthedRequest, res) => {
   const parsed = startingFourSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid request." });
-  const clubIds = Array.from(new Set(parsed.data.clubIds));
-  if (clubIds.length > fantasyConfig.MAX_STARTERS) {
-    return res.status(400).json({ error: `You can start at most ${fantasyConfig.MAX_STARTERS} clubs.` });
-  }
-  const holdingIds = new Set(marketRepo.getHoldings(req.userId!).map((h) => h.club_id));
-  if (!clubIds.every((id) => holdingIds.has(id))) {
-    return res.status(400).json({ error: "You can only start clubs you currently own." });
-  }
-  fantasyRepo.setStarterSelection(req.userId!, clubIds);
-  res.json({ ok: true, clubIds });
+  const result = setLineup(req.userId!, parsed.data.clubIds);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json({ ok: true, clubIds: result.clubIds });
 });

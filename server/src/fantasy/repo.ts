@@ -220,10 +220,22 @@ export const fantasyRepo = {
     db.prepare("DELETE FROM standings_cache WHERE league_id = ?").run(id);
     db.prepare("DELETE FROM leagues WHERE id = ?").run(id);
   },
-  /** Removes every real (non-bot) member from every league, leaving the seeded bot rosters intact. Used by the /internal/reset-users ops action. */
+  /**
+   * Removes every real human member from every league, leaving synthetic
+   * (and any legacy is_bot=1) rosters intact. Used by the /internal/reset-users
+   * ops action — since synthetic users are now real `users` rows too
+   * (account_type='synthetic'), "non-bot" alone would wrongly sweep them up
+   * here; a member only counts as removable if they're missing from `users`
+   * entirely (orphaned/legacy) or explicitly account_type='human'.
+   */
   removeAllNonBotMembers() {
-    db.prepare("DELETE FROM standings_cache WHERE member_id IN (SELECT member_id FROM league_members WHERE is_bot = 0)").run();
-    const result = db.prepare("DELETE FROM league_members WHERE is_bot = 0").run();
+    const removable = `
+      is_bot = 0 AND NOT EXISTS (
+        SELECT 1 FROM users u WHERE u.id = league_members.member_id AND u.account_type != 'human'
+      )
+    `;
+    db.prepare(`DELETE FROM standings_cache WHERE member_id IN (SELECT member_id FROM league_members WHERE ${removable})`).run();
+    const result = db.prepare(`DELETE FROM league_members WHERE ${removable}`).run();
     return result.changes;
   },
   /** Removes one member from every league they belong to (and any cached standings row) — the league-side half of deleting a single user. Used by the admin CMS's delete-user action. */

@@ -10,6 +10,9 @@ import * as updateClubPrices from "./updateClubPrices";
 import * as updateMarketDemandPrices from "./updateMarketDemandPrices";
 import * as recalculateLeagueStandings from "./recalculateLeagueStandings";
 import * as gameweekDeadlineReminder from "./gameweekDeadlineReminder";
+import * as syntheticActivityOrchestrator from "./syntheticActivityOrchestrator";
+import * as syntheticPopulationManager from "./syntheticPopulationManager";
+import * as syntheticLeagueManager from "./syntheticLeagueManager";
 import { pricingConfig } from "../market/pricingConfig";
 
 const MINUTE = 60_000;
@@ -58,6 +61,12 @@ export function registerJobs() {
     run: gameweekDeadlineReminder.run,
     initialDelayMs: 20_000,
   });
+
+  // Synthetic User Engine — see synthetic/. All three check the global kill
+  // switch (synthetic_system_config.enabled) as their first step.
+  scheduler.register({ name: "syntheticActivityOrchestrator", intervalMs: intervalFromEnv("JOB_SYNTHETIC_ORCHESTRATOR_MS", HOUR), run: syntheticActivityOrchestrator.run, initialDelayMs: 120_000 });
+  scheduler.register({ name: "syntheticPopulationManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_POPULATION_MS", 24 * HOUR), run: syntheticPopulationManager.run, initialDelayMs: 130_000 });
+  scheduler.register({ name: "syntheticLeagueManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_LEAGUE_MS", 24 * HOUR), run: syntheticLeagueManager.run, initialDelayMs: 140_000 });
 }
 
 export { scheduler };

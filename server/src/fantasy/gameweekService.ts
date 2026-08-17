@@ -3,7 +3,7 @@ import { fantasyConfig } from "./fantasyConfig";
 import { portfolioService } from "../market/portfolioService";
 import { marketRepo } from "../market/repo";
 import { footballRepo } from "../football/repo";
-import { BOT_ROSTER } from "../shared/bots";
+import { isBotId } from "../shared/bots";
 
 export interface GameweekSummary {
   round: number;
@@ -46,8 +46,7 @@ function lockOneAccountForRound(userId: string, round: number, lockedAt: number)
     .filter((id) => holdingIds.has(id))
     .slice(0, fantasyConfig.MAX_STARTERS);
 
-  const botIds = new Set(BOT_ROSTER.map((b) => b.id));
-  if (starterIds.length === 0 && (botIds.has(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
+  if (starterIds.length === 0 && (isBotId(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
     starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
   }
   const starterSet = new Set(starterIds);
@@ -107,7 +106,11 @@ export const gameweekService = {
     const maxRound = hasHistory ? lastLocked : pending;
     const clamped = Math.max(1, Math.min(maxRound, round));
 
-    const rosterIds = [userId, ...BOT_ROSTER.map((b) => b.id)];
+    // Compares against every account with a market presence (human + synthetic),
+    // not just this user alone — previously a fixed 7-bot roster served as a
+    // stand-in "population" so average/best had something to compare against
+    // before real adoption; the synthetic engine is the same idea at real scale.
+    const rosterIds = [userId, ...marketRepo.listAccountIds().filter((id) => id !== userId)];
     const allPoints = hasHistory ? rosterIds.map((id) => pointsForMemberAtRound(id, clamped)) : rosterIds.map(() => 0);
     const myPoints = allPoints[0];
     const average = Math.round(allPoints.reduce((a, b) => a + b, 0) / allPoints.length);

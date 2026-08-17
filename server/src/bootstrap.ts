@@ -2,13 +2,11 @@ import { footballService } from "./football/service";
 import { footballRepo } from "./football/repo";
 import { priceUpdateService } from "./market/priceUpdateService";
 import { pricingConfig } from "./market/pricingConfig";
-import { tradingService } from "./market/tradingService";
 import { marketRepo } from "./market/repo";
 import { settlementService } from "./fantasy/settlementService";
 import { lineupBackfillService } from "./fantasy/lineupBackfillService";
 import { fantasyRepo } from "./fantasy/repo";
 import { usersRepo } from "./shared/usersRepo";
-import { BOT_ROSTER } from "./shared/bots";
 import { round2, clamp } from "./shared/rng";
 
 interface LeagueSeed {
@@ -18,13 +16,18 @@ interface LeagueSeed {
   code: string | null;
   commissioner: string;
   baseMemberCount: number;
-  botMemberIds: string[];
   autoJoin: boolean;
 }
 
-/** The one league every manager (real or bot) belongs to — see leagueService.DEFAULT_AUTO_JOIN_LEAGUE_IDS. */
+/**
+ * The one league every manager belongs to — see
+ * leagueService.DEFAULT_AUTO_JOIN_LEAGUE_IDS. Used to seed the legacy static
+ * BOT_ROSTER's membership; superseded by the synthetic engine (see
+ * synthetic/syntheticSeedService.ts), which joins its own accounts through
+ * the normal leagueService.join() path instead of a bootstrap-time seed.
+ */
 const LEAGUE_SEEDS: LeagueSeed[] = [
-  { id: "overall-league", name: "Overall League", isPrivate: false, code: "overall", commissioner: "Ticker", baseMemberCount: BOT_ROSTER.length, botMemberIds: BOT_ROSTER.map((b) => b.id), autoJoin: true },
+  { id: "overall-league", name: "Overall League", isPrivate: false, code: "overall", commissioner: "Ticker", baseMemberCount: 0, autoJoin: true },
 ];
 
 /** Retired demo leagues from before the app had real users — delete so an existing (already-seeded) database self-heals without a manual reset. */
@@ -63,7 +66,6 @@ export async function bootstrap(): Promise<void> {
   await healStaleOpeningPrices();
   retireOldDemoLeagues();
   seedLeagues();
-  seedBotManagers();
 
   const settleResult = settlementService.settleAllPending();
   console.log(`[bootstrap] settled ${settleResult.settledCount} previously-unsettled fixtures`);
@@ -260,25 +262,29 @@ function seedLeagues() {
       continue;
     }
     fantasyRepo.insertLeague({ id: lg.id, name: lg.name, is_private: lg.isPrivate ? 1 : 0, code: lg.code, commissioner: lg.commissioner, base_member_count: lg.baseMemberCount, created_at: Date.now() });
-    for (const botId of lg.botMemberIds) {
-      const bot = BOT_ROSTER.find((b) => b.id === botId);
-      if (bot) fantasyRepo.addMember(lg.id, botId, bot.name, true);
-    }
   }
 }
 
 /**
- * Admin-only ops action: wipes every real registered account and its
+ * Admin-only ops action: wipes every real HUMAN registered account and its
  * trading/league state so registration can be tested fresh, while leaving
- * clubs, fixtures, prices, leagues, and the seeded bot rosters untouched.
+ * clubs, fixtures, prices, leagues, and the synthetic population untouched.
  * Exposed via POST /internal/reset-users.
  */
 export function resetAllUsers(): { usersDeleted: number; membershipsDeleted: number } {
-  const userIds = usersRepo.listIds();
+  const userIds = usersRepo.listIds("human");
   const membershipsDeleted = fantasyRepo.removeAllNonBotMembers();
   marketRepo.deleteUserData(userIds);
-  const usersDeleted = usersRepo.deleteAll();
+  const usersDeleted = deleteHumanUsers();
   return { usersDeleted, membershipsDeleted };
+}
+
+function deleteHumanUsers(): number {
+  let count = 0;
+  for (const id of usersRepo.listIds("human")) {
+    if (usersRepo.delete(id)) count++;
+  }
+  return count;
 }
 
 /** Admin CMS's per-user delete action — same cleanup as resetAllUsers, scoped to one account: removes their league memberships (and cached standings rows), their market/trading data, then the account itself. */
@@ -289,27 +295,3 @@ export function deleteUser(userId: string): boolean {
   return usersRepo.delete(userId);
 }
 
-function seedBotManagers() {
-  const clubs = footballRepo.listClubs();
-  const idByCode = new Map(clubs.map((c) => [c.code, c.id]));
-  const GENESIS_ROUND = 1; // bots buy in at the opening/IPO price, before settlement moves anything
-
-  for (const bot of BOT_ROSTER) {
-    if (marketRepo.getHoldings(bot.id).length > 0) continue; // already seeded
-    const clubIds = bot.clubCodes.map((code) => idByCode.get(code)).filter((x): x is string => !!x);
-    if (clubIds.length !== 4) continue;
-    marketRepo.ensureAccount(bot.id, 100);
-
-    // Pre-check the whole roster's cost up front (same all-or-nothing
-    // guarantee the old single setInitialSelection() call gave) rather
-    // than buying one at a time and leaving a bot half-seeded if a later
-    // club is unaffordable.
-    const total = clubIds.reduce((a, id) => a + (marketRepo.getPrice(id) ?? 0), 0);
-    if (round2(100 - total) < 0) {
-      // A bot roster priced over $100 at IPO is a config issue worth surfacing, not silently swallowing forever.
-      console.warn(`[bootstrap] bot ${bot.id} roster exceeds starting budget, skipped`);
-      continue;
-    }
-    for (const clubId of clubIds) tradingService.buy(bot.id, clubId, GENESIS_ROUND);
-  }
-}

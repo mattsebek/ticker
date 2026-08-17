@@ -6,9 +6,25 @@ import { renderAdminShell, T } from "./adminShell";
  * every registered user into one response, so the initial page load can't
  * embed the first batch server-side either without special-casing it.
  */
+const TYPE_FILTERS: { key: string; label: string }[] = [
+  { key: "", label: "All" },
+  { key: "human", label: "Human" },
+  { key: "synthetic", label: "Synthetic" },
+  { key: "admin", label: "Admin" },
+  { key: "system", label: "System" },
+];
+
 export function renderAdminUsersPage(): string {
+  const pills = TYPE_FILTERS.map(
+    (f, i) => `<button class="type-pill${i === 0 ? " active" : ""}" data-type="${f.key}" style="
+      padding: 6px 14px; border-radius: 100px; border: 1px solid ${T.border}; background: ${i === 0 ? T.elevated : "transparent"};
+      color: ${T.text}; font-size: 13px; cursor: pointer; margin-right: 6px;
+    ">${f.label}</button>`
+  ).join("");
+
   const body = `
     <h1>Users</h1>
+    <div style="margin-bottom: 12px;">${pills}</div>
     <input id="search" type="text" placeholder="Search by name or email..." style="
       width: 100%; max-width: 420px; padding: 10px 14px; margin-bottom: 16px;
       border-radius: 10px; border: 1px solid ${T.border}; background: ${T.card};
@@ -17,7 +33,7 @@ export function renderAdminUsersPage(): string {
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Name</th><th>Email</th><th>Birthday</th><th>Joined</th><th>Onboarded</th><th>Cash</th><th>Holdings</th><th></th></tr>
+          <tr><th>Name</th><th>Type</th><th>Email</th><th>Birthday</th><th>Joined</th><th>Onboarded</th><th>Cash</th><th>Holdings</th><th></th></tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -31,8 +47,9 @@ export function renderAdminUsersPage(): string {
         var statusEl = document.getElementById("status");
         var searchEl = document.getElementById("search");
         var sentinel = document.getElementById("sentinel");
+        var pillEls = document.querySelectorAll(".type-pill");
         var PAGE_SIZE = 20;
-        var offset = 0, query = "", loading = false, done = false, searchDebounce = null;
+        var offset = 0, query = "", accountType = "", loading = false, done = false, searchDebounce = null;
 
         function esc(s) {
           return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -40,9 +57,14 @@ export function renderAdminUsersPage(): string {
         function fmtDate(ms) {
           return new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
         }
+        function typeBadge(t) {
+          var color = t === "synthetic" ? "${T.accent}" : t === "admin" || t === "system" ? "${T.textSecondary}" : "${T.text}";
+          return "<span style=\\"color:" + color + ";font-size:12px;\\">" + esc(t) + "</span>";
+        }
         function rowHtml(u) {
           return "<tr data-id=\\"" + esc(u.id) + "\\">" +
             "<td>" + esc(u.name) + "</td>" +
+            "<td>" + typeBadge(u.accountType) + "</td>" +
             "<td>" + esc(u.email) + "</td>" +
             "<td>" + esc(u.birthday) + "</td>" +
             "<td>" + fmtDate(u.createdAt) + "</td>" +
@@ -58,11 +80,11 @@ export function renderAdminUsersPage(): string {
           loading = true;
           statusEl.textContent = "Loading...";
           if (reset) { offset = 0; done = false; rowsEl.innerHTML = ""; }
-          fetch("/admin/api/users?query=" + encodeURIComponent(query) + "&offset=" + offset + "&limit=" + PAGE_SIZE)
+          fetch("/admin/api/users?query=" + encodeURIComponent(query) + "&accountType=" + encodeURIComponent(accountType) + "&offset=" + offset + "&limit=" + PAGE_SIZE)
             .then(function (r) { return r.json(); })
             .then(function (data) {
               if (data.users.length === 0 && offset === 0) {
-                rowsEl.innerHTML = "<tr><td colspan=\\"8\\" class=\\"empty\\">No users found.</td></tr>";
+                rowsEl.innerHTML = "<tr><td colspan=\\"9\\" class=\\"empty\\">No users found.</td></tr>";
               } else {
                 rowsEl.insertAdjacentHTML("beforeend", data.users.map(rowHtml).join(""));
               }
@@ -109,6 +131,15 @@ export function renderAdminUsersPage(): string {
             query = searchEl.value;
             load(true);
           }, 300);
+        });
+
+        pillEls.forEach(function (pill) {
+          pill.addEventListener("click", function () {
+            pillEls.forEach(function (p) { p.style.background = "transparent"; });
+            pill.style.background = "${T.elevated}";
+            accountType = pill.getAttribute("data-type");
+            load(true);
+          });
         });
 
         new IntersectionObserver(function (entries) {

@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import express from "express";
 import jwt from "jsonwebtoken";
-import { usersRepo } from "../shared/usersRepo";
+import { usersRepo, AccountType } from "../shared/usersRepo";
 import { fantasyRepo } from "../fantasy/repo";
 import { marketRepo } from "../market/repo";
 import { footballRepo } from "../football/repo";
@@ -15,6 +15,9 @@ import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
 import { renderAdminLeagueDetailPage, AdminLeagueStandingRow } from "../admin/adminLeagueDetailPage";
 import { JWT_SECRET } from "../shared/auth";
 import { computePricePressure, priceDirection, ppsDirection } from "../market/pricePressure";
+import { renderAdminSyntheticPage, AdminSyntheticUserRow } from "../admin/adminSyntheticPage";
+import { syntheticRepo } from "../synthetic/syntheticRepo";
+import { forceEvaluateUser } from "../synthetic/orchestrator";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -126,9 +129,11 @@ adminRouter.get("/api/users", (req, res) => {
   const query = typeof req.query.query === "string" ? req.query.query : "";
   const offset = Math.max(0, parseInt(String(req.query.offset ?? "0"), 10) || 0);
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+  const accountTypeRaw = typeof req.query.accountType === "string" ? req.query.accountType : "";
+  const accountType = (["human", "synthetic", "admin", "system"] as const).includes(accountTypeRaw as any) ? (accountTypeRaw as AccountType) : undefined;
 
   // Fetch one extra row to know whether there's a next page, without a second COUNT query.
-  const page = usersRepo.searchPaged(query, offset, limit + 1);
+  const page = usersRepo.searchPaged(query, offset, limit + 1, accountType);
   const hasMore = page.length > limit;
   const users = page.slice(0, limit).map((u) => ({
     id: u.id,
@@ -137,6 +142,7 @@ adminRouter.get("/api/users", (req, res) => {
     birthday: u.birthday,
     createdAt: u.created_at,
     onboarded: !!u.onboarded,
+    accountType: u.account_type,
     cash: marketRepo.getCash(u.id),
     holdingsCount: marketRepo.getHoldings(u.id).length,
   }));
@@ -240,4 +246,66 @@ adminRouter.get("/clubs/:id", (req, res) => {
       timeline,
     })
   );
+});
+
+// --- Synthetic ecosystem ---
+
+adminRouter.get("/synthetic", (req, res) => {
+  const config = syntheticRepo.getConfig();
+  const statusCounts = syntheticRepo.countByStatus();
+  const accountCounts = usersRepo.countByAccountType();
+  const actionsLast24h = syntheticRepo.countActionsSince(Date.now() - DAY_MS);
+  const clubNameById = new Map(footballRepo.listClubs().map((c) => [c.id, c.name]));
+
+  const profiles = syntheticRepo.listProfiles(100, 0);
+  const users: AdminSyntheticUserRow[] = profiles.map((p) => {
+    const u = usersRepo.getById(p.userId);
+    return {
+      id: p.userId,
+      name: u?.name ?? p.userId,
+      strategyType: p.strategyType,
+      activityLevel: p.activityLevel,
+      status: p.status,
+      favoriteClubName: p.favoriteClubId ? (clubNameById.get(p.favoriteClubId) ?? null) : null,
+      nextActivityAt: p.nextActivityAt,
+    };
+  });
+
+  res.type("html").send(
+    renderAdminSyntheticPage({
+      accountCounts,
+      statusCounts,
+      actionsLast24h,
+      config,
+      users,
+      totalProfiles: syntheticRepo.countProfiles(),
+    })
+  );
+});
+
+adminRouter.post("/synthetic/config", (req, res) => {
+  try {
+    syntheticRepo.updateConfig(req.body, "admin");
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+adminRouter.post("/synthetic/users/:id/pause", (req, res) => {
+  syntheticRepo.setStatus(req.params.id, "paused");
+  res.json({ ok: true });
+});
+adminRouter.post("/synthetic/users/:id/resume", (req, res) => {
+  syntheticRepo.setStatus(req.params.id, "active");
+  res.json({ ok: true });
+});
+adminRouter.post("/synthetic/users/:id/retire", (req, res) => {
+  syntheticRepo.setStatus(req.params.id, "retired");
+  res.json({ ok: true });
+});
+adminRouter.post("/synthetic/users/:id/force", (req, res) => {
+  const result = forceEvaluateUser(req.params.id);
+  if (!result) return res.status(404).json({ ok: false, error: "No synthetic profile for that user." });
+  res.json({ ok: true, result });
 });

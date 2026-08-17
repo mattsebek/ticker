@@ -27,6 +27,19 @@ try {
   // already applied
 }
 
+// account_type is the source of truth for "is this a real registered
+// human" vs. a synthetic/admin/system account (see synthetic/ domain) —
+// replaces the old approach of bots simply never having a users row at
+// all. Every pre-existing row defaults to 'human', which is correct: this
+// table only ever contained real registrations before this column existed.
+export type AccountType = "human" | "synthetic" | "admin" | "system";
+try {
+  db.exec("ALTER TABLE users ADD COLUMN account_type TEXT NOT NULL DEFAULT 'human'");
+} catch {
+  // already applied
+}
+db.exec("CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type)");
+
 const DAY_MS = 86_400_000;
 const FIRST_WEEK_MS = 7 * DAY_MS;
 
@@ -44,6 +57,7 @@ export interface UserRow {
   brief_dismissed: number;
   brief_dismissed_date: string | null;
   created_at: number;
+  account_type: AccountType;
 }
 
 /**
@@ -68,14 +82,15 @@ export const usersRepo = {
   getByEmail(email: string): UserRow | undefined {
     return db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase().trim()) as UserRow | undefined;
   },
-  create(name: string, email: string, birthday: string): UserRow {
+  create(name: string, email: string, birthday: string, accountType: AccountType = "human"): UserRow {
     const id = randomUUID();
-    db.prepare("INSERT INTO users (id, name, email, birthday, theme, onboarded, brief_dismissed, created_at) VALUES (?,?,?,?,'dark',0,0,?)").run(
+    db.prepare("INSERT INTO users (id, name, email, birthday, theme, onboarded, brief_dismissed, created_at, account_type) VALUES (?,?,?,?,'dark',0,0,?,?)").run(
       id,
       name.trim(),
       email.toLowerCase().trim(),
       birthday,
-      Date.now()
+      Date.now(),
+      accountType
     );
     return usersRepo.getById(id)!;
   },
@@ -89,20 +104,22 @@ export const usersRepo = {
   setCreatedAt(id: string, createdAt: number) {
     db.prepare("UPDATE users SET created_at = ? WHERE id = ?").run(createdAt, id);
   },
-  /** Wipes every registered account (bots aren't rows in this table). Used by the /internal/reset-users ops action. */
-  deleteAll(): number {
-    return db.prepare("DELETE FROM users").run().changes;
-  },
-  listIds(): string[] {
+  listIds(accountType?: AccountType): string[] {
+    if (accountType) return (db.prepare("SELECT id FROM users WHERE account_type = ?").all(accountType) as { id: string }[]).map((r) => r.id);
     return (db.prepare("SELECT id FROM users").all() as { id: string }[]).map((r) => r.id);
   },
   /** Admin CMS only — every registered account's full row. See routes/admin.ts. */
   listAll(): UserRow[] {
     return db.prepare("SELECT * FROM users ORDER BY created_at DESC").all() as UserRow[];
   },
-  /** Admin CMS Users page — alphabetical (by name) page of accounts, optionally filtered by name/email substring. Paginated server-side so the admin page never has to load every user at once. */
-  searchPaged(query: string, offset: number, limit: number): UserRow[] {
+  /** Admin CMS Users page — alphabetical (by name) page of accounts, optionally filtered by name/email substring and/or account_type. Paginated server-side so the admin page never has to load every user at once. */
+  searchPaged(query: string, offset: number, limit: number, accountType?: AccountType): UserRow[] {
     const like = `%${query.trim().toLowerCase()}%`;
+    if (accountType) {
+      return db
+        .prepare(`SELECT * FROM users WHERE account_type = ? AND (lower(name) LIKE ? OR lower(email) LIKE ?) ORDER BY lower(name) ASC LIMIT ? OFFSET ?`)
+        .all(accountType, like, like, limit, offset) as UserRow[];
+    }
     return db
       .prepare(`SELECT * FROM users WHERE lower(name) LIKE ? OR lower(email) LIKE ? ORDER BY lower(name) ASC LIMIT ? OFFSET ?`)
       .all(like, like, limit, offset) as UserRow[];
@@ -110,5 +127,17 @@ export const usersRepo = {
   /** Admin CMS only — permanently removes one account. Caller (bootstrap.ts's deleteUser) is responsible for also cleaning up the user's market/league data first. */
   delete(id: string): boolean {
     return db.prepare("DELETE FROM users WHERE id = ?").run(id).changes > 0;
+  },
+  /** The single source of truth for "is this a synthetic account" everywhere outside this file — replaces the old in-memory BOT_ROSTER check. */
+  isSynthetic(userId: string): boolean {
+    const row = db.prepare("SELECT account_type FROM users WHERE id = ?").get(userId) as { account_type: AccountType } | undefined;
+    return row?.account_type === "synthetic";
+  },
+  /** Admin synthetic dashboard summary — one query, not four. */
+  countByAccountType(): Record<AccountType, number> {
+    const rows = db.prepare("SELECT account_type, COUNT(*) as n FROM users GROUP BY account_type").all() as { account_type: AccountType; n: number }[];
+    const counts: Record<AccountType, number> = { human: 0, synthetic: 0, admin: 0, system: 0 };
+    for (const r of rows) counts[r.account_type] = r.n;
+    return counts;
   },
 };
