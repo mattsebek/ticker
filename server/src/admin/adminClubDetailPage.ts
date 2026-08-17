@@ -54,11 +54,16 @@ function renderTimelineEvent(row: any): string {
   let detail = "";
 
   if (row.event_type === "PERFORMANCE") {
-    const delta = row.actual_ticker_points != null && row.expected_ticker_points != null ? row.actual_ticker_points - row.expected_ticker_points : null;
-    detail = `
-      <div>Expected points: <b>${row.expected_ticker_points?.toFixed(2) ?? "—"}</b></div>
-      <div>Actual points: <b>${row.actual_ticker_points?.toFixed(2) ?? "—"}</b></div>
-      <div>Delta: <b>${delta != null ? delta.toFixed(2) : "—"}</b></div>
+    const hasPoints = row.actual_ticker_points != null && row.expected_ticker_points != null;
+    const delta = hasPoints ? row.actual_ticker_points - row.expected_ticker_points : null;
+    detail = hasPoints
+      ? `
+      <div>Expected points: <b>${row.expected_ticker_points.toFixed(2)}</b></div>
+      <div>Actual points: <b>${row.actual_ticker_points.toFixed(2)}</b></div>
+      <div>Delta: <b>${delta!.toFixed(2)}</b></div>
+      <div>Applied impact: <b>${impact}</b> (capped at ±${(pricingConfig.PERFORMANCE_CAP_PCT * 100).toFixed(0)}%)</div>`
+      : `
+      <div style="font-style:italic;">Expected/actual points weren't recorded for this settlement — it predates Market Pricing V2.</div>
       <div>Applied impact: <b>${impact}</b> (capped at ±${(pricingConfig.PERFORMANCE_CAP_PCT * 100).toFixed(0)}%)</div>`;
   } else if (row.event_type === "DEMAND") {
     // "Requested" is recomputed from the stored demand_signal against the CURRENT tick cap config —
