@@ -272,6 +272,14 @@ export function resetAllUsers(): { usersDeleted: number; membershipsDeleted: num
   return { usersDeleted, membershipsDeleted };
 }
 
+/** Admin CMS's per-user delete action — same cleanup as resetAllUsers, scoped to one account: removes their league memberships (and cached standings rows), their market/trading data, then the account itself. */
+export function deleteUser(userId: string): boolean {
+  if (!usersRepo.getById(userId)) return false;
+  fantasyRepo.removeMemberFromAllLeagues(userId);
+  marketRepo.deleteUserData([userId]);
+  return usersRepo.delete(userId);
+}
+
 function seedBotManagers() {
   const clubs = footballRepo.listClubs();
   const idByCode = new Map(clubs.map((c) => [c.code, c.id]));

@@ -4,8 +4,13 @@ import jwt from "jsonwebtoken";
 import { usersRepo } from "../shared/usersRepo";
 import { fantasyRepo } from "../fantasy/repo";
 import { marketRepo } from "../market/repo";
-import { renderAdminPage } from "../admin/adminPage";
+import { footballRepo } from "../football/repo";
+import { deleteUser } from "../bootstrap";
 import { renderAdminLoginPage } from "../admin/adminLoginPage";
+import { renderAdminUsersPage } from "../admin/adminUsersPage";
+import { renderAdminClubsPage, AdminClubRow } from "../admin/adminClubsPage";
+import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
+import { renderAdminLeagueDetailPage, AdminLeagueStandingRow } from "../admin/adminLeagueDetailPage";
 import { JWT_SECRET } from "../shared/auth";
 
 const ADMIN_COOKIE = "ticker_admin";
@@ -90,12 +95,78 @@ adminRouter.get("/logout", (req, res) => {
 
 adminRouter.use(requireAdminSession);
 
-adminRouter.get("/", (req, res) => {
-  const users = usersRepo.listAll().map((u) => ({
-    ...u,
+adminRouter.get("/", (req, res) => res.redirect("/admin/users"));
+
+// --- Users ---
+
+adminRouter.get("/users", (req, res) => {
+  res.type("html").send(renderAdminUsersPage());
+});
+
+/** Backs the Users page's search + infinite scroll — never returns the whole table in one response. */
+adminRouter.get("/api/users", (req, res) => {
+  const query = typeof req.query.query === "string" ? req.query.query : "";
+  const offset = Math.max(0, parseInt(String(req.query.offset ?? "0"), 10) || 0);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+
+  // Fetch one extra row to know whether there's a next page, without a second COUNT query.
+  const page = usersRepo.searchPaged(query, offset, limit + 1);
+  const hasMore = page.length > limit;
+  const users = page.slice(0, limit).map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    birthday: u.birthday,
+    createdAt: u.created_at,
+    onboarded: !!u.onboarded,
     cash: marketRepo.getCash(u.id),
     holdingsCount: marketRepo.getHoldings(u.id).length,
   }));
-  const leagues = fantasyRepo.listAllLeagues().map((lg) => ({ ...lg, members: fantasyRepo.getMembers(lg.id) }));
-  res.type("html").send(renderAdminPage({ users, leagues }));
+  res.json({ users, hasMore });
+});
+
+adminRouter.post("/users/:id/delete", (req, res) => {
+  const ok = deleteUser(req.params.id);
+  if (!ok) return res.status(404).json({ ok: false, error: "User not found." });
+  res.json({ ok: true });
+});
+
+// --- Leagues ---
+
+adminRouter.get("/leagues", (req, res) => {
+  const leagues = fantasyRepo.listAllLeagues().map((lg) => ({
+    id: lg.id,
+    name: lg.name,
+    isPrivate: !!lg.is_private,
+    code: lg.code,
+    commissioner: lg.commissioner,
+    memberCount: fantasyRepo.getMembers(lg.id).length,
+  }));
+  res.type("html").send(renderAdminLeaguesPage(leagues));
+});
+
+adminRouter.get("/leagues/:id", (req, res) => {
+  const league = fantasyRepo.getLeagueById(req.params.id);
+  if (!league) return res.status(404).send("League not found.");
+  const members = fantasyRepo.getMembers(league.id);
+  const botIds = new Set(members.filter((m) => m.is_bot).map((m) => m.member_id));
+  const standings: AdminLeagueStandingRow[] = fantasyRepo
+    .getStandingsCache(league.id)
+    .map((s) => ({ rank: s.rank, name: s.name, points: s.points, portfolio: s.portfolio, isBot: botIds.has(s.memberId) }));
+  res.type("html").send(
+    renderAdminLeagueDetailPage({ name: league.name, isPrivate: !!league.is_private, code: league.code, commissioner: league.commissioner, standings })
+  );
+});
+
+// --- Clubs ---
+
+adminRouter.get("/clubs", (req, res) => {
+  const clubs: AdminClubRow[] = footballRepo.listClubs().map((c) => {
+    const series = marketRepo.getPriceSeries(c.id);
+    const startingPrice = series[0]?.price ?? 0;
+    const currentPrice = marketRepo.getPrice(c.id) ?? startingPrice;
+    const pctChange = startingPrice > 0 ? ((currentPrice - startingPrice) / startingPrice) * 100 : 0;
+    return { name: c.name, code: c.code, startingPrice, currentPrice, pctChange };
+  });
+  res.type("html").send(renderAdminClubsPage(clubs));
 });

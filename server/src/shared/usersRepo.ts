@@ -100,4 +100,15 @@ export const usersRepo = {
   listAll(): UserRow[] {
     return db.prepare("SELECT * FROM users ORDER BY created_at DESC").all() as UserRow[];
   },
+  /** Admin CMS Users page — alphabetical (by name) page of accounts, optionally filtered by name/email substring. Paginated server-side so the admin page never has to load every user at once. */
+  searchPaged(query: string, offset: number, limit: number): UserRow[] {
+    const like = `%${query.trim().toLowerCase()}%`;
+    return db
+      .prepare(`SELECT * FROM users WHERE lower(name) LIKE ? OR lower(email) LIKE ? ORDER BY lower(name) ASC LIMIT ? OFFSET ?`)
+      .all(like, like, limit, offset) as UserRow[];
+  },
+  /** Admin CMS only — permanently removes one account. Caller (bootstrap.ts's deleteUser) is responsible for also cleaning up the user's market/league data first. */
+  delete(id: string): boolean {
+    return db.prepare("DELETE FROM users WHERE id = ?").run(id).changes > 0;
+  },
 };

@@ -226,6 +226,11 @@ export const fantasyRepo = {
     const result = db.prepare("DELETE FROM league_members WHERE is_bot = 0").run();
     return result.changes;
   },
+  /** Removes one member from every league they belong to (and any cached standings row) — the league-side half of deleting a single user. Used by the admin CMS's delete-user action. */
+  removeMemberFromAllLeagues(memberId: string) {
+    db.prepare("DELETE FROM standings_cache WHERE member_id = ?").run(memberId);
+    db.prepare("DELETE FROM league_members WHERE member_id = ?").run(memberId);
+  },
   insertLeague(lg: LeagueRow) {
     db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count, created_at) VALUES (?,?,?,?,?,?,?)").run(
       lg.id,
