@@ -59,12 +59,19 @@ function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
 export function clubSummary(club: Club, currentRound: number) {
   const price = marketRepo.getPrice(club.id) ?? 0;
   const series = marketRepo.getPriceSeries(club.id).map((s) => s.price);
-  const lastPrice = series.length >= 2 ? series[series.length - 2] : price;
   const openPrice = series.length >= 1 ? series[0] : price;
   const nextFixture = footballService.getUpcomingFixtureForClub(club.id);
   const opponent = nextFixture ? opponentClub(nextFixture, club.id) : undefined;
   const winProb = nextFixture ? winProbFor(nextFixture, club.id) : 0.33;
   const drawProb = nextFixture?.drawProb ?? 0.24;
+
+  // "This week" is this round's real settlement move specifically (not an
+  // arbitrary diff between the last two price_history rows, which used to
+  // silently pick up the cosmetic microPriceJitter job's most recent random
+  // tick instead of the actual result). Null (no fixture settled yet this
+  // round) reads as 0%, not as "no movement was ever recorded."
+  const thisRoundBreakdown = marketRepo.getPriceBreakdownForRound(club.id, currentRound);
+  const thisWeekPct = thisRoundBreakdown ? round2((thisRoundBreakdown.performancePct + thisRoundBreakdown.demandPct) * 100) : 0;
 
   return {
     id: club.id,
@@ -73,8 +80,8 @@ export function clubSummary(club: Club, currentRound: number) {
     color: club.color,
     priorSeasonPoints: club.priorSeasonPoints,
     price,
-    dailyPct: lastPrice ? round2(((price - lastPrice) / lastPrice) * 100) : 0,
-    weeklyPct: lastPrice ? round2(((price - lastPrice) / lastPrice) * 100) : 0,
+    dailyPct: thisWeekPct,
+    weeklyPct: thisWeekPct,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
     priceBreakdown: marketRepo.getLatestPriceBreakdown(club.id),

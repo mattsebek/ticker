@@ -14,10 +14,11 @@ const DAY_MS = 86_400_000;
 
 /**
  * Before any fixture has actually settled, every club's weekly/daily % is
- * either exactly 0 or pure micro-jitter noise (see jobs/microPriceJitter.ts)
- * — a "brief" built from picking a best/worst mover out of that is
- * meaningless. Explain the game's own mechanics instead until there's
- * something real to report. Also shown unconditionally during a brand-new
+ * exactly 0 (see presenters.ts's clubSummary — it reflects the latest real
+ * settlement only) — a "brief" built from picking a best/worst mover out of
+ * that is meaningless. Explain the game's own mechanics instead until
+ * there's something real to report. Also shown unconditionally during a
+ * brand-new
  * account's first week (see isBriefCurrentlyDismissed in usersRepo.ts) as an
  * onboarding/engagement nudge, independent of whether real data exists yet.
  */

@@ -60,6 +60,7 @@ export async function bootstrap(): Promise<void> {
   }
 
   await seedOpeningPrices();
+  await healStaleOpeningPrices();
   retireOldDemoLeagues();
   seedLeagues();
   seedBotManagers();
@@ -157,6 +158,33 @@ async function seedOpeningPrices() {
   if (clubs.length === 0) return;
   const prices = await computeOpeningPrices(clubs.map((c) => c.id));
   for (const [clubId, price] of prices) priceUpdateService.ensureOpeningPrice(clubId, price);
+}
+
+/**
+ * ensureOpeningPrice() only ever sets a club's price once. That's fine when
+ * the club already had fixture data at that moment — but a club with zero
+ * fixtures yet is simply skipped by seedOpeningPrices() above, so it should
+ * get priced for real on a later boot once fixtures land... UNLESS
+ * something else (an older code path, a manual DB write, a provider hiccup
+ * that still let some earlier seed slip through at MIN_PRICE) already
+ * parked it at the exact opening-price floor first, in which case the
+ * once-only guard blocks that later, informed recompute forever — this
+ * happened for real (confirmed live: every club frozen at the exact $6.00
+ * floor, even after a subsequent successful import brought in real
+ * standings and win probabilities). This heals it: any club still sitting
+ * on the literal floor, once it actually has fixture data to price off of,
+ * gets recomputed for real. Safe by construction — the blended formula is
+ * continuous, so a genuinely computed price landing back on the exact floor
+ * is not a realistic coincidence, meaning this can't misfire on a club
+ * that's already been priced from real data.
+ */
+async function healStaleOpeningPrices() {
+  const stillFlat = footballRepo.listClubs().filter((c) => marketRepo.getPrice(c.id) === OPENING_PRICE_FLOOR);
+  const withFixtures = stillFlat.filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
+  if (withFixtures.length === 0) return;
+  const prices = await computeOpeningPrices(withFixtures.map((c) => c.id));
+  for (const [clubId, price] of prices) marketRepo.setOpeningPrice(clubId, price);
+  console.log(`[bootstrap] healed ${withFixtures.length} club price(s) stuck at the uninformed $${OPENING_PRICE_FLOOR} floor`);
 }
 
 /**

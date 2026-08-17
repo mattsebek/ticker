@@ -147,6 +147,20 @@ export const marketRepo = {
     if (!row || row.performance_pct == null || row.demand_pct == null) return null;
     return { performancePct: row.performance_pct, demandPct: row.demand_pct };
   },
+  /**
+   * This club's real settlement breakdown for a specific round, if that
+   * round's fixture has settled — the "this week" figure. Distinct from
+   * getLatestPriceBreakdown (which ignores round and can return a stale
+   * settlement from weeks ago); this returns null for a round that hasn't
+   * settled yet rather than falling back to an old number.
+   */
+  getPriceBreakdownForRound(clubId: string, round: number): { performancePct: number; demandPct: number } | null {
+    const row = db
+      .prepare("SELECT performance_pct, demand_pct FROM price_history WHERE club_id = ? AND round = ? AND fixture_id IS NOT NULL LIMIT 1")
+      .get(clubId, round) as { performance_pct: number | null; demand_pct: number | null } | undefined;
+    if (!row || row.performance_pct == null || row.demand_pct == null) return null;
+    return { performancePct: row.performance_pct, demandPct: row.demand_pct };
+  },
   /** Timestamp of a club's last real (fixture-triggered) settlement — the window start for its next demand calculation. Null if it's never settled yet (season start). */
   getLastSettlementTime(clubId: string): number | null {
     const row = db.prepare("SELECT MAX(created_at) as t FROM price_history WHERE club_id = ? AND fixture_id IS NOT NULL").get(clubId) as { t: number | null };

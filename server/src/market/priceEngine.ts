@@ -30,13 +30,19 @@ export function computePerformanceChangeForClub(fixture: Fixture, side: "home" |
 /**
  * Ticker's own trading activity for a club since its last settlement.
  * Unique managers, not raw transaction count, so one very active trader
- * can't disproportionately move price on their own.
+ * can't move price purely by placing lots of small trades. That alone
+ * isn't enough with a small userbase, though: demandScore itself saturates
+ * to ±1.0 the moment everyone trading is on the same side, regardless of
+ * how few of them there are. `confidence` scales the signal down when the
+ * total participant count is below DEMAND_MIN_SAMPLE, so 1-2 early traders
+ * nudge price instead of unilaterally maxing out the demand cap.
  */
 export function computeDemandChangePct(uniqueBuyers: number, uniqueSellers: number): number {
   const total = uniqueBuyers + uniqueSellers;
   if (total === 0) return 0;
   const demandScore = (uniqueBuyers - uniqueSellers) / total; // -1..+1
-  return clamp(round4Pct(demandScore * pricingConfig.DEMAND_CAP_PCT), -pricingConfig.DEMAND_CAP_PCT, pricingConfig.DEMAND_CAP_PCT);
+  const confidence = clamp(total / pricingConfig.DEMAND_MIN_SAMPLE, 0, 1);
+  return clamp(round4Pct(demandScore * confidence * pricingConfig.DEMAND_CAP_PCT), -pricingConfig.DEMAND_CAP_PCT, pricingConfig.DEMAND_CAP_PCT);
 }
 
 /** Combines both forces, clamps the total move, then clamps the resulting price into the configured trading band. */
