@@ -41,9 +41,20 @@ export interface ClubFixture {
   projPts: number;
 }
 
+export interface ClubPastFixture {
+  opp: string;
+  matchText: string;
+  actualPts: number;
+  projPts: number;
+}
+
 export interface ClubDetail extends ClubSummary {
   series: number[];
+  /** Price series clipped to the last 30 days, for the club card's month-performance sparkline. */
+  monthSeries: number[];
   fixtures: ClubFixture[];
+  /** Last two played matches, most recent first. */
+  pastFixtures: ClubPastFixture[];
   news: { h: string; m: string };
 }
 

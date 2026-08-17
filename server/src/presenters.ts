@@ -10,7 +10,7 @@ import { marketRepo } from "./market/repo";
 import { fantasyRepo, LineupStatus } from "./fantasy/repo";
 import { fantasyConfig } from "./fantasy/fantasyConfig";
 import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
-import { breakdownClubInFixture } from "./fantasy/scoringService";
+import { breakdownClubInFixture, scoreClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
 
@@ -101,6 +101,8 @@ export function clubSummary(club: Club, currentRound: number) {
   };
 }
 
+const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function clubDetail(club: Club, currentRound: number) {
   const summary = clubSummary(club, currentRound);
   const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
@@ -115,11 +117,30 @@ export function clubDetail(club: Club, currentRound: number) {
       projPts: projectPoints(winProb, f.drawProb ?? 0.24),
     };
   });
+  // Last two played matches, most recent first — same "opponent + result vs
+  // projection" facts the price engine itself reacted to (see priceEngine.ts),
+  // just surfaced for a manager to read directly instead of only feeling it
+  // as a price move.
+  const pastFixtures = footballService.getRecentResultsForClub(club.id, 2).map((f) => {
+    const opponent = opponentClub(f, club.id);
+    const isHome = f.homeClubId === club.id;
+    const winProb = winProbFor(f, club.id);
+    const projPts = projectPoints(winProb, f.drawProb ?? 0.24);
+    const actualPts = scoreClubInFixture(f, isHome ? "home" : "away");
+    return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchText(f, club.id, opponent), actualPts, projPts };
+  });
+  const now = Date.now();
+  const monthSeries = marketRepo
+    .getPriceSeriesWithTime(club.id)
+    .filter((p) => p.createdAt >= now - MONTH_MS)
+    .map((p) => p.price);
   const headline = commentaryService.clubHeadline(club, summary.form, summary.seasonPct);
   return {
     ...summary,
     series: marketRepo.getPriceSeries(club.id).map((s) => s.price),
+    monthSeries,
     fixtures,
+    pastFixtures,
     news: { h: headline, m: commentaryService.readTimeLabel(headline) },
   };
 }

@@ -11,6 +11,7 @@ import type { ClubDetail } from "../api/types";
 import type { AppStackParamList } from "../navigation/types";
 import { ClubBadge } from "./ClubBadge";
 import { FormChip } from "./FormChip";
+import { SparkLine } from "./SparkLine";
 import { CloseIcon } from "./icons";
 import { fmtMoney, fmtPct } from "../utils/format";
 import { FONT_SERIF, colorForPct } from "../theme/theme";
@@ -142,10 +143,19 @@ export function ClubOverlayHost() {
             </Pressable>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingRight: 40, paddingBottom: 14 }}>
               <ClubBadge code={detail.code} color={detail.color} size={52} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ color: T.text, fontSize: 16, fontWeight: "500", marginBottom: 6 }}>{detail.name}</Text>
                 <Text style={{ color: T.text, fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "500", letterSpacing: -0.3 }}>{fmtMoney(detail.price)}</Text>
               </View>
+              {detail.monthSeries.length > 1 && (
+                <SparkLine
+                  values={detail.monthSeries}
+                  width={76}
+                  height={34}
+                  strokeWidth={2}
+                  color={colorForPct(detail.monthSeries[detail.monthSeries.length - 1] - detail.monthSeries[0])}
+                />
+              )}
             </View>
             <View style={{ flexDirection: "row", gap: 16, paddingHorizontal: 24 }}>
               <Text style={{ color: T.accent, fontSize: 13 }}>{detail.gwPts} pts this week</Text>
@@ -161,13 +171,31 @@ export function ClubOverlayHost() {
             scrollEventThrottle={16}
           >
             {detail.form.length > 0 && (
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 22 }}>
+                {detail.form.map((f, i) => (
+                  <FormChip key={i} result={f} />
+                ))}
+              </View>
+            )}
+
+            {detail.pastFixtures.length > 0 && (
               <>
-                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 8 }}>Form</Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {detail.form.map((f, i) => (
-                    <FormChip key={i} result={f} />
-                  ))}
-                </View>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 6 }}>Past Fixtures</Text>
+                {detail.pastFixtures.map((fx, i) => {
+                  const { opponent, date } = splitMatchText(fx.matchText);
+                  return (
+                    <View key={i} style={[styles.plainRow, i === detail.pastFixtures.length - 1 && { paddingBottom: 0 }]}>
+                      <Text style={{ fontSize: 13 }}>
+                        <Text style={{ color: T.text }}>{opponent}</Text>
+                        {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600" }}>
+                        <Text style={{ color: colorForPct(fx.actualPts - fx.projPts) }}>{fx.actualPts} pts</Text>
+                        <Text style={{ color: T.textSecondary, fontWeight: "400" }}> vs {fx.projPts} proj</Text>
+                      </Text>
+                    </View>
+                  );
+                })}
               </>
             )}
 
