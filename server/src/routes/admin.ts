@@ -166,7 +166,7 @@ adminRouter.get("/clubs", (req, res) => {
     const startingPrice = series[0]?.price ?? 0;
     const currentPrice = marketRepo.getPrice(c.id) ?? startingPrice;
     const pctChange = startingPrice > 0 ? ((currentPrice - startingPrice) / startingPrice) * 100 : 0;
-    return { name: c.name, code: c.code, startingPrice, currentPrice, pctChange };
+    return { name: c.name, code: c.code, startingPrice, currentPrice, pctChange, ownershipPct: marketRepo.getOwnershipPct(c.id) };
   });
   res.type("html").send(renderAdminClubsPage(clubs));
 });

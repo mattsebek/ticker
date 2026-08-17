@@ -6,6 +6,7 @@ export interface AdminClubRow {
   startingPrice: number;
   currentPrice: number;
   pctChange: number;
+  ownershipPct: number;
 }
 
 function fmt(n: number): string {
@@ -24,6 +25,7 @@ export function renderAdminClubsPage(clubs: AdminClubRow[]): string {
           <td>${fmt(c.startingPrice)}</td>
           <td>${fmt(c.currentPrice)}</td>
           <td class="${cls}">${sign}${c.pctChange.toFixed(1)}%</td>
+          <td>${c.ownershipPct.toFixed(1)}%</td>
         </tr>`;
     })
     .join("");
@@ -32,8 +34,8 @@ export function renderAdminClubsPage(clubs: AdminClubRow[]): string {
     <h1>Clubs <span style="color:${T.textSecondary};font-weight:400;font-size:13px;">${clubs.length}</span></h1>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Club</th><th>Starting Value</th><th>Current Value</th><th>% Change</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" class="empty">No clubs yet.</td></tr>`}</tbody>
+        <thead><tr><th>Club</th><th>Starting Value</th><th>Current Value</th><th>% Change</th><th>% Owned</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="empty">No clubs yet.</td></tr>`}</tbody>
       </table>
     </div>
   `;
