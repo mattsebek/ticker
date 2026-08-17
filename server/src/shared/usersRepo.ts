@@ -104,6 +104,16 @@ export const usersRepo = {
   setCreatedAt(id: string, createdAt: number) {
     db.prepare("UPDATE users SET created_at = ? WHERE id = ?").run(createdAt, id);
   },
+  /**
+   * Ops-only account_type change (e.g. promoting a real registered user to
+   * 'admin'). Never exposed on a human-facing/authenticated-user API — see
+   * /internal/set-account-type, gated the same way every other ops action
+   * in that router is (INTERNAL_TOKEN), matching the synthetic engine
+   * spec's "only trusted server-side processes and administrators" rule.
+   */
+  setAccountType(id: string, accountType: AccountType): boolean {
+    return db.prepare("UPDATE users SET account_type = ? WHERE id = ?").run(accountType, id).changes > 0;
+  },
   listIds(accountType?: AccountType): string[] {
     if (accountType) return (db.prepare("SELECT id FROM users WHERE account_type = ?").all(accountType) as { id: string }[]).map((r) => r.id);
     return (db.prepare("SELECT id FROM users").all() as { id: string }[]).map((r) => r.id);

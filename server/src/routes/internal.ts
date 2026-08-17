@@ -174,6 +174,27 @@ internalRouter.post("/reset-users", (req, res) => {
   res.json({ ok: true, ...result });
 });
 
+const ACCOUNT_TYPES = ["human", "synthetic", "admin", "system"] as const;
+
+/**
+ * Dev/ops only: promotes/demotes a real registered account's account_type
+ * (e.g. granting a specific email admin). Deliberately not exposed on any
+ * authenticated-user-facing route — see usersRepo.setAccountType's doc
+ * comment and the synthetic engine spec's security section.
+ */
+internalRouter.post("/set-account-type", (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const accountType = req.body?.accountType;
+  if (!email) return res.status(400).json({ ok: false, error: "email required." });
+  if (!ACCOUNT_TYPES.includes(accountType)) return res.status(400).json({ ok: false, error: `accountType must be one of ${ACCOUNT_TYPES.join(", ")}.` });
+
+  const user = usersRepo.getByEmail(email);
+  if (!user) return res.status(404).json({ ok: false, error: `No account found for ${email}.` });
+
+  usersRepo.setAccountType(user.id, accountType);
+  res.json({ ok: true, id: user.id, email: user.email, accountType });
+});
+
 /**
  * Dev/ops only: a true clean slate. Deletes every row in every table —
  * users, bots, holdings, prices/history, fantasy points, gameweek locks,
