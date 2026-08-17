@@ -10,9 +10,26 @@ import { deleteUser } from "../bootstrap";
 import { renderAdminLoginPage } from "../admin/adminLoginPage";
 import { renderAdminUsersPage } from "../admin/adminUsersPage";
 import { renderAdminClubsPage, AdminClubRow } from "../admin/adminClubsPage";
+import { renderAdminClubDetailPage } from "../admin/adminClubDetailPage";
 import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
 import { renderAdminLeagueDetailPage, AdminLeagueStandingRow } from "../admin/adminLeagueDetailPage";
 import { JWT_SECRET } from "../shared/auth";
+import { computePricePressure, priceDirection, ppsDirection } from "../market/pricePressure";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Shared by /clubs and /clubs/:id — PPS + the divergence check against real 24H price movement (BR-14). */
+function clubPricingDiagnostics(clubId: string, currentPrice: number) {
+  const now = Date.now();
+  const price24hAgo = marketRepo.getPriceAtOrBefore(clubId, now - DAY_MS);
+  const pctChange24h = price24hAgo && price24hAgo > 0 ? ((currentPrice - price24hAgo) / price24hAgo) * 100 : 0;
+  const pressure = computePricePressure(clubId);
+  const eligible = pressure.eligible && price24hAgo != null;
+  const priceDir = priceDirection(pctChange24h / 100);
+  const ppsDir = pressure.score != null ? ppsDirection(pressure.score) : "NEUTRAL";
+  const divergence: "ALIGNED" | "DIVERGENCE" | null = eligible ? (priceDir === ppsDir ? "ALIGNED" : "DIVERGENCE") : null;
+  return { pctChange24h, pressure, priceDir, ppsDir, divergence, eligible };
+}
 
 const ADMIN_COOKIE = "ticker_admin";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -162,6 +179,8 @@ adminRouter.get("/leagues/:id", (req, res) => {
 // --- Clubs ---
 
 adminRouter.get("/clubs", (req, res) => {
+  let aligned = 0;
+  let eligible = 0;
   const clubs: AdminClubRow[] = footballRepo.listClubs().map((c) => {
     const series = marketRepo.getPriceSeries(c.id);
     const startingPrice = series[0]?.price ?? 0;
@@ -169,7 +188,15 @@ adminRouter.get("/clubs", (req, res) => {
     const pctChange = startingPrice > 0 ? ((currentPrice - startingPrice) / startingPrice) * 100 : 0;
     const demand = marketRepo.getDemandSince(c.id, marketRepo.getLastSettlementTime(c.id) ?? 0);
     const netDemand: "buying" | "selling" | "flat" = demand.uniqueBuyers > demand.uniqueSellers ? "buying" : demand.uniqueBuyers < demand.uniqueSellers ? "selling" : "flat";
+
+    const diag = clubPricingDiagnostics(c.id, currentPrice);
+    if (diag.eligible) {
+      eligible++;
+      if (diag.divergence === "ALIGNED") aligned++;
+    }
+
     return {
+      id: c.id,
       name: c.name,
       code: c.code,
       startingPrice,
@@ -178,7 +205,40 @@ adminRouter.get("/clubs", (req, res) => {
       ownershipPct: marketRepo.getOwnershipPct(c.id),
       netDemand,
       form: formLettersForClub(c.id, 3),
+      pricePressure: diag.pressure.score,
+      divergence: diag.divergence,
     };
   });
-  res.type("html").send(renderAdminClubsPage(clubs));
+  res.type("html").send(renderAdminClubsPage(clubs, { aligned, eligible }));
+});
+
+adminRouter.get("/clubs/:id", (req, res) => {
+  const club = footballRepo.listClubs().find((c) => c.id === req.params.id);
+  if (!club) return res.status(404).send("Club not found.");
+
+  const series = marketRepo.getPriceSeries(club.id);
+  const startingPrice = series[0]?.price ?? 0;
+  const currentPrice = marketRepo.getPrice(club.id) ?? startingPrice;
+  const price7dAgo = marketRepo.getPriceAtOrBefore(club.id, Date.now() - 7 * DAY_MS);
+  const pctChange7d = price7dAgo && price7dAgo > 0 ? ((currentPrice - price7dAgo) / price7dAgo) * 100 : 0;
+
+  const diag = clubPricingDiagnostics(club.id, currentPrice);
+  const timeline = marketRepo.getPriceHistoryTimeline(club.id, 100);
+
+  res.type("html").send(
+    renderAdminClubDetailPage({
+      id: club.id,
+      name: club.name,
+      code: club.code,
+      currentPrice,
+      startingPrice,
+      pctChange24h: diag.pctChange24h,
+      pctChange7d,
+      pressure: diag.pressure,
+      priceDirection: diag.priceDir,
+      ppsDirection: diag.ppsDir,
+      divergence: diag.divergence,
+      timeline,
+    })
+  );
 });

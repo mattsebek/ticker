@@ -7,8 +7,10 @@ import * as monitorLiveMatches from "./monitorLiveMatches";
 import * as settleCompletedMatches from "./settleCompletedMatches";
 import * as lockGameweekLineups from "./lockGameweekLineups";
 import * as updateClubPrices from "./updateClubPrices";
+import * as updateMarketDemandPrices from "./updateMarketDemandPrices";
 import * as recalculateLeagueStandings from "./recalculateLeagueStandings";
 import * as gameweekDeadlineReminder from "./gameweekDeadlineReminder";
+import { pricingConfig } from "../market/pricingConfig";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -42,6 +44,13 @@ export function registerJobs() {
   scheduler.register({ name: "settleCompletedMatches", intervalMs: 2 * MINUTE, run: settleCompletedMatches.run });
   scheduler.register({ name: "lockGameweekLineups", intervalMs: 2 * MINUTE, run: lockGameweekLineups.run });
   scheduler.register({ name: "updateClubPrices", intervalMs: 2 * MINUTE, run: updateClubPrices.run });
+  // Market Pricing V2's demand clock — fully independent of fixture settlement (see market/marketDemandService.ts).
+  scheduler.register({
+    name: "updateMarketDemandPrices",
+    intervalMs: intervalFromEnv("JOB_MARKET_TICK_MS", pricingConfig.MARKET_TICK_MINUTES * MINUTE),
+    run: updateMarketDemandPrices.run,
+    initialDelayMs: 90_000, // let bootstrap's opening-price seeding settle first
+  });
   scheduler.register({ name: "recalculateLeagueStandings", intervalMs: 3 * MINUTE, run: recalculateLeagueStandings.run });
   scheduler.register({
     name: "gameweekDeadlineReminder",

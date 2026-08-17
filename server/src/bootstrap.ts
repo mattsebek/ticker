@@ -228,14 +228,18 @@ async function healStaleOpeningPrices() {
  * every club's price_history (not just round 0, which is all
  * setOpeningPrice touches on its own — see clearAllPriceHistory's doc
  * comment for why leaving real settlement rows behind silently breaks
- * future settlement). Not wired into any automatic path; exposed via
- * POST /internal/reseed-prices.
+ * future settlement). Also clears every market_ticks row (global, not
+ * per-club) — Market Pricing V2's demand job resumes whatever tick is most
+ * recent, so a stale one left over from before the reseed would otherwise
+ * keep referencing price_history rows that no longer exist. Not wired into
+ * any automatic path; exposed via POST /internal/reseed-prices.
  */
 export async function reseedAllOpeningPrices(): Promise<{ priced: number; skipped: number }> {
   const all = footballRepo.listClubs();
   const clubs = all.filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
   if (clubs.length === 0) return { priced: 0, skipped: all.length };
   const prices = await computeOpeningPrices(clubs.map((c) => c.id));
+  marketRepo.clearAllMarketTicks();
   for (const [clubId, price] of prices) {
     marketRepo.clearAllPriceHistory(clubId);
     marketRepo.setOpeningPrice(clubId, price);

@@ -23,3 +23,10 @@ export const BOT_ROSTER: BotSeed[] = [
   { id: "bot-casey", name: "Casey", clubCodes: ["CHE", "BRE", "LIV", "BOU"] },
   { id: "bot-morgan", name: "Morgan", clubCodes: ["NEW", "BRI", "COV", "SUN"] },
 ];
+
+const BOT_IDS = new Set(BOT_ROSTER.map((b) => b.id));
+
+/** The single source of truth for "is this a synthetic/seed account" — used to weight or exclude bot activity from demand/Price Pressure calculations. */
+export function isBotId(userId: string): boolean {
+  return BOT_IDS.has(userId);
+}

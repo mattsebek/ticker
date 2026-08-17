@@ -1,16 +1,20 @@
 import { Fixture } from "../football/types";
 import { footballRepo } from "../football/repo";
 import { marketRepo } from "./repo";
-import { computePerformanceChangeForClub, computeDemandChangePct, applyImpact } from "./priceEngine";
+import { computePerformanceChangeForClub, applyImpact } from "./priceEngine";
 import { scoreClubInFixture } from "../fantasy/scoringService";
 import { CURRENT_SCORING_RULES } from "../fantasy/scoringRules";
+import { db } from "../db";
 
 /**
- * Reacts to a settled match by moving both clubs' prices — the combination
- * of fundamental performance-vs-expectation and Ticker's own trading
- * demand since each club's last settlement. Idempotent per fixture+club
- * (price_history has a unique index on (fixture_id, club_id)); calling
- * this twice for the same fixture is a safe no-op.
+ * Reacts to a settled match by moving a club's price on performance vs.
+ * expectation alone — Market Pricing V2 (see market/marketDemandService.ts)
+ * moved trading demand to its own recurring tick, independent of fixtures,
+ * so settlement no longer touches ledger_entries at all. Idempotent per
+ * fixture+club (price_history has a unique index on (fixture_id, club_id));
+ * calling this twice for the same fixture is a safe no-op. Each club's
+ * read-compute-write-history sequence is one db.transaction() so a demand
+ * tick can never observe or write over a half-applied settlement.
  */
 export const priceUpdateService = {
   applyFixtureSettlement(fixture: Fixture): void {
@@ -19,18 +23,27 @@ export const priceUpdateService = {
       if (marketRepo.hasSettledFixture(fixture.id, clubId)) continue;
 
       const actualPoints = scoreClubInFixture(fixture, side, CURRENT_SCORING_RULES);
-      const performancePct = computePerformanceChangeForClub(fixture, side, actualPoints);
+      const { performancePct, expectedPoints } = computePerformanceChangeForClub(fixture, side, actualPoints);
 
-      const sinceMs = marketRepo.getLastSettlementTime(clubId) ?? 0;
-      const { uniqueBuyers, uniqueSellers } = marketRepo.getDemandSince(clubId, sinceMs);
-      const demandPct = computeDemandChangePct(uniqueBuyers, uniqueSellers);
+      db.transaction(() => {
+        const currentPrice = marketRepo.getPrice(clubId) ?? 10;
+        const newPrice = applyImpact(currentPrice, performancePct);
+        const impactPct = currentPrice > 0 ? Math.round(((newPrice - currentPrice) / currentPrice) * 10000) / 10000 : 0;
 
-      const currentPrice = marketRepo.getPrice(clubId) ?? 10;
-      const newPrice = applyImpact(currentPrice, performancePct, demandPct);
-      const impactPct = currentPrice > 0 ? Math.round(((newPrice - currentPrice) / currentPrice) * 10000) / 10000 : 0;
-
-      marketRepo.setPrice(clubId, newPrice);
-      marketRepo.recordPriceHistory(clubId, fixture.round, newPrice, impactPct, fixture.id, { performancePct, demandPct });
+        marketRepo.setPrice(clubId, newPrice);
+        marketRepo.insertPriceHistoryEvent({
+          clubId,
+          eventType: "PERFORMANCE",
+          round: fixture.round,
+          previousPrice: currentPrice,
+          price: newPrice,
+          impactPct,
+          fixtureId: fixture.id,
+          performancePct,
+          expectedTickerPoints: expectedPoints,
+          actualTickerPoints: actualPoints,
+        });
+      })();
     }
   },
 

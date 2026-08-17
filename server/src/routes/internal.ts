@@ -12,6 +12,7 @@ import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
 import { reseedAllOpeningPrices, resetAllUsers, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
+import { runMarketTick } from "../market/marketDemandService";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -33,6 +34,7 @@ const ALL_TABLES = [
   "transactions",
   "holdings",
   "price_history",
+  "market_ticks",
   "club_prices",
   "market_accounts",
   "football_standings",
@@ -94,6 +96,21 @@ internalRouter.get("/leagues", (req, res) => {
 internalRouter.post("/reseed-prices", async (req, res) => {
   try {
     const result = await reseedAllOpeningPrices();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
+ * Dev/ops only: fires the market-demand tick job on demand instead of
+ * waiting for its MARKET_TICK_MINUTES interval — see market/marketDemandService.ts.
+ * Safe to call repeatedly; a tick that's already 'completed' opens a fresh
+ * one, an unfinished one is resumed (see runMarketTick's own doc comment).
+ */
+internalRouter.post("/run-market-tick", (req, res) => {
+  try {
+    const result = runMarketTick();
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err?.message || String(err) });
@@ -193,7 +210,7 @@ internalRouter.post("/simulate", (req, res) => {
     const currentPrice = marketRepo.getPrice(c.id) ?? 10;
     const newPrice = round2(clamp(currentPrice * (1 + impactPct / 100), 0.5, 999));
     marketRepo.setPrice(c.id, newPrice);
-    marketRepo.recordPriceHistory(c.id, round, newPrice, impactPct, null);
+    marketRepo.insertPriceHistoryEvent({ clubId: c.id, eventType: "ADMIN", round, previousPrice: currentPrice, price: newPrice, impactPct, fixtureId: null });
     return { id: c.id, code: c.code, name: c.name, oldPrice: currentPrice, newPrice, impactPct };
   });
 

@@ -77,13 +77,15 @@ export function clubSummary(club: Club, currentRound: number) {
   const winProb = nextFixture ? winProbFor(nextFixture, club.id) : 0.33;
   const drawProb = nextFixture?.drawProb ?? 0.24;
 
-  // "This week" is this round's real settlement move specifically (not an
-  // arbitrary diff between the last two price_history rows, which used to
-  // silently pick up the cosmetic microPriceJitter job's most recent random
-  // tick instead of the actual result). Null (no fixture settled yet this
-  // round) reads as 0%, not as "no movement was ever recorded."
-  const thisRoundBreakdown = marketRepo.getPriceBreakdownForRound(club.id, currentRound);
-  const thisWeekPct = thisRoundBreakdown ? round2((thisRoundBreakdown.performancePct + thisRoundBreakdown.demandPct) * 100) : 0;
+  // Real elapsed-time price movement (Market Pricing V2) — not a round-based
+  // proxy. getPriceAtOrBefore finds the closest recorded price at-or-before
+  // the target timestamp; no price that old yet (a young club/account) reads
+  // as 0%, not as "no movement was ever recorded."
+  const now = Date.now();
+  const price24hAgo = marketRepo.getPriceAtOrBefore(club.id, now - 24 * 60 * 60 * 1000);
+  const price7dAgo = marketRepo.getPriceAtOrBefore(club.id, now - 7 * 24 * 60 * 60 * 1000);
+  const dailyPct = price24hAgo && price24hAgo > 0 ? round2(((price - price24hAgo) / price24hAgo) * 100) : 0;
+  const weeklyPct = price7dAgo && price7dAgo > 0 ? round2(((price - price7dAgo) / price7dAgo) * 100) : 0;
 
   // Same buy/sell signal the price engine itself uses (computeDemandChangePct
   // in priceEngine.ts) — unique buyers vs. sellers since this club's last
@@ -105,8 +107,8 @@ export function clubSummary(club: Club, currentRound: number) {
     color: club.color,
     priorSeasonPoints: club.priorSeasonPoints,
     price,
-    dailyPct: thisWeekPct,
-    weeklyPct: thisWeekPct,
+    dailyPct,
+    weeklyPct,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
     netDemand,
