@@ -85,6 +85,19 @@ export function clubSummary(club: Club, currentRound: number) {
   const thisRoundBreakdown = marketRepo.getPriceBreakdownForRound(club.id, currentRound);
   const thisWeekPct = thisRoundBreakdown ? round2((thisRoundBreakdown.performancePct + thisRoundBreakdown.demandPct) * 100) : 0;
 
+  // Same buy/sell signal the price engine itself uses (computeDemandChangePct
+  // in priceEngine.ts) — unique buyers vs. sellers since this club's last
+  // settlement — read live rather than off the last settlement's frozen
+  // breakdown, so it reflects trading that's happened since, not just
+  // whatever direction the price last moved for.
+  const demandSinceLastSettlement = marketRepo.getDemandSince(club.id, marketRepo.getLastSettlementTime(club.id) ?? 0);
+  const netDemand: "buying" | "selling" | "flat" =
+    demandSinceLastSettlement.uniqueBuyers > demandSinceLastSettlement.uniqueSellers
+      ? "buying"
+      : demandSinceLastSettlement.uniqueBuyers < demandSinceLastSettlement.uniqueSellers
+        ? "selling"
+        : "flat";
+
   return {
     id: club.id,
     name: club.name,
@@ -96,6 +109,7 @@ export function clubSummary(club: Club, currentRound: number) {
     weeklyPct: thisWeekPct,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
+    netDemand,
     priceBreakdown: marketRepo.getLatestPriceBreakdown(club.id),
     gwPts: fantasyRepo.pointsAtRound(club.id, currentRound),
     seasonPts: fantasyRepo.seasonPointsThroughRound(club.id, currentRound),

@@ -26,6 +26,8 @@ export interface ClubSummary {
   weeklyPct: number;
   seasonPct: number;
   ownershipPct: number;
+  /** Unique buyers vs. sellers since this club's last settlement — the same signal driving its price's demand component, live rather than frozen at the last settlement. */
+  netDemand: "buying" | "selling" | "flat";
   gwPts: number;
   seasonPts: number;
   sparkline: number[];

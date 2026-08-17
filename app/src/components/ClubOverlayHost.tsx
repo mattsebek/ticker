@@ -14,7 +14,7 @@ import { FormChip } from "./FormChip";
 import { SparkLine } from "./SparkLine";
 import { CloseIcon } from "./icons";
 import { fmtMoney, fmtPct } from "../utils/format";
-import { FONT_SERIF, colorForPct } from "../theme/theme";
+import { FONT_SERIF, colorForPct, GREEN, RED } from "../theme/theme";
 import { Button } from "./Button";
 
 const DISMISS_DISTANCE = 110;
@@ -244,7 +244,12 @@ export function ClubOverlayHost() {
           <View style={[styles.footer, { borderTopColor: T.border }]}>
             <View>
               <Text style={{ color: T.textSecondary, fontSize: 14 }}>League Ownership</Text>
-              <Text style={{ color: T.text, fontSize: 24, fontWeight: "600", marginTop: 4 }}>{detail.ownershipPct.toFixed(2)}%</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <Text style={{ color: T.text, fontSize: 24, fontWeight: "600" }}>{detail.ownershipPct.toFixed(2)}%</Text>
+                {detail.netDemand !== "flat" && (
+                  <Text style={{ color: detail.netDemand === "buying" ? GREEN : RED, fontSize: 16, fontWeight: "700" }}>{detail.netDemand === "buying" ? "▲" : "▼"}</Text>
+                )}
+              </View>
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
               {isOwned ? (
