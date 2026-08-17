@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.JWT_SECRET || "ticker-dev-secret";
+export const JWT_SECRET = process.env.JWT_SECRET || "ticker-dev-secret";
 
 export interface AuthedRequest extends Request {
   userId?: string;
