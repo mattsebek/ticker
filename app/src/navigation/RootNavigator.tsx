@@ -62,11 +62,16 @@ export function RootNavigator() {
 
   const showOnboarding = !user || !user.onboarded;
 
+  // https://playticker.app prefix only actually deep-links once iOS
+  // associated domains / Android app links are configured (not yet — no
+  // ios.associatedDomains or android.intentFilters in app.json) — until
+  // then this matches the URL shape shared by LeagueDetailScreen's
+  // shareLeague() (/compete/join?code=XXXX) for when that lands.
   const linking = {
-    prefixes: ["ticker://", "https://ticker.app"],
+    prefixes: ["ticker://", "https://playticker.app"],
     config: {
       screens: {
-        JoinLeague: "join",
+        JoinLeague: "compete/join",
       },
     },
   };

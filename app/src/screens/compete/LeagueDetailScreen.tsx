@@ -33,8 +33,17 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
   }, [leagueId, sort]);
 
   async function shareLeague() {
-    const link = `ticker://join?code=${code}`;
-    const message = `Join my Ticker league "${name}"! Use code ${code.toUpperCase()} or tap: ${link}`;
+    // A bare ticker:// custom-scheme link fails outright for a recipient
+    // who doesn't have the app installed — no fallback, just a dead link
+    // in whatever email/SMS this gets forwarded into. The website's own
+    // /compete/join route (see JoinLeaguePage.tsx) handles this code for
+    // anyone, app or not, so that's what actually goes out. Once
+    // universal links / app links are configured (not yet — see
+    // app.json's bare `scheme` with no associatedDomains/intentFilters),
+    // this same https link would also hand off to the native app on a
+    // device that already has it installed.
+    const link = `https://playticker.app/compete/join?code=${code}`;
+    const message = `Join my Ticker league "${name}"! Use code ${code.toUpperCase()} or visit: ${link}`;
     try {
       await Share.share({ message, url: link });
     } catch {
