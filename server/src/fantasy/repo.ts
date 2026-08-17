@@ -279,6 +279,11 @@ export const fantasyRepo = {
   getMembers(leagueId: string): { member_id: string; member_name: string; is_bot: number }[] {
     return db.prepare("SELECT member_id, member_name, is_bot FROM league_members WHERE league_id = ?").all(leagueId) as any[];
   },
+  /** Real current membership — base_member_count is a creation-time snapshot that's never incremented as people join, so anything user-facing needs this instead. */
+  getMemberCount(leagueId: string): number {
+    const row = db.prepare("SELECT COUNT(*) as n FROM league_members WHERE league_id = ?").get(leagueId) as { n: number };
+    return row.n;
+  },
   getUserLeagues(userId: string): LeagueRow[] {
     return db
       .prepare(`SELECT l.* FROM leagues l JOIN league_members m ON m.league_id = l.id WHERE m.member_id = ? ORDER BY l.name`)
@@ -287,7 +292,8 @@ export const fantasyRepo = {
   publicLeaguesNotJoined(userId: string): LeagueRow[] {
     return db
       .prepare(
-        `SELECT l.* FROM leagues l WHERE l.is_private = 0 AND l.id NOT IN (SELECT league_id FROM league_members WHERE member_id = ?) ORDER BY l.base_member_count DESC`
+        `SELECT l.* FROM leagues l WHERE l.is_private = 0 AND l.id NOT IN (SELECT league_id FROM league_members WHERE member_id = ?)
+         ORDER BY (SELECT COUNT(*) FROM league_members WHERE league_id = l.id) DESC`
       )
       .all(userId) as LeagueRow[];
   },

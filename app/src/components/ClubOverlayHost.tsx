@@ -159,7 +159,11 @@ export function ClubOverlayHost() {
             </View>
             <View style={{ flexDirection: "row", gap: 16, paddingHorizontal: 24 }}>
               <Text style={{ color: T.accent, fontSize: 13 }}>{detail.gwPts} pts this week</Text>
-              <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
+              {detail.hasWeeklyHistory ? (
+                <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
+              ) : (
+                <Text style={{ color: T.textSecondary, fontSize: 13, fontWeight: "300" }}>— this week</Text>
+              )}
             </View>
           </View>
 
@@ -171,22 +175,25 @@ export function ClubOverlayHost() {
             scrollEventThrottle={16}
           >
             {detail.form.length > 0 && (
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 22 }}>
-                {detail.form.map((f, i) => (
-                  <FormChip key={i} result={f} />
-                ))}
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 18 }}>
+                {detail.form
+                  .slice()
+                  .reverse()
+                  .map((f, i) => (
+                    <FormChip key={i} result={f} />
+                  ))}
               </View>
             )}
 
             {detail.pastFixtures.length > 0 && (
               <>
-                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 22, marginBottom: 6 }}>Past Fixtures</Text>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 18, marginBottom: 6 }}>Past Fixtures</Text>
                 {detail.pastFixtures.map((fx, i) => {
                   const { opponent, date } = splitMatchText(fx.matchText);
                   return (
                     <View key={i} style={[styles.plainRow, i === detail.pastFixtures.length - 1 && { paddingBottom: 0 }]}>
                       <Text style={{ fontSize: 13 }}>
-                        <Text style={{ color: T.text }}>{opponent}</Text>
+                        <Text style={{ color: T.textSecondary }}>{opponent}</Text>
                         {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
                       </Text>
                       <Text style={{ fontSize: 13, fontWeight: "600" }}>
@@ -199,7 +206,7 @@ export function ClubOverlayHost() {
               </>
             )}
 
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 22, marginBottom: 6 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 18, marginBottom: 6 }}>
               <Text style={{ color: T.text, fontSize: 16, fontWeight: "600" }}>Upcoming Fixtures</Text>
               <Text style={{ color: T.textSecondary, fontSize: 10, fontWeight: "500", textTransform: "uppercase", letterSpacing: 0.5 }}>Projected Points</Text>
             </View>
@@ -208,7 +215,7 @@ export function ClubOverlayHost() {
               return (
                 <View key={i} style={[styles.plainRow, i === detail.fixtures.length - 1 && { paddingBottom: 0 }]}>
                   <Text style={{ fontSize: 13 }}>
-                    <Text style={{ color: T.text }}>{opponent}</Text>
+                    <Text style={{ color: T.textSecondary }}>{opponent}</Text>
                     {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
                   </Text>
                   <Text style={{ color: T.accent, fontSize: 13, fontWeight: "600" }}>{fx.projPts} pts</Text>
@@ -218,7 +225,7 @@ export function ClubOverlayHost() {
 
             {holding && (
               <>
-                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 34, marginBottom: 6 }}>Your Position</Text>
+                <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 20, marginBottom: 6 }}>Your Position</Text>
                 <View style={styles.plainRow}>
                   <Text style={{ color: T.textSecondary, fontSize: 13 }}>Purchase price</Text>
                   <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{fmtMoney(holding.purchasePrice)}</Text>
@@ -270,6 +277,6 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, overflow: "hidden" },
   handle: { alignSelf: "center", width: 36, height: 5, borderRadius: 3, marginBottom: 14 },
   closeBtn: { position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },
+  plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 24, paddingTop: 22, paddingBottom: 38, borderTopWidth: 1 },
 });

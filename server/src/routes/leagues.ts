@@ -38,7 +38,7 @@ leaguesRouter.get("/mine", requireAuth, (req: AuthedRequest, res) => {
 
 leaguesRouter.get("/public", requireAuth, (req: AuthedRequest, res) => {
   const leagues = leagueService.publicLeagues(req.userId!);
-  res.json({ leagues: leagues.map((lg) => ({ id: lg.id, name: lg.name, membersStr: lg.base_member_count.toLocaleString("en-US") + " members" })) });
+  res.json({ leagues: leagues.map((lg) => ({ id: lg.id, name: lg.name, membersStr: fantasyRepo.getMemberCount(lg.id).toLocaleString("en-US") + " members" })) });
 });
 
 leaguesRouter.get("/lookup-code", requireAuth, (req, res) => {
@@ -46,7 +46,7 @@ leaguesRouter.get("/lookup-code", requireAuth, (req, res) => {
   if (!code.trim()) return res.json({ league: null });
   const lg = leagueService.getLeagueByCode(code);
   if (!lg) return res.json({ league: null });
-  res.json({ league: { id: lg.id, name: lg.name, membersStr: lg.base_member_count.toLocaleString("en-US") + " members" } });
+  res.json({ league: { id: lg.id, name: lg.name, membersStr: fantasyRepo.getMemberCount(lg.id).toLocaleString("en-US") + " members" } });
 });
 
 leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {

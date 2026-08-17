@@ -102,6 +102,10 @@ export function clubSummary(club: Club, currentRound: number) {
     price,
     dailyPct,
     weeklyPct,
+    // Distinct from weeklyPct===0 (a real flat week) — this tells the client
+    // whether a 7-day-old price actually exists to compare against, so it
+    // can show "not enough history yet" instead of a misleading "+0.0%".
+    hasWeeklyHistory: price7dAgo != null,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
     netDemand,
@@ -134,7 +138,7 @@ export function clubDetail(club: Club, currentRound: number) {
       opp: opponent?.name ?? "TBD",
       home: f.homeClubId === club.id,
       diff: difficultyFromWinProb(winProb),
-      matchText: fixtureMatchTextNoTime(f, club.id, opponent),
+      matchText: fixtureMatchText(f, club.id, opponent),
       projPts: projectPoints(winProb, f.drawProb ?? 0.24),
     };
   });

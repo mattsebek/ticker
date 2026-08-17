@@ -24,6 +24,8 @@ export interface ClubSummary {
   price: number;
   dailyPct: number;
   weeklyPct: number;
+  /** False until the club has a recorded price at least 7 days old — distinguishes "genuinely flat this week" from "no week-old data yet". */
+  hasWeeklyHistory: boolean;
   seasonPct: number;
   ownershipPct: number;
   /** Unique buyers vs. sellers since this club's last settlement — the same signal driving its price's demand component, live rather than frozen at the last settlement. */
