@@ -186,8 +186,7 @@ adminRouter.get("/clubs", (req, res) => {
     const startingPrice = series[0]?.price ?? 0;
     const currentPrice = marketRepo.getPrice(c.id) ?? startingPrice;
     const pctChange = startingPrice > 0 ? ((currentPrice - startingPrice) / startingPrice) * 100 : 0;
-    const demand = marketRepo.getDemandSince(c.id, marketRepo.getLastSettlementTime(c.id) ?? 0);
-    const netDemand: "buying" | "selling" | "flat" = demand.uniqueBuyers > demand.uniqueSellers ? "buying" : demand.uniqueBuyers < demand.uniqueSellers ? "selling" : "flat";
+    const netDemand = marketRepo.getLatestDemandDirection(c.id);
 
     const diag = clubPricingDiagnostics(c.id, currentPrice);
     if (diag.eligible) {

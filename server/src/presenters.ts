@@ -87,18 +87,11 @@ export function clubSummary(club: Club, currentRound: number) {
   const dailyPct = price24hAgo && price24hAgo > 0 ? round2(((price - price24hAgo) / price24hAgo) * 100) : 0;
   const weeklyPct = price7dAgo && price7dAgo > 0 ? round2(((price - price7dAgo) / price7dAgo) * 100) : 0;
 
-  // Same buy/sell signal the price engine itself uses (computeDemandChangePct
-  // in priceEngine.ts) — unique buyers vs. sellers since this club's last
-  // settlement — read live rather than off the last settlement's frozen
-  // breakdown, so it reflects trading that's happened since, not just
-  // whatever direction the price last moved for.
-  const demandSinceLastSettlement = marketRepo.getDemandSince(club.id, marketRepo.getLastSettlementTime(club.id) ?? 0);
-  const netDemand: "buying" | "selling" | "flat" =
-    demandSinceLastSettlement.uniqueBuyers > demandSinceLastSettlement.uniqueSellers
-      ? "buying"
-      : demandSinceLastSettlement.uniqueBuyers < demandSinceLastSettlement.uniqueSellers
-        ? "selling"
-        : "flat";
+  // The most recent market tick's net buyer/seller direction (Market Pricing
+  // V2) — see marketRepo.getLatestDemandDirection's doc comment for why this
+  // replaced the old "since last fixture settlement" query, which starved
+  // for a signal on any club that hadn't played recently.
+  const netDemand = marketRepo.getLatestDemandDirection(club.id);
 
   return {
     id: club.id,

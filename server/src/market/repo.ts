@@ -357,18 +357,23 @@ export const marketRepo = {
     if (!row || row.performance_pct == null) return null;
     return { performancePct: row.performance_pct, demandPct: row.demand_pct };
   },
-  /** Timestamp of a club's last real (fixture-triggered) settlement — the window start for its next demand calculation. Null if it's never settled yet (season start). */
-  getLastSettlementTime(clubId: string): number | null {
-    const row = db.prepare("SELECT MAX(created_at) as t FROM price_history WHERE club_id = ? AND fixture_id IS NOT NULL").get(clubId) as { t: number | null };
-    return row.t ?? null;
-  },
-  /** Unique buyers/sellers for a club since a point in time — the demand signal for pricing. Unique managers, not raw trade count, so one very active trader can't dominate it. */
-  getDemandSince(clubId: string, sinceMs: number): { uniqueBuyers: number; uniqueSellers: number } {
-    const rows = db
-      .prepare("SELECT entry_type, COUNT(DISTINCT user_id) as n FROM ledger_entries WHERE club_id = ? AND created_at > ? GROUP BY entry_type")
-      .all(clubId, sinceMs) as { entry_type: string; n: number }[];
-    const byType = Object.fromEntries(rows.map((r) => [r.entry_type, r.n]));
-    return { uniqueBuyers: byType["BUY"] ?? 0, uniqueSellers: byType["SELL"] ?? 0 };
+  /**
+   * The live buy/sell arrow signal (public club card's "League Ownership %"
+   * arrow, admin's "% Owned" column) — reads the most recent market tick's
+   * already-computed net buyers/sellers directly, rather than re-querying
+   * ledger_entries "since last settlement" (the pre-V2 approach, which was
+   * anchored to fixture settlement time and starved for a signal on any
+   * club that hadn't played recently — the exact bug this replaces). "flat"
+   * before this club's first tick has ever run, not an error.
+   */
+  getLatestDemandDirection(clubId: string): "buying" | "selling" | "flat" {
+    const row = db
+      .prepare("SELECT net_buyers, net_sellers FROM price_history WHERE club_id = ? AND event_type = 'DEMAND' ORDER BY id DESC LIMIT 1")
+      .get(clubId) as { net_buyers: number | null; net_sellers: number | null } | undefined;
+    if (!row) return "flat";
+    const buyers = row.net_buyers ?? 0;
+    const sellers = row.net_sellers ?? 0;
+    return buyers > sellers ? "buying" : buyers < sellers ? "selling" : "flat";
   },
   /**
    * Sets a club's IPO/opening price. Unlike recordPriceHistory(), this
