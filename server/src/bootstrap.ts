@@ -97,18 +97,55 @@ function clubFormSignal(clubId: string): number | null {
   return real.reduce((a, b) => a + b, 0) / real.length;
 }
 
-const PRIOR_SEASON_WEIGHT = 0.65; // last season's actual table is a far steadier signal than 1-2 early matchups
+/**
+ * Title-winning probability for the current season, by club CODE (stable
+ * across providers, unlike provider-specific club ids). Source: Squawka
+ * Signal model (20,000-season-simulation title probabilities), snapshotted
+ * at the start of the season — https://www.squawka.com/us/outright-markets/
+ * premier-league-title-odds-2026-27-who-will-win-epl/. This is deliberately
+ * a one-time snapshot, not a live feed: it only matters for a club's very
+ * first price, before any real fixture has settled — after that, real
+ * performance and demand take over (see priceEngine.ts), so a stale
+ * pre-season number doesn't linger as stale pricing.
+ */
+const TITLE_ODDS_BY_CODE: Record<string, number> = {
+  ARS: 0.307,
+  MCI: 0.272,
+  LIV: 0.108,
+  CHE: 0.045,
+  NEW: 0.041,
+  MUN: 0.031,
+  AST: 0.03,
+  BRI: 0.03,
+  BRE: 0.024,
+  BOU: 0.022,
+  TOT: 0.017,
+  NOT: 0.016,
+  FUL: 0.014,
+  CRY: 0.011,
+  EVE: 0.01,
+  LEE: 0.01,
+  SUN: 0.01,
+  COV: 0.001,
+  IPS: 0.001,
+  HUL: 0.0,
+};
+
+const TITLE_ODDS_WEIGHT = 0.75; // the dominant signal, per product intent: initial price = who's actually favored to win it
 
 /**
- * Blends last season's final points (steady, real signal) with the current
- * season's early win-probability form (freshness — transfers, new manager,
- * etc.), each independently min-max normalized across this season's clubs,
- * then maps the blend onto a fixed $6-$35 range so the best and worst
- * clubs land near the ends. Newly promoted clubs (no prior top-flight
- * campaign) are estimated at the average points of last season's bottom 3
- * relegated clubs — a "typical newcomer" expectation, not an invented
- * tier. If no prior-season data is available at all (e.g. the mock
- * provider), falls back to form alone.
+ * Blends title-winning odds (the dominant signal — "these initial values
+ * should be based on PL teams most likely to win the title") with the
+ * current season's early win-probability form (freshness the title odds
+ * snapshot can't capture — an injury, a hot start), each independently
+ * min-max normalized across this season's clubs, then mapped onto a fixed
+ * price range so the favorite and the rank outsider land near the ends.
+ * Last season's final standings are still fetched and persisted (see
+ * footballRepo.setPriorSeasonPoints below) — useful on their own, e.g. for
+ * sorting the onboarding club picker — but no longer drive price directly;
+ * that's title odds' job now. A club missing from TITLE_ODDS_BY_CODE (a
+ * provider surprise, a mid-season codebase not yet updated with next
+ * year's odds) falls back to form alone rather than guessing.
  */
 async function computeOpeningPrices(clubIds: string[]): Promise<Map<string, number>> {
   const priorStandings = await footballService.fetchPriorSeasonStandings();
@@ -118,6 +155,7 @@ async function computeOpeningPrices(clubIds: string[]): Promise<Map<string, numb
   const rows = clubIds.map((id) => ({
     id,
     form: clubFormSignal(id),
+    titleOdds: footballService.getClub(id)?.code != null ? TITLE_ODDS_BY_CODE[footballService.getClub(id)!.code] : undefined,
     priorPoints: priorStandings.get(id)?.points ?? newcomerEstimate,
   }));
 
@@ -127,22 +165,18 @@ async function computeOpeningPrices(clubIds: string[]): Promise<Map<string, numb
     return (v: number) => (max - min < 0.01 ? 0.5 : clamp((v - min) / (max - min), 0, 1));
   };
   const forms = rows.map((r) => r.form).filter((v): v is number => v != null);
-  const points = rows.map((r) => r.priorPoints).filter((v): v is number => v != null);
+  const titleOdds = rows.map((r) => r.titleOdds).filter((v): v is number => v != null);
   const normForm = norm(forms);
-  const normPoints = norm(points);
+  const normTitleOdds = norm(titleOdds);
   const formMid = forms.length ? forms.reduce((a, b) => a + b, 0) / forms.length : 0.33;
 
-  // Persisted separately from the price it feeds into — price keeps moving
-  // with demand/performance after this, but "how good was this club last
-  // season" is a fixed fact, useful on its own (e.g. ranking the onboarding
-  // club picker by preseason expectations rather than a live, demand-skewed
-  // price).
+  // Persisted separately from the price it feeds into — see doc comment above.
   for (const r of rows) footballRepo.setPriorSeasonPoints(r.id, r.priorPoints ?? null);
 
   return new Map(
     rows.map((r) => {
       const formT = normForm(r.form ?? formMid);
-      const t = r.priorPoints != null && points.length > 0 ? PRIOR_SEASON_WEIGHT * normPoints(r.priorPoints) + (1 - PRIOR_SEASON_WEIGHT) * formT : formT;
+      const t = r.titleOdds != null && titleOdds.length > 0 ? TITLE_ODDS_WEIGHT * normTitleOdds(r.titleOdds) + (1 - TITLE_ODDS_WEIGHT) * formT : formT;
       return [r.id, round2(OPENING_PRICE_FLOOR + t * (OPENING_PRICE_CEIL - OPENING_PRICE_FLOOR))];
     })
   );
