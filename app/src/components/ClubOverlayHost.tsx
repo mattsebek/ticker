@@ -143,7 +143,7 @@ export function ClubOverlayHost() {
             </Pressable>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingRight: 64, paddingBottom: 14 }}>
               <ClubBadge code={detail.code} color={detail.color} size={52} />
-              <View style={{ flex: 1 }}>
+              <View>
                 <Text style={{ color: T.text, fontSize: 16, fontWeight: "500", marginBottom: 6 }}>{detail.name}</Text>
                 <Text style={{ color: T.text, fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "500", letterSpacing: -0.3 }}>{fmtMoney(detail.price)}</Text>
               </View>

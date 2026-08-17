@@ -194,6 +194,19 @@ export const marketRepo = {
       `INSERT INTO price_history (club_id, round, price, impact_pct, fixture_id, created_at) VALUES (?,0,?,0,NULL,?)`
     ).run(clubId, price, now);
   },
+  /**
+   * Wipes EVERY price_history row for a club, including real (fixture_id
+   * NOT NULL) settlement rows — setOpeningPrice() deliberately preserves
+   * those, which is correct for healing a single still-frozen club, but
+   * wrong for a full reseed of clubs that already have real settlement
+   * history: those stale rows kept blocking hasSettledFixture() from ever
+   * reprocessing that fixture again, so the club's live price silently
+   * stopped updating even though the reseed had reset it. Call this right
+   * before setOpeningPrice() when the intent is a genuine fresh restart.
+   */
+  clearAllPriceHistory(clubId: string) {
+    db.prepare("DELETE FROM price_history WHERE club_id = ?").run(clubId);
+  },
   getPriceSeries(clubId: string): { round: number; price: number }[] {
     return db.prepare("SELECT round, price FROM price_history WHERE club_id = ? ORDER BY round ASC").all(clubId) as any[];
   },

@@ -224,17 +224,22 @@ async function healStaleOpeningPrices() {
 /**
  * Admin-only, pre-launch tuning action: force-recomputes and OVERWRITES
  * every priceable club's price, bypassing ensureOpeningPrice's once-only
- * guard — unlike seedOpeningPrices() this is safe only before real
- * settlement has moved any price organically. Not wired into any automatic
- * path; exposed via POST /internal/reseed-prices for iterating on the
- * pricing formula before the season actually starts.
+ * guard — a genuine restart, not just a one-time reseed, so it also clears
+ * every club's price_history (not just round 0, which is all
+ * setOpeningPrice touches on its own — see clearAllPriceHistory's doc
+ * comment for why leaving real settlement rows behind silently breaks
+ * future settlement). Not wired into any automatic path; exposed via
+ * POST /internal/reseed-prices.
  */
 export async function reseedAllOpeningPrices(): Promise<{ priced: number; skipped: number }> {
   const all = footballRepo.listClubs();
   const clubs = all.filter((c) => footballRepo.listFixturesForClub(c.id).length > 0);
   if (clubs.length === 0) return { priced: 0, skipped: all.length };
   const prices = await computeOpeningPrices(clubs.map((c) => c.id));
-  for (const [clubId, price] of prices) marketRepo.setOpeningPrice(clubId, price);
+  for (const [clubId, price] of prices) {
+    marketRepo.clearAllPriceHistory(clubId);
+    marketRepo.setOpeningPrice(clubId, price);
+  }
   return { priced: clubs.length, skipped: all.length - clubs.length };
 }
 
