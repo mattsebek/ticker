@@ -204,6 +204,9 @@ export function ClubOverlayHost() {
                   <Text style={{ color: colorForPct(detail.price - holding.purchasePrice), fontSize: 14, fontWeight: "600" }}>
                     {detail.price - holding.purchasePrice >= 0 ? "+" : "-"}
                     {fmtMoney(Math.abs(detail.price - holding.purchasePrice))}
+                    {" ("}
+                    {fmtPct(((detail.price - holding.purchasePrice) / holding.purchasePrice) * 100)}
+                    {")"}
                   </Text>
                 </View>
               </>
