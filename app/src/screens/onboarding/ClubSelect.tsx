@@ -6,8 +6,8 @@ import { ClubBadge } from "../../components/ClubBadge";
 import { Button } from "../../components/Button";
 import { api } from "../../api/client";
 import type { ClubSummary } from "../../api/types";
-import { fmtMoney } from "../../utils/format";
-import { FONT_SERIF, GREEN } from "../../theme/theme";
+import { fmtMoney, fmtPct } from "../../utils/format";
+import { FONT_SERIF, GREEN, colorForPct } from "../../theme/theme";
 
 const STARTING_CASH = 100;
 
@@ -100,7 +100,10 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
             >
               <ClubBadge code={c.code} color={c.color} size={36} />
               <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
-              <Text style={{ fontSize: 15, fontWeight: "600", marginRight: 10, color: T.text }}>{fmtMoney(c.price)}</Text>
+              <View style={{ alignItems: "flex-end", marginRight: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{fmtMoney(c.price)}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
+              </View>
               {selected ? (
                 <View style={[styles.ownedPill, { backgroundColor: T.accentTint }]}>
                   <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent }}>Selected</Text>
