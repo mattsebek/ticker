@@ -49,20 +49,23 @@ export function MarketScreen() {
     [clubs, q, isSearching]
   );
 
-  // Real 24h movers only — a club with no 24h-old price yet (e.g. right
-  // after a reset) isn't "flat", it's unmeasured, and shouldn't be mixed in
-  // with genuine movement. No cosmetic jitter here: unlike the wobble
-  // elsewhere on this screen (jitPrice/jitPct above), a list that's
-  // ostensibly ranking real movers needs to actually be real.
-  const movers = useMemo(
-    () =>
-      clubs
-        .filter((c) => c.hasDailyHistory)
-        .slice()
-        .sort((a, b) => Math.abs(b.dailyPct) - Math.abs(a.dailyPct))
-        .slice(0, TOP_MOVERS_COUNT),
-    [clubs]
-  );
+  // Real movers only, never fabricated — but always something to show. Real
+  // 24h movement is preferred when it exists; right after a reset (or in
+  // the first 24h of a fresh season) no club has a day-old price yet, so
+  // this falls back to real since-opening movement (seasonPct) instead of
+  // an empty "come back later" panel. No cosmetic jitter here: unlike the
+  // wobble elsewhere on this screen (jitPrice/jitPct above), a list that's
+  // ostensibly ranking real movers needs to actually be real — including
+  // in what it falls back to.
+  const movers = useMemo(() => {
+    const withDailyHistory = clubs.filter((c) => c.hasDailyHistory);
+    const usingDaily = withDailyHistory.length > 0;
+    const source = usingDaily ? withDailyHistory : clubs;
+    return source
+      .map((c) => ({ club: c, pct: usingDaily ? c.dailyPct : c.seasonPct }))
+      .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+      .slice(0, TOP_MOVERS_COUNT);
+  }, [clubs]);
 
   const topEarners = useMemo(
     () => clubs.slice().sort((a, b) => (earnersRange === "ytd" ? b.seasonPts - a.seasonPts : b.gwPts - a.gwPts)).slice(0, 6),
@@ -118,20 +121,16 @@ export function MarketScreen() {
         ) : (
           <View>
             <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Top Movers</Text>
-            {movers.length > 0 ? (
-              <View style={styles.grid}>
-                {movers.map((c) => (
-                  <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(c.dailyPct) }}>
-                      {c.dailyPct >= 0 ? "▲" : "▼"} {fmtPct(c.dailyPct)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <Text style={{ color: T.textSecondary, fontSize: 14, marginBottom: 8 }}>Check back in 24 hours for today's biggest movers.</Text>
-            )}
+            <View style={styles.grid}>
+              {movers.map(({ club: c, pct }) => (
+                <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(pct) }}>
+                    {pct >= 0 ? "▲" : "▼"} {fmtPct(pct)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Top Point Earners</Text>
