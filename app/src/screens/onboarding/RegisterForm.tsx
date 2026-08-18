@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -98,10 +98,6 @@ export function RegisterForm({ stage, name, email, birthday, agreedToTerms, setN
   const meta = META[stage];
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  useEffect(() => {
-    if (stage === "birthday" && !birthday) setBirthday(toISODate(defaultBirthday()));
-  }, [stage]);
-
   const valid = stage === "name" ? name.trim().length > 0 : stage === "email" ? /\S+@\S+\.\S+/.test(email) : !!birthday && agreedToTerms;
 
   return (
@@ -164,7 +160,7 @@ export function RegisterForm({ stage, name, email, birthday, agreedToTerms, setN
               accessibilityRole="button"
               accessibilityLabel="Date of birth"
             >
-              <Text style={{ fontSize: 17, fontWeight: "500", color: T.text }}>{fmtLongDate(birthday) || "Select date"}</Text>
+              <Text style={{ fontSize: 17, fontWeight: "500", color: birthday ? T.text : T.textSecondary }}>{fmtLongDate(birthday) || "mm/dd/yyyy"}</Text>
               <Text style={{ fontSize: 13, color: T.textSecondary, transform: [{ rotate: pickerOpen ? "180deg" : "0deg" }] }}>▾</Text>
             </Pressable>
             {pickerOpen && (
