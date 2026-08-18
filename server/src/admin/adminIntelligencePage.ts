@@ -55,24 +55,45 @@ const FILTERS: { key: IntelligenceFilter; label: string }[] = [
   { key: "expired", label: "Expired" },
 ];
 
+type ButtonVariant = "solid" | "ghost" | "ghostActive" | "danger";
+
+/**
+ * One shared button builder — every action button gets exactly one `style`
+ * attribute (base pill styling merged with its variant's color/border),
+ * never two. The previous version built a base style string and a
+ * per-button style string separately and spliced them into the same tag
+ * via string replace, which silently produced two `style` attributes on
+ * one element — HTML only honors the first, so every button's intended
+ * color/border was discarded and everything rendered with generic default
+ * styling regardless of variant.
+ */
+function actionButton(label: string, opts: { className: string; dataAction?: string; id: string; variant: ButtonVariant }): string {
+  const variantStyle: Record<ButtonVariant, string> = {
+    solid: `background:${T.accent};color:#00170c;border:none;font-weight:700;`,
+    ghost: `background:transparent;color:${T.text};border:1px solid ${T.border};font-weight:500;`,
+    ghostActive: `background:${T.elevated};color:${T.text};border:1px solid ${T.border};font-weight:500;`,
+    danger: `background:transparent;color:${T.red};border:1px solid ${T.red};font-weight:500;`,
+  };
+  const dataAction = opts.dataAction ? ` data-action="${esc(opts.dataAction)}"` : "";
+  return `<button class="${opts.className}"${dataAction} data-id="${esc(opts.id)}" style="font-size:12px;padding:7px 14px;border-radius:100px;cursor:pointer;margin-right:6px;transition:opacity 0.15s;${variantStyle[opts.variant]}">${esc(label)}</button>`;
+}
+
 function nuggetCard(n: AdminNuggetRow): string {
   const scoreColor = n.interestScore >= 85 ? T.accent : n.interestScore >= 70 ? T.text : T.textSecondary;
   const actions: string[] = [];
   if (n.status === "CANDIDATE") {
-    actions.push(`<button class="act-btn" data-action="publish" data-id="${esc(n.id)}" style="background:${T.accent};color:#00170c;border:none;font-weight:700;">Publish</button>`);
+    actions.push(actionButton("Publish", { className: "act-btn", dataAction: "publish", id: n.id, variant: "solid" }));
     if (n.signalType !== "MANUAL") {
-      actions.push(`<button class="act-btn" data-action="regenerate" data-id="${esc(n.id)}" style="background:transparent;color:${T.text};border:1px solid ${T.border};">Regenerate</button>`);
+      actions.push(actionButton("Regenerate", { className: "act-btn", dataAction: "regenerate", id: n.id, variant: "ghost" }));
     }
-    actions.push(`<button class="edit-btn" data-id="${esc(n.id)}" style="background:transparent;color:${T.text};border:1px solid ${T.border};">Edit</button>`);
-    actions.push(`<button class="act-btn" data-action="dismiss" data-id="${esc(n.id)}" style="background:transparent;color:${T.red};border:1px solid ${T.red};">Dismiss</button>`);
+    actions.push(actionButton("Edit", { className: "edit-btn", id: n.id, variant: "ghost" }));
+    actions.push(actionButton("Dismiss", { className: "act-btn", dataAction: "dismiss", id: n.id, variant: "danger" }));
   } else if (n.status === "PUBLISHED") {
-    actions.push(
-      `<button class="act-btn" data-action="${n.isPinned ? "unpin" : "pin"}" data-id="${esc(n.id)}" style="background:${n.isPinned ? T.elevated : "transparent"};color:${T.text};border:1px solid ${T.border};">${n.isPinned ? "Unpin" : "Pin"}</button>`
-    );
-    actions.push(`<button class="edit-btn" data-id="${esc(n.id)}" style="background:transparent;color:${T.text};border:1px solid ${T.border};">Edit</button>`);
-    actions.push(`<button class="act-btn" data-action="dismiss" data-id="${esc(n.id)}" style="background:transparent;color:${T.red};border:1px solid ${T.red};">Retract</button>`);
+    actions.push(actionButton(n.isPinned ? "Unpin" : "Pin", { className: "act-btn", dataAction: n.isPinned ? "unpin" : "pin", id: n.id, variant: n.isPinned ? "ghostActive" : "ghost" }));
+    actions.push(actionButton("Edit", { className: "edit-btn", id: n.id, variant: "ghost" }));
+    actions.push(actionButton("Retract", { className: "act-btn", dataAction: "dismiss", id: n.id, variant: "danger" }));
   }
-  const actionsHtml = actions.map((a) => a.replace("<button ", `<button style="font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;margin-right:6px;" `)).join("");
+  const actionsHtml = actions.join("");
 
   return `
   <div class="nugget-card" data-id="${esc(n.id)}" style="background:${T.card};border:1px solid ${T.border};border-radius:12px;padding:16px 18px;margin-bottom:10px;">

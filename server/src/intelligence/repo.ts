@@ -134,11 +134,41 @@ export const intelligenceRepo = {
     return row ? rowToNugget(row) : undefined;
   },
 
-  /** Most recent nugget (any status, any dedup_key) for this exact signal type + club generated since `sinceMs` — the cross-day/cross-fixture cooldown check, independent of a detector's own windowLabel granularity. */
-  findRecentBySignalAndClub(signalType: string, clubId: string | null, sinceMs: number): MarketNuggetRow | undefined {
+  /**
+   * Most recent RESOLVED (published or dismissed) nugget for this exact
+   * signal type + club generated since `sinceMs` — the cross-day/cross-
+   * fixture cooldown check once a story has actually been reviewed,
+   * independent of a detector's own windowLabel granularity. Deliberately
+   * excludes CANDIDATE rows — an unreviewed one is handled by
+   * findUnresolvedBySignalAndClub instead, which coalesces rather than
+   * cooldown-blocks.
+   */
+  findRecentResolvedBySignalAndClub(signalType: string, clubId: string | null, sinceMs: number): MarketNuggetRow | undefined {
     const row = clubId
-      ? db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id = ? AND generated_at >= ? ORDER BY id DESC LIMIT 1").get(signalType, clubId, sinceMs)
-      : db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id IS NULL AND generated_at >= ? ORDER BY id DESC LIMIT 1").get(signalType, sinceMs);
+      ? db
+          .prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id = ? AND status IN ('PUBLISHED','DISMISSED') AND generated_at >= ? ORDER BY id DESC LIMIT 1")
+          .get(signalType, clubId, sinceMs)
+      : db
+          .prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id IS NULL AND status IN ('PUBLISHED','DISMISSED') AND generated_at >= ? ORDER BY id DESC LIMIT 1")
+          .get(signalType, sinceMs);
+    return row ? rowToNugget(row) : undefined;
+  },
+
+  /**
+   * The single still-open (status='CANDIDATE') nugget for this exact
+   * signal type + club, if any, regardless of its dedup_key. An admin
+   * hasn't reviewed it yet, so a fresh detection of the same underlying
+   * condition — even under a new day/fixture windowLabel — refreshes this
+   * row in place instead of spawning a sibling. This is the fix for the
+   * flood the day/fixture-keyed dedup alone couldn't catch: without it, an
+   * escalating-but-still-unreviewed story (day 1 score 70, day 2 score 82,
+   * day 3 score 95 — each "materially stronger" than the last) would pile
+   * up three separate open candidates instead of staying one.
+   */
+  findUnresolvedBySignalAndClub(signalType: string, clubId: string | null): MarketNuggetRow | undefined {
+    const row = clubId
+      ? db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id = ? AND status = 'CANDIDATE' ORDER BY id DESC LIMIT 1").get(signalType, clubId)
+      : db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id IS NULL AND status = 'CANDIDATE' ORDER BY id DESC LIMIT 1").get(signalType);
     return row ? rowToNugget(row) : undefined;
   },
 
@@ -171,15 +201,24 @@ export const intelligenceRepo = {
     return this.getById(id)!;
   },
 
-  /** Material-change supersede (spec section 53): updates an existing non-terminal candidate in place rather than inserting a duplicate — refreshes score/copy/facts/expiry, keeps the same id/dedup_key/status. */
+  /**
+   * Material-change supersede (spec section 53) AND the unresolved-
+   * candidate-coalescing refresh both land here — updates an existing
+   * non-terminal candidate in place rather than inserting a duplicate.
+   * dedup_key is refreshed too: when this is coalescing an unreviewed
+   * candidate into today's fresher window (a new day bucket, a new
+   * fixture), the row now legitimately represents that new window, not
+   * the stale one it was first created under.
+   */
   updateInPlace(id: string, input: NewNuggetInput) {
     db.prepare(
       `UPDATE market_nuggets SET
-        interest_score = ?, category = ?, emoji = ?, headline = ?, body = ?, generated_headline = ?, generated_body = ?,
+        interest_score = ?, dedup_key = ?, category = ?, emoji = ?, headline = ?, body = ?, generated_headline = ?, generated_body = ?,
         cta_club_id = ?, source_data_json = ?, round = ?, updated_at = ?, expires_at = ?
        WHERE id = ?`
     ).run(
       input.interestScore,
+      input.dedupKey,
       input.category,
       input.emoji,
       input.headline,

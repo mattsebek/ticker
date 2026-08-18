@@ -32,19 +32,27 @@ function runAllDetectors(): CandidateSignal[] {
 }
 
 /**
- * Persists one scored, above-threshold candidate. Two layers of
- * suppression, in order:
+ * Persists one scored, above-threshold candidate. Three layers, in order:
  *  1. Exact dedup key (same detector-chosen window, e.g. today's day
  *     bucket or this exact fixture) — an in-place update if it materially
  *     strengthens an existing non-terminal nugget, per spec section 53.
- *  2. Cross-window cooldown — even with a NEW dedup key (a new day, a new
- *     gameweek's fixture), if this exact (signalType, clubId) pair already
- *     produced a nugget within its cooldown window and this one isn't
- *     materially stronger, skip entirely. Without this, a persistently-true
- *     condition (a club sitting above the crowded-ownership threshold every
- *     gameweek, chronically elevated PPS every day) would otherwise
- *     generate a "fresh" candidate forever, flooding the admin queue with
- *     the same story retold daily/weekly.
+ *  2. Unresolved coalescing — if no exact-key match, but this exact
+ *     (signalType, clubId) pair already has a still-open CANDIDATE under a
+ *     DIFFERENT window (yesterday's day bucket, a previous gameweek's
+ *     fixture), refresh THAT row in place rather than opening a sibling.
+ *     The admin hasn't reviewed it yet, so there is no reason for two
+ *     "here's the crowded-trade story about Arsenal" cards to exist at
+ *     once — one card, kept current, is correct regardless of whether the
+ *     new reading is stronger or weaker than the old one. This is what
+ *     the day/fixture-keyed cooldown alone couldn't catch: an escalating
+ *     but still-unreviewed story (day 1 score 70, day 2 score 82, day 3
+ *     score 95 — each one "materially stronger" than the last) would
+ *     otherwise pile up three separate open candidates instead of staying
+ *     one that simply reads 95 by day 3.
+ *  3. Cross-window cooldown against a RESOLVED nugget — once the admin has
+ *     published or dismissed a story, a new occurrence under a fresh
+ *     window is only allowed through if it materially strengthens that
+ *     resolved one; otherwise it's the same old story retold too soon.
  * Returns which happened.
  */
 function persistCandidate(signal: CandidateSignal, score: number): "created" | "updated" | "skipped" | "cooldown" {
@@ -54,9 +62,15 @@ function persistCandidate(signal: CandidateSignal, score: number): "created" | "
   const currentRound = gameweekService.currentRound();
   const expiresAt = defaultExpiresAt(signal.signalType, now, currentRound);
 
+  let coalesceTarget: MarketNuggetRow | null = null;
   if (!existing) {
-    const recent = intelligenceRepo.findRecentBySignalAndClub(signal.signalType, signal.clubId, now - cooldownMs(signal.signalType));
-    if (recent && !isMaterialStrengthening(recent.interestScore, score)) return "cooldown";
+    const unresolved = intelligenceRepo.findUnresolvedBySignalAndClub(signal.signalType, signal.clubId);
+    if (unresolved) {
+      coalesceTarget = unresolved;
+    } else {
+      const recentResolved = intelligenceRepo.findRecentResolvedBySignalAndClub(signal.signalType, signal.clubId, now - cooldownMs(signal.signalType));
+      if (recentResolved && !isMaterialStrengthening(recentResolved.interestScore, score)) return "cooldown";
+    }
   }
 
   const clubName = signal.clubId ? footballService.getClub(signal.clubId)?.name ?? null : null;
@@ -76,6 +90,10 @@ function persistCandidate(signal: CandidateSignal, score: number): "created" | "
     expiresAt,
   };
 
+  if (coalesceTarget) {
+    intelligenceRepo.updateInPlace(coalesceTarget.id, input);
+    return "updated";
+  }
   if (!existing) {
     intelligenceRepo.insertCandidate(input);
     return "created";
