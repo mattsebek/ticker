@@ -37,8 +37,8 @@ export function renderAdminProjectionsPage(rows: AdminProjectionRow[]): string {
           : `<span style="color:${T.textSecondary};font-size:11px;">${esc(r.status)}</span>`;
       return `
         <tr>
-          <td><a href="${detailHref}" style="color:${T.text};text-decoration:none;">${esc(r.homeClubName)} vs ${esc(r.awayClubName)}</a></td>
-          <td>${r.round}</td>
+          <td><a href="${detailHref}" style="color:${T.text};text-decoration:none;">${esc(r.homeClubName)} (h) vs ${esc(r.awayClubName)} (a)</a></td>
+          <td style="text-align:center;">${r.round}</td>
           <td>${esc(r.kickoffStr)}</td>
           <td>${pct(r.consensusHomeProb)} / ${pct(r.consensusDrawProb)} / ${pct(r.consensusAwayProb)}</td>
           <td>${num(r.lambdaHome, 2)} / ${num(r.lambdaAway, 2)}</td>
@@ -53,7 +53,7 @@ export function renderAdminProjectionsPage(rows: AdminProjectionRow[]): string {
     <p style="color:${T.textSecondary};font-size:13px;margin:-12px 0 20px;">Market-calibrated Points Projection Engine — shadow mode. These numbers do not affect live club pricing yet.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Fixture</th><th>Round</th><th>Kickoff</th><th>Consensus H/D/A</th><th>λ Home/Away</th><th>Projected Pts H/A</th><th>Status</th></tr></thead>
+        <thead><tr><th>Fixture</th><th style="text-align:center;">GW</th><th>Kickoff</th><th>Consensus H/D/A</th><th>λ Home/Away</th><th>Projected Pts H/A</th><th>Status</th></tr></thead>
         <tbody>${body || `<tr><td colspan="7" class="empty">No projections computed yet — run the odds-refresh job or POST /internal/refresh-odds-projections.</td></tr>`}</tbody>
       </table>
     </div>
