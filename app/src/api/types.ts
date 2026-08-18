@@ -34,6 +34,8 @@ export interface ClubSummary {
   ownershipPct: number;
   /** Unique buyers vs. sellers since this club's last settlement — the same signal driving its price's demand component, live rather than frozen at the last settlement. */
   netDemand: "buying" | "selling" | "flat";
+  /** performancePct is a raw fraction (0.0893 = +8.93%), unlike dailyPct/weeklyPct/seasonPct which are already ×100 — from the most recent real fixture settlement, null until the club's first one. */
+  priceBreakdown: { performancePct: number; demandPct: number | null } | null;
   gwPts: number;
   seasonPts: number;
   sparkline: number[];
