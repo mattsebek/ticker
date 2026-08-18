@@ -101,6 +101,33 @@ export const footballService = {
     return { updated: results.length };
   },
 
+  /**
+   * Ops-only repair tool: re-fetches every fixture's TRUE kickoff straight
+   * from the provider and overwrites the stored value, leaving
+   * status/scores/odds untouched. Ground truth for
+   * bootstrap.ts's resetToPreGameweek1(), which needs the real,
+   * uncorrupted kickoff times to compute a correct whole-week shift — safe
+   * to call any time (including after a previous shift), since it always
+   * restores the provider's actual value rather than adjusting whatever's
+   * currently stored.
+   */
+  async resyncKickoffsFromProvider(): Promise<{ updated: number; unmatched: number }> {
+    const seasonProviderId = await this.currentSeasonProviderId();
+    const fixturesRaw = await provider.fetchFixtures(seasonProviderId);
+    let updated = 0;
+    let unmatched = 0;
+    for (const f of fixturesRaw) {
+      const tickerId = footballRepo.getMapping(provider.name, "fixture", f.providerId);
+      if (!tickerId) {
+        unmatched++;
+        continue;
+      }
+      footballRepo.setFixtureKickoff(tickerId, f.kickoff);
+      updated++;
+    }
+    return { updated, unmatched };
+  },
+
   async currentSeasonProviderId(): Promise<string> {
     const [competitionRaw] = await provider.fetchCompetitions();
     const seasonRaw = pickSeason(await provider.fetchSeasons(competitionRaw.providerId));

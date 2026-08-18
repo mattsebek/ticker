@@ -257,13 +257,16 @@ const WEEK_MS = 7 * DAY_MS;
  * Admin-only, high-impact ops action: resets the whole season back to
  * right before Game Week 1 for a clean end-to-end re-simulation of Market
  * Pricing V2 + the synthetic ecosystem. Touches:
- *  - every fixture: reverted to unplayed, kickoffs shifted forward by a
- *    WHOLE number of weeks (never a partial-day offset) until round 1's
- *    deadline lands at least `daysUntilFirstKickoff` days out — a whole-week
- *    shift is deliberate: it's the only offset that preserves each real
- *    fixture's actual day-of-week and kickoff time (Friday-night opener,
- *    Saturday 3pm kickoffs, etc.); shifting by a raw day count would land
- *    Game Week 1 on an arbitrary, non-matchday weekday instead (see
+ *  - every fixture's kickoff: first re-derived from the provider's actual
+ *    schedule (resyncKickoffsFromProvider — makes this function correct
+ *    regardless of any previous shift already applied), then reverted to
+ *    unplayed and shifted forward by a WHOLE number of weeks (never a
+ *    partial-day offset) until round 1's deadline lands at least
+ *    `daysUntilFirstKickoff` days out — a whole-week shift is deliberate:
+ *    it's the only offset that preserves each real fixture's actual
+ *    day-of-week and kickoff time (Friday-night opener, Saturday 3pm
+ *    kickoffs, etc.); shifting by a raw day count would land Game Week 1 on
+ *    an arbitrary, non-matchday weekday instead (see
  *    footballRepo.resetAllFixtureResults's doc comment for why shifting at
  *    all isn't optional — leaving a past kickoff in place gets round 1
  *    silently auto-locked from current holdings on the very next boot)
@@ -277,6 +280,7 @@ const WEEK_MS = 7 * DAY_MS;
  * what. Exposed via POST /internal/reset-to-pregameweek1.
  */
 export async function resetToPreGameweek1(daysUntilFirstKickoff = 2): Promise<{ fixturesReset: number; pricesReset: number; newRound1KickoffMs: number }> {
+  await footballService.resyncKickoffsFromProvider();
   const round1 = footballRepo.listFixturesByRound(1);
   if (round1.length === 0) throw new Error("No round 1 fixtures found — has the season been imported?");
   const earliestKickoffMs = Math.min(...round1.map((f) => new Date(f.kickoff).getTime()));

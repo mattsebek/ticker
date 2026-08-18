@@ -169,6 +169,11 @@ export const footballRepo = {
     });
   },
 
+  /** Ops-only: corrects a single fixture's stored kickoff without touching status/scores/odds — see footballService.resyncKickoffsFromProvider(). */
+  setFixtureKickoff(id: string, kickoff: string) {
+    db.prepare("UPDATE ticker_fixtures SET kickoff = ? WHERE id = ?").run(kickoff, id);
+  },
+
   getClub(id: string): Club | undefined {
     return db.prepare("SELECT id, name, code, color, prior_season_points as priorSeasonPoints FROM ticker_clubs WHERE id = ?").get(id) as
       | Club
