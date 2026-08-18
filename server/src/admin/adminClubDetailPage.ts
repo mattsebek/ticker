@@ -88,11 +88,17 @@ function renderTimelineEvent(row: any): string {
   }
 
   const color = row.impact_pct > 0 ? T.accent : row.impact_pct < 0 ? T.red : T.textSecondary;
+  // Price transition alongside the % so a glance down the timeline shows the
+  // actual dollar fluctuation, not just the relative change.
+  const priceTransition = row.previous_price != null ? `${fmt(row.previous_price)} → ${fmt(row.price)}` : fmt(row.price);
   return `
     <details style="background:${T.card};border:1px solid ${T.border};border-radius:10px;margin-bottom:6px;">
-      <summary style="padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;">
+      <summary style="padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <span><span style="color:${T.textSecondary};font-size:12px;">${time}</span> — <b>${esc(label)}</b></span>
-        <span style="color:${color};font-weight:600;">${impact}</span>
+        <span style="text-align:right;white-space:nowrap;">
+          <span style="color:${T.textSecondary};font-size:12px;">${priceTransition}</span>
+          <span style="color:${color};font-weight:600;margin-left:8px;">${impact}</span>
+        </span>
       </summary>
       <div style="padding:0 14px 12px;font-size:12.5px;color:${T.textSecondary};line-height:1.7;">${detail}</div>
     </details>`;
@@ -131,10 +137,10 @@ export function renderAdminClubDetailPage(d: AdminClubDetail): string {
       ${
         d.forwardProjection
           ? statCard(
-              `Forward Projection (${d.forwardProjection.gameweeks} GW)`,
+              `Forward Proj. (${d.forwardProjection.gameweeks} GW)`,
               `${d.forwardProjection.points.toFixed(1)} pts` + (d.forwardProjection.delta != null ? ` <span style="font-size:12px;color:${d.forwardProjection.delta >= 0 ? T.accent : T.red};">${d.forwardProjection.delta >= 0 ? "+" : ""}${d.forwardProjection.delta.toFixed(1)}</span>` : "")
             )
-          : statCard(`Forward Projection`, "—")
+          : statCard(`Forward Proj.`, "—")
       }
     </div>
 
@@ -144,7 +150,7 @@ export function renderAdminClubDetailPage(d: AdminClubDetail): string {
           <div style="font-size:11px;color:${T.textSecondary};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Price Pressure Score</div>
           <div style="font-size:28px;font-weight:600;color:${scoreColor(d.pressure.score)};">${d.pressure.score ?? "—"}</div>
         </div>
-        <div style="font-size:12px;color:${T.textSecondary};text-align:right;">
+        <div style="font-size:12px;color:${T.textSecondary};text-align:right;line-height:1.9;">
           <div>Price direction (24H): <b style="color:${T.text};">${directionLabel(d.priceDirection)}</b></div>
           <div>Price Pressure direction: <b style="color:${T.text};">${directionLabel(d.ppsDirection)}</b></div>
           <div style="margin-top:4px;">${divergenceBadge}</div>
