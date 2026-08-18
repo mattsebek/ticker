@@ -30,3 +30,20 @@ export function difficultyFromWinProb(winProb: number): Difficulty {
   if (winProb <= 0.32) return "Hard";
   return "Medium";
 }
+
+/**
+ * Difficulty derived directly from the Points Projection Engine's own
+ * projected-points number — used specifically by the mobile Upcoming
+ * Fixtures pills, where the product requirement is one coherent pipeline
+ * (Projection Engine -> Points -> Difficulty -> Color), not a second,
+ * independently-computed difficulty signal like difficultyFromWinProb
+ * above (which stays in place for its own existing callers). Thresholds
+ * calibrated against real projected-points output across a full round of
+ * fixtures: values cluster tightly around ~4.0-4.4 for genuinely close
+ * matches, with real lopsided fixtures spreading out to roughly 2.5-6.
+ */
+export function difficultyFromProjectedPoints(projPts: number): Difficulty {
+  if (projPts >= 4.8) return "Easy";
+  if (projPts <= 3.5) return "Hard";
+  return "Medium";
+}

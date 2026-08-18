@@ -9,7 +9,7 @@ import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
 import { fantasyRepo, LineupStatus } from "./fantasy/repo";
 import { fantasyConfig } from "./fantasy/fantasyConfig";
-import { expectedTickerPoints, difficultyFromWinProb } from "./fantasy/projection";
+import { expectedTickerPoints, difficultyFromWinProb, difficultyFromProjectedPoints } from "./fantasy/projection";
 import { breakdownClubInFixture, scoreClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
@@ -157,17 +157,25 @@ const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function clubDetail(club: Club, currentRound: number) {
   const summary = clubSummary(club, currentRound);
-  const upcoming = footballService.getUpcomingFixturesForClub(club.id, 2);
+  // 3, not 2 — the mobile Upcoming Fixtures pills show the next three
+  // gameweeks (GW1/GW2/GW3) side by side.
+  const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
   const fixtures = upcoming.map((f) => {
     const opponent = opponentClub(f, club.id);
     const winProb = winProbFor(f, club.id);
     const side = f.homeClubId === club.id ? "home" : "away";
+    const projPts = bestProjectedPoints(f.id, side, winProb, f.drawProb ?? 0.24);
     return {
       opp: opponent?.name ?? "TBD",
+      code: opponent?.code ?? "TBD",
       home: f.homeClubId === club.id,
-      diff: difficultyFromWinProb(winProb),
+      // Derived from this same projPts value, not a separately-computed
+      // signal — see difficultyFromProjectedPoints's doc comment. This is
+      // deliberately different from clubSummary()'s nextFixture.diff above,
+      // which stays win-probability-based for its own existing consumers.
+      diff: difficultyFromProjectedPoints(projPts),
       matchText: fixtureMatchText(f, club.id, opponent),
-      projPts: bestProjectedPoints(f.id, side, winProb, f.drawProb ?? 0.24),
+      projPts,
     };
   });
   // Last two played matches, most recent first — same "opponent + result vs

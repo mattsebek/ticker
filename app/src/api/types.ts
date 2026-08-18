@@ -45,6 +45,7 @@ export interface ClubSummary {
 
 export interface ClubFixture {
   opp: string;
+  code: string;
   home: boolean;
   diff: FixtureDifficulty;
   matchText: string;
