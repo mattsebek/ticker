@@ -11,7 +11,6 @@ const TYPE_FILTERS: { key: string; label: string }[] = [
   { key: "human", label: "Human" },
   { key: "synthetic", label: "Synthetic" },
   { key: "admin", label: "Admin" },
-  { key: "system", label: "System" },
 ];
 
 export function renderAdminUsersPage(): string {
