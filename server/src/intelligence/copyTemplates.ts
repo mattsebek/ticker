@@ -21,7 +21,7 @@ const round1 = (n: number) => n.toFixed(1);
  * would replace — nothing else in the pipeline (detection, scoring, dedup,
  * persistence, admin workflow) would need to change.
  */
-export function generateCopy(signal: CandidateSignal, clubName: string | null, variant = 0): GeneratedCopy {
+export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubId" | "facts">, clubName: string | null, variant = 0): GeneratedCopy {
   const club = clubName ?? "This club";
   const f = signal.facts;
   const v = variant % 2;

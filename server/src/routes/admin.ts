@@ -23,6 +23,9 @@ import { renderAdminProjectionDetailPage } from "../admin/adminProjectionDetailP
 import { projectionRepo } from "../projection/repo";
 import { projectionConfig } from "../projection/projectionConfig";
 import { buildScoreMatrix } from "../projection/scoreDistribution";
+import { renderAdminIntelligencePage, AdminNuggetRow, IntelligenceFilter } from "../admin/adminIntelligencePage";
+import { intelligenceRepo } from "../intelligence/repo";
+import { generateCopy } from "../intelligence/copyTemplates";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -450,4 +453,117 @@ adminRouter.get("/projections/:fixtureId", (req, res) => {
       })),
     })
   );
+});
+
+// --- Ticker Intelligence Engine (Market Nuggets — see intelligence/) ---
+
+function toAdminNuggetRow(n: ReturnType<typeof intelligenceRepo.getById>): AdminNuggetRow {
+  const row = n!;
+  const club = row.clubId ? footballRepo.getClub(row.clubId) : undefined;
+  return {
+    id: row.id,
+    signalType: row.signalType,
+    clubId: row.clubId,
+    clubName: club?.name ?? null,
+    interestScore: row.interestScore,
+    category: row.category,
+    emoji: row.emoji,
+    headline: row.headline,
+    body: row.body,
+    isEdited: row.headline !== row.generatedHeadline || row.body !== row.generatedBody,
+    sourceDataJson: row.sourceDataJson,
+    status: row.status,
+    isPinned: row.isPinned,
+    generatedAt: row.generatedAt,
+    publishedAt: row.publishedAt,
+    expiresAt: row.expiresAt,
+  };
+}
+
+adminRouter.get("/intelligence", (req, res) => {
+  const filter = (["new", "published", "pinned", "dismissed", "expired"] as const).includes(req.query.filter as any) ? (req.query.filter as IntelligenceFilter) : "new";
+
+  const rows =
+    filter === "new"
+      ? intelligenceRepo.listByStatus("CANDIDATE")
+      : filter === "published"
+        ? intelligenceRepo.listByStatus("PUBLISHED")
+        : filter === "pinned"
+          ? intelligenceRepo.listPinned()
+          : filter === "dismissed"
+            ? intelligenceRepo.listByStatus("DISMISSED")
+            : intelligenceRepo.listExpiredPublished();
+
+  const statusCounts = intelligenceRepo.countByStatus();
+  const clubs = footballRepo.listClubs().map((c) => ({ id: c.id, name: c.name }));
+
+  res.type("html").send(
+    renderAdminIntelligencePage({
+      filter,
+      counts: { new: statusCounts.CANDIDATE, published: statusCounts.PUBLISHED, pinned: intelligenceRepo.listPinned().length, dismissed: statusCounts.DISMISSED },
+      nuggets: rows.map((r) => toAdminNuggetRow(r)),
+      clubs,
+    })
+  );
+});
+
+adminRouter.post("/nuggets", (req, res) => {
+  try {
+    const { category, emoji, headline, body, clubId, isPinned } = req.body ?? {};
+    if (!category || !emoji || !headline || !body) return res.status(400).json({ ok: false, error: "category, emoji, headline, and body are required." });
+    const nugget = intelligenceRepo.insertManual({
+      category: String(category),
+      emoji: String(emoji),
+      headline: String(headline),
+      body: String(body),
+      clubId: clubId || null,
+      ctaClubId: clubId || null,
+      expiresAt: Date.now() + 48 * 60 * 60 * 1000,
+      isPinned: !!isPinned,
+    });
+    res.json({ ok: true, id: nugget.id });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+adminRouter.post("/nuggets/:id/publish", (req, res) => {
+  intelligenceRepo.publish(req.params.id, "admin");
+  res.json({ ok: true });
+});
+adminRouter.post("/nuggets/:id/dismiss", (req, res) => {
+  intelligenceRepo.dismiss(req.params.id, "admin");
+  res.json({ ok: true });
+});
+adminRouter.post("/nuggets/:id/pin", (req, res) => {
+  intelligenceRepo.setPinned(req.params.id, true);
+  res.json({ ok: true });
+});
+adminRouter.post("/nuggets/:id/unpin", (req, res) => {
+  intelligenceRepo.setPinned(req.params.id, false);
+  res.json({ ok: true });
+});
+adminRouter.post("/nuggets/:id/edit", (req, res) => {
+  const { headline, body } = req.body ?? {};
+  if (!headline || !body) return res.status(400).json({ ok: false, error: "headline and body are required." });
+  intelligenceRepo.editCopy(req.params.id, String(headline), String(body));
+  res.json({ ok: true });
+});
+adminRouter.post("/nuggets/:id/regenerate", (req, res) => {
+  const existing = intelligenceRepo.getById(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, error: "Nugget not found." });
+  if (existing.signalType === "MANUAL") return res.status(400).json({ ok: false, error: "Manual nuggets don't have a generator to re-run — edit them directly." });
+
+  let facts: Record<string, string | number | boolean | null> = {};
+  try {
+    facts = JSON.parse(existing.sourceDataJson);
+  } catch {
+    // leave empty
+  }
+  const clubName = existing.clubId ? footballRepo.getClub(existing.clubId)?.name ?? null : null;
+  // Cycles to the next phrasing variant deterministically off generatedAt, so repeated clicks rotate rather than repeat the same variant.
+  const variant = Math.floor(existing.updatedAt / 1000) + 1;
+  const copy = generateCopy({ signalType: existing.signalType, clubId: existing.clubId, facts }, clubName, variant);
+  intelligenceRepo.regenerateCopy(existing.id, copy.category, copy.emoji, copy.headline, copy.body);
+  res.json({ ok: true });
 });
