@@ -73,6 +73,8 @@ export interface HoldingView extends ClubSummary {
   purchasePrice: number;
   /** Whether this club is in the manager's pending (not-yet-locked) Starting Four intent. */
   inStartingFour: boolean;
+  /** Backs the Portfolio screen's Upcoming Fixtures table (3 columns per club) — separate from ClubSummary's own single nextFixture. */
+  upcomingFixtures: ClubFixture[];
 }
 
 export interface User {

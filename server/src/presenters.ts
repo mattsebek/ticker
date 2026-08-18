@@ -162,12 +162,19 @@ export function clubSummary(club: Club, currentRound: number) {
 
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-export function clubDetail(club: Club, currentRound: number) {
-  const summary = clubSummary(club, currentRound);
-  // 3, not 2 — the mobile Upcoming Fixtures pills show the next three
-  // gameweeks (GW1/GW2/GW3) side by side.
-  const upcoming = footballService.getUpcomingFixturesForClub(club.id, 3);
-  const fixtures = upcoming.map((f) => {
+/**
+ * A club's next N upcoming fixtures in the same pill-ready shape used by
+ * the club detail overlay's Upcoming Fixtures pills and Portfolio's
+ * Upcoming Fixtures table — factored out so both call sites (clubDetail()
+ * below, and the portfolio route's per-holding table data) share one
+ * implementation rather than drifting. Deliberately NOT folded into
+ * clubSummary() itself: that function is called for every club on
+ * screens (Market list, Top Movers, etc.) that never show more than the
+ * single nextFixture, and computing 3 fixtures' worth of projections for
+ * each of those would be pure waste.
+ */
+export function upcomingFixturesForClub(club: Club, n: number) {
+  return footballService.getUpcomingFixturesForClub(club.id, n).map((f) => {
     const opponent = opponentClub(f, club.id);
     const winProb = winProbFor(f, club.id);
     const side = f.homeClubId === club.id ? "home" : "away";
@@ -177,14 +184,19 @@ export function clubDetail(club: Club, currentRound: number) {
       code: opponent?.code ?? "TBD",
       home: f.homeClubId === club.id,
       // Derived from this same projPts value, not a separately-computed
-      // signal — see difficultyFromProjectedPoints's doc comment. This is
-      // deliberately different from clubSummary()'s nextFixture.diff above,
-      // which stays win-probability-based for its own existing consumers.
+      // signal — see difficultyFromProjectedPoints's doc comment.
       diff: difficultyFromProjectedPoints(projPts),
       matchText: fixtureMatchText(f, club.id, opponent),
       projPts,
     };
   });
+}
+
+export function clubDetail(club: Club, currentRound: number) {
+  const summary = clubSummary(club, currentRound);
+  // 3, not 2 — the mobile Upcoming Fixtures pills show the next three
+  // gameweeks (GW1/GW2/GW3) side by side.
+  const fixtures = upcomingFixturesForClub(club, 3);
   // Last two played matches, most recent first — same "opponent + result vs
   // projection" facts the price engine itself reacted to (see priceEngine.ts),
   // just surfaced for a manager to read directly instead of only feeling it

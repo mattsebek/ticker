@@ -6,7 +6,7 @@ import { portfolioService } from "../market/portfolioService";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
-import { clubSummary } from "../presenters";
+import { clubSummary, upcomingFixturesForClub } from "../presenters";
 import { round2 } from "../shared/rng";
 
 export const portfolioRouter = Router();
@@ -22,7 +22,15 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     .map((h) => {
       const club = footballService.getClub(h.club_id);
       if (!club) return null;
-      return { ...clubSummary(club, currentRound), purchasePrice: h.purchase_price, inStartingFour: starterIds.has(h.club_id) };
+      return {
+        ...clubSummary(club, currentRound),
+        purchasePrice: h.purchase_price,
+        inStartingFour: starterIds.has(h.club_id),
+        // Backs the Upcoming Fixtures table (3 columns per club) — separate
+        // from clubSummary()'s own single nextFixture, which every other
+        // clubSummary() consumer (Market list, Top Movers, ...) still uses.
+        upcomingFixtures: upcomingFixturesForClub(club, 3),
+      };
     })
     .filter(Boolean) as any[];
 
