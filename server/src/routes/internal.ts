@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { db } from "../db";
-import { scheduler } from "../jobs/scheduler";
+import { scheduler, getJobRunHistory } from "../jobs/scheduler";
 import { footballService } from "../football/service";
 import { footballRepo } from "../football/repo";
 import { marketRepo } from "../market/repo";
@@ -86,6 +86,12 @@ internalRouter.use(requireInternalToken);
 
 internalRouter.get("/jobs", (req, res) => {
   res.json({ jobs: scheduler.getStatus() });
+});
+
+/** Persisted run history for one job — survives restarts, unlike /jobs's in-memory snapshot. Use this to check what actually ran during a past window (e.g. overnight) instead of only the current process's counters. */
+internalRouter.get("/jobs/:name/history", (req, res) => {
+  const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
+  res.json({ jobName: req.params.name, runs: getJobRunHistory(req.params.name, limit) });
 });
 
 internalRouter.get("/leagues", (req, res) => {

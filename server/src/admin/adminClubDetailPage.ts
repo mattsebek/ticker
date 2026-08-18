@@ -31,8 +31,17 @@ function pct(n: number): string {
 function pctColor(n: number): string {
   return n > 0 ? T.accent : n < 0 ? T.red : T.textSecondary;
 }
+/**
+ * Renders a placeholder that a small client-side script (see
+ * renderAdminClubDetailPage's <script> tag) fills in with the timestamp
+ * formatted in the VIEWER's own local timezone. A server-rendered
+ * toLocaleString() would format in whatever timezone the Node process
+ * itself runs in (UTC on Railway) — every admin would see the same wrong
+ * clock regardless of where they actually are, silently misattributing
+ * events to the wrong time of day.
+ */
 function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return `<span class="local-time" data-ts="${ms}"></span>`;
 }
 function scoreColor(n: number | null): string {
   if (n == null) return T.textSecondary;
@@ -170,6 +179,15 @@ export function renderAdminClubDetailPage(d: AdminClubDetail): string {
 
     <h1 style="font-size:16px;">Price History</h1>
     ${timeline}
+
+    <script>
+      document.querySelectorAll(".local-time").forEach(function (el) {
+        var ms = parseInt(el.getAttribute("data-ts"), 10);
+        if (!isNaN(ms)) {
+          el.textContent = new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        }
+      });
+    </script>
   `;
   return renderAdminShell({ active: "clubs", title: d.name, bodyHtml: body });
 }

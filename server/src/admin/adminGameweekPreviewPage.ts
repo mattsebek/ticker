@@ -25,8 +25,9 @@ export interface AdminGameweekPreviewData {
   iconConfig: AdminIconConfig;
 }
 
+/** Placeholder filled in client-side, in the viewer's own timezone — see adminClubDetailPage.ts's fmtTime for why this can't be formatted server-side. */
 function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return `<span class="local-time" data-ts="${ms}"></span>`;
 }
 
 /** Renders **bold** markers as real <b> tags for the read-only preview — applied to already-escaped text, so it's safe against the raw ** in the escaped string (esc() doesn't touch asterisks). The edit textarea below keeps the raw markers untouched, since that's what an admin types back. */
@@ -233,6 +234,12 @@ export function renderAdminGameweekPreviewPage(d: AdminGameweekPreviewData): str
 
     <script>
       (function () {
+        document.querySelectorAll(".local-time").forEach(function (el) {
+          var ms = parseInt(el.getAttribute("data-ts"), 10);
+          if (!isNaN(ms)) {
+            el.textContent = new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          }
+        });
         function post(url) {
           return fetch(url, { method: "POST" }).then(function (r) { return r.json(); });
         }

@@ -28,8 +28,9 @@ export interface AdminIntelligenceData {
   clubs: { id: string; name: string }[];
 }
 
+/** Placeholder filled in client-side, in the viewer's own timezone — a server-rendered toLocaleString() would show every admin the same wrong clock (the Node process's own timezone), regardless of where they actually are. */
 function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return `<span class="local-time" data-ts="${ms}"></span>`;
 }
 
 function factsTable(sourceDataJson: string): string {
@@ -168,6 +169,12 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
 
     <script>
       (function () {
+        document.querySelectorAll(".local-time").forEach(function (el) {
+          var ms = parseInt(el.getAttribute("data-ts"), 10);
+          if (!isNaN(ms)) {
+            el.textContent = new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          }
+        });
         document.querySelectorAll(".edit-btn").forEach(function (btn) {
           btn.addEventListener("click", function () {
             var card = btn.closest(".nugget-card");
