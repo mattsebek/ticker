@@ -217,7 +217,7 @@ export function PortfolioScreen() {
         {gameweekPreview && (
           <Pressable
             onPress={() => navigation.navigate("GameweekPreview")}
-            style={{ marginTop: 14, backgroundColor: T.card, borderRadius: 16, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}
+            style={{ marginTop: 14, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}
           >
             <GameweekPreviewArt size={52} radius={12} />
             <View style={{ flex: 1 }}>
