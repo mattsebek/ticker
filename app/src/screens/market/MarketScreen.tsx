@@ -27,17 +27,7 @@ function jitPct(pct: number, tick: number, seed: number): number {
   return pct + Math.sin((tick + seed) * 0.7 + 1) * JIT_PCT_POINTS;
 }
 
-// Top Movers gets its own, calmer jitter: only ONE pill nudges per tick
-// (not all 6 in lockstep), and slots are drawn from a wider pool that
-// occasionally rotates a club in/out — so the panel isn't permanently
-// frozen to the same six clubs. Each club's own real dailyPct is looked
-// up fresh every render; only a small, self-bounded offset is randomized.
-const MOVER_POOL_SIZE = 18;
-const MOVER_SLOTS = 6;
-const MOVER_TICK_MS = 1200;
-const MOVER_OFFSET_MAX = 0.4; // pct points
-const MOVER_NUDGE_STEP = 0.15;
-const MOVER_SWAP_CHANCE = 0.12; // per tick, chance one slot rotates to a different pool club
+const TOP_MOVERS_COUNT = 6;
 
 export function MarketScreen() {
   const T = useThemeStore((s) => s.tokens);
@@ -59,51 +49,20 @@ export function MarketScreen() {
     [clubs, q, isSearching]
   );
 
-  const moverPool = useMemo(() => clubs.slice().sort((a, b) => Math.abs(b.dailyPct) - Math.abs(a.dailyPct)).slice(0, MOVER_POOL_SIZE), [clubs]);
-  const [moverSlots, setMoverSlots] = useState<{ clubId: string; offset: number }[]>([]);
-
-  useEffect(() => {
-    if (moverPool.length === 0 || moverSlots.length > 0) return;
-    setMoverSlots(moverPool.slice(0, MOVER_SLOTS).map((c) => ({ clubId: c.id, offset: 0 })));
-  }, [moverPool, moverSlots.length]);
-
-  useEffect(() => {
-    if (moverPool.length === 0) return;
-    const id = setInterval(() => {
-      setMoverSlots((prev) => {
-        if (prev.length === 0) return prev;
-        const next = prev.slice();
-
-        // Nudge exactly one pill so the grid never all-moves-at-once.
-        const nudgeIdx = Math.floor(Math.random() * next.length);
-        const step = (Math.random() < 0.5 ? -1 : 1) * Math.random() * MOVER_NUDGE_STEP;
-        const offset = Math.max(-MOVER_OFFSET_MAX, Math.min(MOVER_OFFSET_MAX, next[nudgeIdx].offset + step));
-        next[nudgeIdx] = { ...next[nudgeIdx], offset };
-
-        // Occasionally rotate in a club from the wider pool, so Top Movers
-        // isn't permanently locked to the same six.
-        if (Math.random() < MOVER_SWAP_CHANCE) {
-          const shownIds = new Set(next.map((m) => m.clubId));
-          const candidates = moverPool.filter((c) => !shownIds.has(c.id));
-          if (candidates.length > 0) {
-            const swapIdx = Math.floor(Math.random() * next.length);
-            const incoming = candidates[Math.floor(Math.random() * candidates.length)];
-            next[swapIdx] = { clubId: incoming.id, offset: 0 };
-          }
-        }
-
-        return next;
-      });
-    }, MOVER_TICK_MS);
-    return () => clearInterval(id);
-  }, [moverPool]);
-
-  const movers = moverSlots
-    .map((slot) => {
-      const club = clubs.find((c) => c.id === slot.clubId);
-      return club ? { club, pct: club.dailyPct + slot.offset } : null;
-    })
-    .filter((m): m is { club: (typeof clubs)[number]; pct: number } => m != null);
+  // Real 24h movers only — a club with no 24h-old price yet (e.g. right
+  // after a reset) isn't "flat", it's unmeasured, and shouldn't be mixed in
+  // with genuine movement. No cosmetic jitter here: unlike the wobble
+  // elsewhere on this screen (jitPrice/jitPct above), a list that's
+  // ostensibly ranking real movers needs to actually be real.
+  const movers = useMemo(
+    () =>
+      clubs
+        .filter((c) => c.hasDailyHistory)
+        .slice()
+        .sort((a, b) => Math.abs(b.dailyPct) - Math.abs(a.dailyPct))
+        .slice(0, TOP_MOVERS_COUNT),
+    [clubs]
+  );
 
   const topEarners = useMemo(
     () => clubs.slice().sort((a, b) => (earnersRange === "ytd" ? b.seasonPts - a.seasonPts : b.gwPts - a.gwPts)).slice(0, 6),
@@ -159,16 +118,20 @@ export function MarketScreen() {
         ) : (
           <View>
             <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Top Movers</Text>
-            <View style={styles.grid}>
-              {movers.map(({ club: c, pct }) => (
-                <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(pct) }}>
-                    {pct >= 0 ? "▲" : "▼"} {fmtPct(pct)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {movers.length > 0 ? (
+              <View style={styles.grid}>
+                {movers.map((c) => (
+                  <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(c.dailyPct) }}>
+                      {c.dailyPct >= 0 ? "▲" : "▼"} {fmtPct(c.dailyPct)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ color: T.textSecondary, fontSize: 14, marginBottom: 8 }}>Check back in 24 hours for today's biggest movers.</Text>
+            )}
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Top Point Earners</Text>

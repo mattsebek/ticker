@@ -102,9 +102,11 @@ export function clubSummary(club: Club, currentRound: number) {
     price,
     dailyPct,
     weeklyPct,
-    // Distinct from weeklyPct===0 (a real flat week) — this tells the client
-    // whether a 7-day-old price actually exists to compare against, so it
-    // can show "not enough history yet" instead of a misleading "+0.0%".
+    // Same idea as hasWeeklyHistory, one window down — Top Movers (Market
+    // screen) needs to distinguish "genuinely flat today" from "no 24h-old
+    // price yet" (e.g. right after a reseed/reset) so it can show an honest
+    // empty state instead of a list of clubs that all happen to read 0.0%.
+    hasDailyHistory: price24hAgo != null,
     hasWeeklyHistory: price7dAgo != null,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),

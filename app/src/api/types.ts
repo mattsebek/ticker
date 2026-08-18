@@ -26,6 +26,8 @@ export interface ClubSummary {
   price: number;
   dailyPct: number;
   weeklyPct: number;
+  /** False until the club has a recorded price at least 24 hours old — distinguishes "genuinely flat today" from "no day-old data yet" (Top Movers). */
+  hasDailyHistory: boolean;
   /** False until the club has a recorded price at least 7 days old — distinguishes "genuinely flat this week" from "no week-old data yet". */
   hasWeeklyHistory: boolean;
   seasonPct: number;
