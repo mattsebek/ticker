@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { FONT_SERIF } from "../../theme/theme";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
+import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import type { AppStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<AppStackParamList, "GameweekPreview">;
@@ -31,7 +32,8 @@ export function GameweekPreviewScreen({ navigation }: Props) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}>
-          <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
+          <GameweekPreviewArt size={96} radius={18} />
+          <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>
             Gameweek {preview.round} Preview
           </Text>
           <Text style={{ fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "600", letterSpacing: -0.3, color: T.text, marginBottom: 20 }}>{preview.headline}</Text>

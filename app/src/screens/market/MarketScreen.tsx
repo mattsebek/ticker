@@ -5,6 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
+import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useClubOverlayStore } from "../../store/overlayStore";
@@ -161,9 +162,7 @@ export function MarketScreen() {
                   onPress={() => navigation.navigate("GameweekPreview")}
                   style={[styles.newsRow, { borderBottomColor: T.borderLight, borderBottomWidth: news.length > 0 ? 1 : 0 }]}
                 >
-                  <View style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: T.accent, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 22 }}>📈</Text>
-                  </View>
+                  <GameweekPreviewArt size={56} radius={10} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 11, fontWeight: "700", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Gameweek {gameweekPreview.round} Preview</Text>
                     <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{gameweekPreview.headline}</Text>

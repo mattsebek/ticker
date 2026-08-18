@@ -5,6 +5,7 @@ import { useScrollToTop, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
+import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
@@ -215,8 +216,9 @@ export function PortfolioScreen() {
         {gameweekPreview && (
           <Pressable
             onPress={() => navigation.navigate("GameweekPreview")}
-            style={{ marginTop: 14, backgroundColor: T.card, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+            style={{ marginTop: 14, backgroundColor: T.card, borderRadius: 16, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}
           >
+            <GameweekPreviewArt size={52} radius={12} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Gameweek {gameweekPreview.round} Preview</Text>
               <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }} numberOfLines={2}>
