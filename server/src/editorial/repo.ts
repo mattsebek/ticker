@@ -126,6 +126,16 @@ function slugTaken(slug: string, excludeId: string | null): boolean {
   return !!row;
 }
 
+// One-time, idempotent catch-up for rows inserted before the slug column
+// existed — without this, a still-published pre-migration article stays
+// permanently unlinkable (its card's link would resolve to literally
+// "/gameweek-preview/null"). Safe to run on every boot: only rows still
+// missing a slug are touched, so it naturally converges to a no-op.
+for (const row of db.prepare("SELECT id, round, headline FROM gameweek_previews WHERE slug IS NULL").all() as { id: string; round: number; headline: string }[]) {
+  const slug = generateUniqueSlug(row.round, row.headline, row.id);
+  db.prepare("UPDATE gameweek_previews SET slug = ? WHERE id = ?").run(slug, row.id);
+}
+
 export const editorialRepo = {
   /** Most recent row (any status) for a round — used to decide whether "generate" should create fresh or regenerate the existing still-unpublished draft in place. */
   getLatestForRound(round: number): GameweekPreviewRow | undefined {
