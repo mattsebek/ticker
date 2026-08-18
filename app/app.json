@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.mattsebek.ticker"
     },
     "android": {
+      "package": "com.mattsebek.ticker",
       "adaptiveIcon": {
         "backgroundColor": "#00C805",
         "foregroundImage": "./assets/android-icon-foreground.png",
