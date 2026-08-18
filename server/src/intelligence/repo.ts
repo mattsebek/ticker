@@ -252,6 +252,45 @@ export const intelligenceRepo = {
     db.prepare("UPDATE market_nuggets SET is_pinned = ?, updated_at = ? WHERE id = ?").run(pinned ? 1 : 0, Date.now(), id);
   },
 
+  /**
+   * One-time backlog cleanup, not part of the regular sweep pipeline: for
+   * every (signal_type, club_id) pair with more than one still-open
+   * CANDIDATE row — the pre-cooldown-fix flood of the same ongoing story
+   * retold every day/gameweek — keeps only the single best one (highest
+   * score, most recent tiebreak) and dismisses the rest. MANUAL nuggets are
+   * excluded: multiple admin-authored notes about the same club are
+   * intentionally distinct content, not automated re-alerts of one
+   * detected condition, so they're never candidates for consolidation.
+   */
+  consolidateRedundantCandidates(): { groupsCollapsed: number; dismissed: number } {
+    const groups = db
+      .prepare(
+        `SELECT signal_type, club_id, COUNT(*) as n FROM market_nuggets
+         WHERE status = 'CANDIDATE' AND signal_type != 'MANUAL'
+         GROUP BY signal_type, club_id HAVING COUNT(*) > 1`
+      )
+      .all() as { signal_type: string; club_id: string | null; n: number }[];
+
+    const now = Date.now();
+    let dismissed = 0;
+    for (const g of groups) {
+      const rows = (
+        g.club_id == null
+          ? db
+              .prepare("SELECT id FROM market_nuggets WHERE status = 'CANDIDATE' AND signal_type = ? AND club_id IS NULL ORDER BY interest_score DESC, generated_at DESC")
+              .all(g.signal_type)
+          : db
+              .prepare("SELECT id FROM market_nuggets WHERE status = 'CANDIDATE' AND signal_type = ? AND club_id = ? ORDER BY interest_score DESC, generated_at DESC")
+              .all(g.signal_type, g.club_id)
+      ) as { id: string }[];
+      for (let i = 1; i < rows.length; i++) {
+        db.prepare("UPDATE market_nuggets SET status = 'DISMISSED', dismissed_at = ?, dismissed_by = ?, updated_at = ? WHERE id = ?").run(now, "system:cleanup", now, rows[i].id);
+        dismissed++;
+      }
+    }
+    return { groupsCollapsed: groups.length, dismissed };
+  },
+
   /** Admin manual copy edit — leaves generated_headline/body (and source_data_json) untouched, so "was this edited?" is always recoverable as headline !== generated_headline. */
   editCopy(id: string, headline: string, body: string) {
     db.prepare("UPDATE market_nuggets SET headline = ?, body = ?, updated_at = ? WHERE id = ?").run(headline, body, Date.now(), id);
