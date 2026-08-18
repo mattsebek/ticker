@@ -10,8 +10,7 @@ import { renderBoldSegments } from "../../utils/richText";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
-import { FONT_SERIF, colorForPct, RED, DIFF_BORDER_SOFT } from "../../theme/theme";
-import type { ThemeTokens } from "../../theme/theme";
+import { FONT_SERIF, colorForPct } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { PillRow, Pill } from "../../components/Pill";
 import { PortfolioChart } from "../../components/PortfolioChart";
@@ -19,15 +18,11 @@ import { RollingNumber } from "../../components/RollingNumber";
 import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
+import { ClubBadge } from "../../components/ClubBadge";
 import { FixturePill } from "../../components/FixturePill";
 import { useBriefing } from "../../hooks/useBriefing";
 
-const FIXTURE_NAME_COL_WIDTH = 96;
-const DIFF_LEGEND: { label: string; bg: (T: ThemeTokens) => string; border: (T: ThemeTokens) => string }[] = [
-  { label: "Easy", bg: (T) => T.accentTint, border: () => DIFF_BORDER_SOFT.Easy },
-  { label: "Medium", bg: (T) => T.card, border: (T) => T.border },
-  { label: "Hard", bg: (T) => T.redTint, border: () => DIFF_BORDER_SOFT.Hard },
-];
+const FIXTURE_NAME_COL_WIDTH = 108;
 
 type Range = "24H" | "7D" | "YTD";
 
@@ -344,9 +339,9 @@ export function PortfolioScreen() {
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <View style={{ width: FIXTURE_NAME_COL_WIDTH }} />
-              <View style={{ flexDirection: "row", gap: 6, flex: 1 }}>
+              <View style={{ flexDirection: "row", gap: 5, flex: 1 }}>
                 {["GW1", "GW2", "GW3"].map((label) => (
-                  <Text key={label} style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <Text key={label} style={{ flex: 1, textAlign: "center", fontSize: 9, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.4 }}>
                     {label}
                   </Text>
                 ))}
@@ -356,31 +351,20 @@ export function PortfolioScreen() {
             {portfolio.holdings
               .filter((h) => h.upcomingFixtures?.length)
               .map((h) => (
-                <View key={h.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <View key={h.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <View style={{ width: FIXTURE_NAME_COL_WIDTH, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View style={[styles.badge, { backgroundColor: h.color }]}>
-                      <Text style={{ color: "#fff", fontWeight: "600", fontSize: 11 }}>{h.code}</Text>
-                    </View>
+                    <ClubBadge code={h.code} color={h.color} size={40} />
                     <Text style={{ flex: 1, fontSize: 12, fontWeight: "500", color: T.text }} numberOfLines={2}>
                       {h.name}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: "row", gap: 6, flex: 1 }}>
+                  <View style={{ flexDirection: "row", gap: 5, flex: 1 }}>
                     {[0, 1, 2].map((i) => (
-                      <FixturePill key={i} index={i} fixture={h.upcomingFixtures[i]} T={T} />
+                      <FixturePill key={i} index={i} fixture={h.upcomingFixtures[i]} T={T} compact />
                     ))}
                   </View>
                 </View>
               ))}
-
-            <View style={{ flexDirection: "row", justifyContent: "center", gap: 18, marginTop: 14 }}>
-              {DIFF_LEGEND.map(({ label, bg, border }) => (
-                <View key={label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <View style={{ width: 12, height: 12, borderRadius: 4, backgroundColor: bg(T), borderWidth: 1, borderColor: border(T) }} />
-                  <Text style={{ fontSize: 12, color: T.textSecondary }}>{label}</Text>
-                </View>
-              ))}
-            </View>
           </>
         )}
       </ScrollView>
@@ -391,6 +375,4 @@ export function PortfolioScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 13, paddingBottom: 40 },
   sectionHeader: { marginTop: 28, marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
-  badge: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 });
