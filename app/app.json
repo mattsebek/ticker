@@ -9,7 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mattsebek.ticker"
+      "bundleIdentifier": "com.mattsebek.ticker",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.mattsebek.ticker",
@@ -39,6 +40,23 @@
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#000000"
+        }
+      ],
+      "@react-native-firebase/app",
+      [
+        "@react-native-firebase/analytics",
+        {
+          "ios": {
+            "withoutAdIdSupport": true
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "dynamic"
+          }
         }
       ]
     ],

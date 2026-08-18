@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, ActivityIndicator } from "react-native";
-import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme, useNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { trackScreenView } from "../utils/analytics";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import { useDataStore } from "../store/dataStore";
@@ -26,6 +27,8 @@ export function RootNavigator() {
   const tokens = useThemeStore((s) => s.tokens);
   const startPolling = useDataStore((s) => s.startPolling);
   const stopPolling = useDataStore((s) => s.stopPolling);
+  const navigationRef = useNavigationContainerRef<AppStackParamList>();
+  const currentRouteNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     hydrateAuth();
@@ -77,7 +80,20 @@ export function RootNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navTheme} linking={showOnboarding ? undefined : linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      linking={showOnboarding ? undefined : linking}
+      onReady={() => {
+        currentRouteNameRef.current = navigationRef.getCurrentRoute()?.name;
+      }}
+      onStateChange={() => {
+        const previousRouteName = currentRouteNameRef.current;
+        const currentRouteName = navigationRef.getCurrentRoute()?.name;
+        if (currentRouteName && currentRouteName !== previousRouteName) trackScreenView(currentRouteName);
+        currentRouteNameRef.current = currentRouteName;
+      }}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true, fullScreenGestureEnabled: true }}>
         {showOnboarding ? (
           <Stack.Screen name="Main" component={OnboardingScreen} />
