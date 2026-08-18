@@ -148,7 +148,7 @@ export function renderAdminProjectionDetailPage(d: AdminProjectionDetail): strin
 
   const body = `
     <a href="/admin/projections" style="color:${T.textSecondary};font-size:13px;text-decoration:none;">← Projections</a>
-    <h1 style="margin-top:10px;">${esc(d.homeClubName)} vs ${esc(d.awayClubName)}
+    <h1 style="margin-top:10px;">${esc(d.homeClubName)} (h) vs ${esc(d.awayClubName)} (a)
       <span style="color:${T.textSecondary};font-weight:400;font-size:14px;">Round ${d.round} · ${esc(d.kickoffStr)} · ${esc(d.status)}</span>
     </h1>
 

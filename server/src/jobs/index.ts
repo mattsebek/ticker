@@ -74,10 +74,15 @@ export function registerJobs() {
   // Market-Calibrated Points Projection Engine (shadow mode — see
   // projection/). Gated by its own kill switch, checked inside the job
   // itself so it stays a true no-op (not even a log line change) when off.
+  // 6h interval (not tighter) is deliberate: The Odds API bills per CALL
+  // (2 credits at regions=uk&markets=h2h,totals), not per fixture returned,
+  // so every refresh costs the same regardless of how many games are live —
+  // 4 calls/day keeps monthly spend around ~240 of the ~500 free-tier
+  // credits, leaving real room for manual /internal testing.
   if (projectionConfig.ENABLED) {
     scheduler.register({
       name: "refreshOddsAndReproject",
-      intervalMs: intervalFromEnv("JOB_REFRESH_ODDS_PROJECTIONS_MS", 3 * HOUR),
+      intervalMs: intervalFromEnv("JOB_REFRESH_ODDS_PROJECTIONS_MS", 6 * HOUR),
       run: refreshOddsAndReproject.run,
       initialDelayMs: 150_000,
     });
