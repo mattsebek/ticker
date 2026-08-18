@@ -226,6 +226,14 @@ export interface BuyPreviewResponse {
   confirmLabel: string;
 }
 
+export interface GameweekPreview {
+  id: string;
+  round: number;
+  headline: string;
+  body: string;
+  publishedAt: string;
+}
+
 export interface SellPreviewResponse {
   clubName: string;
   currentPrice: number;

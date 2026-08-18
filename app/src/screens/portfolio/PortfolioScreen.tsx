@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useScrollToTop } from "@react-navigation/native";
+import { useScrollToTop, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AppStackParamList } from "../../navigation/types";
+import { useGameweekPreview } from "../../hooks/useGameweekPreview";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
@@ -115,6 +118,8 @@ export function PortfolioScreen() {
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
   const user = useAuthStore((s) => s.user);
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const gameweekPreview = useGameweekPreview();
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
   // Young accounts default to 24H rather than 7D — a week-wide view is
@@ -206,6 +211,21 @@ export function PortfolioScreen() {
         <View style={{ marginTop: 20 }}>
           <GameweekWidget />
         </View>
+
+        {gameweekPreview && (
+          <Pressable
+            onPress={() => navigation.navigate("GameweekPreview")}
+            style={{ marginTop: 14, backgroundColor: T.card, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Gameweek {gameweekPreview.round} Preview</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }} numberOfLines={2}>
+                {gameweekPreview.headline}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: T.accent }}>›</Text>
+          </Pressable>
+        )}
 
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 

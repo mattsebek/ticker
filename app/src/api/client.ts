@@ -16,6 +16,7 @@ import type {
   BuyPreviewResponse,
   SellPreviewResponse,
   User,
+  GameweekPreview,
 } from "./types";
 
 export class ApiError extends Error {
@@ -96,5 +97,8 @@ export const api = {
     registerToken: (token: string, platform: "ios" | "android") =>
       request<{ ok: true }>("/notifications/register-token", { method: "POST", body: JSON.stringify({ token, platform }) }),
     setEnabled: (enabled: boolean) => request<{ ok: true }>("/notifications/enabled", { method: "PATCH", body: JSON.stringify({ enabled }) }),
+  },
+  gameweekPreview: {
+    latest: () => request<{ preview: GameweekPreview | null }>("/gameweek-preview/latest"),
   },
 };
