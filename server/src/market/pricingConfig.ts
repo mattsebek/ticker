@@ -31,8 +31,14 @@ export const pricingConfig = {
 
   // --- Market Pricing V2: demand, decoupled from fixture settlement ---
 
-  /** How often the market-demand tick job runs, independent of fixtures. */
-  MARKET_TICK_MINUTES: floatFromEnv("PRICING_MARKET_TICK_MINUTES", 15),
+  /**
+   * How often the market-demand tick job runs, independent of fixtures.
+   * Purely internal (no external API calls in this job), so a shorter
+   * interval has no polling/rate-limit cost — kept short so demand gets
+   * applied in smaller, more frequent increments instead of accumulating
+   * into a single larger jump every 15 minutes.
+   */
+  MARKET_TICK_MINUTES: floatFromEnv("PRICING_MARKET_TICK_MINUTES", 5),
   /**
    * Demand is net buyers vs. net sellers (a user who both buys and sells in
    * the same window nets to neutral), which saturates instantly with a tiny

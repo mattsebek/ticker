@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS synthetic_system_config (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   enabled INTEGER NOT NULL DEFAULT 1,
   target_active_users INTEGER NOT NULL DEFAULT 300,
-  activity_multiplier REAL NOT NULL DEFAULT 1.0,
+  activity_multiplier REAL NOT NULL DEFAULT 3.0,
   max_synthetic_percentage_per_public_league REAL NOT NULL DEFAULT 0.75,
   minimum_public_league_population INTEGER NOT NULL DEFAULT 8,
   auto_create_users_enabled INTEGER NOT NULL DEFAULT 1,
@@ -62,6 +62,13 @@ CREATE TABLE IF NOT EXISTS synthetic_activity_log (
 );
 CREATE INDEX IF NOT EXISTS idx_synthetic_activity_log_user ON synthetic_activity_log(user_id, created_at);
 `);
+
+// One-time bump for rows created under the old 1.0 default — real trade
+// volume at 1.0x was too thin for the market-demand tick to ever have
+// much to react to (most 5-15min windows saw zero synthetic trades
+// market-wide). Only touches a row still sitting at the untouched old
+// default, so a deliberate admin override is never clobbered.
+db.prepare("UPDATE synthetic_system_config SET activity_multiplier = 3.0 WHERE id = 1 AND activity_multiplier = 1.0").run();
 
 export interface SyntheticProfile {
   userId: string;
