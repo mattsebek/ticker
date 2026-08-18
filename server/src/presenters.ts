@@ -121,6 +121,7 @@ export function clubSummary(club: Club, currentRound: number) {
           diff: difficultyFromWinProb(winProb),
           matchText: fixtureMatchText(nextFixture, club.id, opponent),
           projPts: projectPoints(winProb, drawProb),
+          kickoff: nextFixture.kickoff,
         }
       : null,
   };

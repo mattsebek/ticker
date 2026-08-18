@@ -222,6 +222,7 @@ export function PortfolioScreen() {
             </View>
             {portfolio.holdings
               .filter((h) => h.nextFixture)
+              .sort((a, b) => new Date(a.nextFixture!.kickoff).getTime() - new Date(b.nextFixture!.kickoff).getTime())
               .map((h) => (
                 <View key={h.id} style={[styles.fixtureRow, { borderBottomColor: T.border }]}>
                   <View style={[styles.badge, { backgroundColor: h.color }]}>
