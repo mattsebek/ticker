@@ -46,6 +46,70 @@ function bucketByDay(points: Point[]): Point[] {
   return [...lastPerDay.values()];
 }
 
+/** One constant-value run in a resampled grid, as a half-open [start, end) index range. */
+interface Plateau {
+  value: number;
+  start: number;
+  end: number;
+}
+
+function groupPlateaus(values: number[]): Plateau[] {
+  const plateaus: Plateau[] = [];
+  let start = 0;
+  for (let i = 1; i <= values.length; i++) {
+    if (i === values.length || values[i] !== values[start]) {
+      plateaus.push({ value: values[start], start, end: i });
+      start = i;
+    }
+  }
+  return plateaus;
+}
+
+// A real move has to clear this fractional change from its neighboring
+// plateau before it's considered a genuine "swing" worth widening — keeps
+// ordinary rounding noise between adjacent flat segments from getting
+// stretched too.
+const SPIKE_THRESHOLD_FRAC = 0.03;
+// Real portfolio events (a settlement batch, a demand-tick correction) can
+// land and fully revert within minutes — narrow enough that a fixed-size
+// grid (one point every several minutes) can render the whole round trip
+// as a near-invisible sliver, even though the underlying data is correct.
+// This stretches any plateau that both (a) is shorter than this floor and
+// (b) genuinely differs from a neighbor by more than SPIKE_THRESHOLD_FRAC,
+// by borrowing width from whichever adjacent plateau currently has the
+// most spare room — so a real 15-minute crash-and-recovery still reads as
+// a legible notch instead of a sliver easy to mistake for noise.
+function widenNarrowSpikes(values: number[], minWidth: number): number[] {
+  const plateaus = groupPlateaus(values);
+  for (let p = 0; p < plateaus.length; p++) {
+    const plateau = plateaus[p];
+    const len = plateau.end - plateau.start;
+    if (len >= minWidth) continue;
+    const prev = p > 0 ? plateaus[p - 1] : null;
+    const next = p < plateaus.length - 1 ? plateaus[p + 1] : null;
+    const devFrom = (other: Plateau | null) => (other ? Math.abs(plateau.value - other.value) / (Math.abs(other.value) || 1) : 0);
+    if (Math.max(devFrom(prev), devFrom(next)) < SPIKE_THRESHOLD_FRAC) continue;
+
+    let deficit = minWidth - len;
+    while (deficit > 0 && (prev || next)) {
+      const prevAvail = prev ? prev.end - prev.start - 1 : 0;
+      const nextAvail = next ? next.end - next.start - 1 : 0;
+      if (prevAvail <= 0 && nextAvail <= 0) break;
+      if (prevAvail >= nextAvail && prevAvail > 0) {
+        plateau.start -= 1;
+        prev!.end -= 1;
+      } else if (nextAvail > 0) {
+        plateau.end += 1;
+        next!.start += 1;
+      } else break;
+      deficit--;
+    }
+  }
+  const out = new Array<number>(values.length);
+  for (const p of plateaus) for (let i = p.start; i < p.end; i++) out[i] = p.value;
+  return out;
+}
+
 /**
  * Resamples real points onto an evenly-spaced grid spanning the full
  * [windowStart, windowEnd] span, step-holding the last known value forward
@@ -54,6 +118,15 @@ function bucketByDay(points: Point[]): Point[] {
  * account's first few minutes of microPriceJitter ticks would get stretched
  * to fill the entire 7-day-labeled width, reading as a full week of
  * activity instead of a flat week with one recent sliver of real movement.
+ *
+ * Within each grid bucket, the MOST EXTREME real value seen is what gets
+ * displayed (not simply whichever happened to land last) — otherwise a
+ * brief spike-and-revert that lands entirely inside one bucket can be
+ * silently skipped depending on grid alignment, even though `last` (the
+ * true final value, used as every later bucket's baseline) stays correct.
+ * A widenNarrowSpikes pass then ensures a real, meaningfully-sized swing
+ * still occupies a legible minimum share of the chart even if the event
+ * itself was brief.
  */
 function resampleWithFlatFill(points: Point[], windowStart: number, windowEnd: number, gridSize: number, startingValue: number): Point[] {
   const grid: Point[] = [];
@@ -61,13 +134,25 @@ function resampleWithFlatFill(points: Point[], windowStart: number, windowEnd: n
   let last = startingValue;
   for (let i = 0; i < gridSize; i++) {
     const gt = gridSize === 1 ? windowEnd : windowStart + (i / (gridSize - 1)) * (windowEnd - windowStart);
+    let display = last;
+    let maxDeviation = 0;
     while (pi < points.length && points[pi].t <= gt) {
+      const deviation = Math.abs(points[pi].v - last);
+      if (deviation >= maxDeviation) {
+        maxDeviation = deviation;
+        display = points[pi].v;
+      }
       last = points[pi].v;
       pi++;
     }
-    grid.push({ t: gt, v: last });
+    grid.push({ t: gt, v: display });
   }
-  return grid;
+  const minWidth = Math.max(2, Math.round(gridSize * 0.04));
+  const widenedValues = widenNarrowSpikes(
+    grid.map((p) => p.v),
+    minWidth
+  );
+  return grid.map((p, i) => ({ t: p.t, v: widenedValues[i] }));
 }
 
 /** Full-width single day, gridded densely — the default view for an account under a week old, where "7D" would mostly be a flat pre-inception stretch diluting whatever real movement actually happened today. resampleWithFlatFill is handed the FULL points array (not pre-filtered to the last 24h) so its own walk-forward still finds the correct real value to seed the left edge, exactly like resample7D's older segment does. */
