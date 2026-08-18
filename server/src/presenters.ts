@@ -13,6 +13,7 @@ import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
 import { breakdownClubInFixture, scoreClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
+import { projectionRepo } from "./projection/repo";
 
 function opponentClub(fixture: Fixture, clubId: string): Club | undefined {
   const opponentId = fixture.homeClubId === clubId ? fixture.awayClubId : fixture.homeClubId;
@@ -22,6 +23,27 @@ function opponentClub(fixture: Fixture, clubId: string): Club | undefined {
 function winProbFor(fixture: Fixture, clubId: string): number {
   const isHome = fixture.homeClubId === clubId;
   return (isHome ? fixture.homeWinProb : fixture.awayWinProb) ?? 0.33;
+}
+
+/**
+ * The "Projected Points" the app shows a user for a fixture — prefers the
+ * market-calibrated Points Projection Engine's real expected-value number
+ * (projection/, previously admin-only/shadow-mode) over the older naive
+ * winProb-only formula (fantasy/projection.ts), falling back to the old
+ * formula only when the new engine has no projection yet for this fixture
+ * (e.g. the odds provider hasn't posted lines for it, or it's a fixture
+ * that predates the engine). Once a fixture is locked (kicked off), the
+ * immutable OFFICIAL projection is authoritative; before that, the latest
+ * (still-refining) projection is used. This is purely a display-layer
+ * choice — it does not touch price_history/settlement/Price Pressure,
+ * which still read fantasy/projection.ts exactly as before.
+ */
+function bestProjectedPoints(fixtureId: string, side: "home" | "away", winProb: number, drawProb: number): number {
+  const official = projectionRepo.getOfficialProjection(fixtureId);
+  if (official) return Math.round(side === "home" ? official.homeProjectedPoints : official.awayProjectedPoints);
+  const latest = projectionRepo.getLatestFixtureProjection(fixtureId);
+  if (latest) return Math.round(side === "home" ? latest.homeProjectedPoints : latest.awayProjectedPoints);
+  return projectPoints(winProb, drawProb);
 }
 
 // Kickoffs are stored as raw provider ISO timestamps (UTC) — the app has no
@@ -122,7 +144,7 @@ export function clubSummary(club: Club, currentRound: number) {
           home: nextFixture.homeClubId === club.id,
           diff: difficultyFromWinProb(winProb),
           matchText: fixtureMatchText(nextFixture, club.id, opponent),
-          projPts: projectPoints(winProb, drawProb),
+          projPts: bestProjectedPoints(nextFixture.id, nextFixture.homeClubId === club.id ? "home" : "away", winProb, drawProb),
           kickoff: nextFixture.kickoff,
         }
       : null,
@@ -137,12 +159,13 @@ export function clubDetail(club: Club, currentRound: number) {
   const fixtures = upcoming.map((f) => {
     const opponent = opponentClub(f, club.id);
     const winProb = winProbFor(f, club.id);
+    const side = f.homeClubId === club.id ? "home" : "away";
     return {
       opp: opponent?.name ?? "TBD",
       home: f.homeClubId === club.id,
       diff: difficultyFromWinProb(winProb),
       matchText: fixtureMatchText(f, club.id, opponent),
-      projPts: projectPoints(winProb, f.drawProb ?? 0.24),
+      projPts: bestProjectedPoints(f.id, side, winProb, f.drawProb ?? 0.24),
     };
   });
   // Last two played matches, most recent first — same "opponent + result vs
@@ -153,7 +176,7 @@ export function clubDetail(club: Club, currentRound: number) {
     const opponent = opponentClub(f, club.id);
     const isHome = f.homeClubId === club.id;
     const winProb = winProbFor(f, club.id);
-    const projPts = projectPoints(winProb, f.drawProb ?? 0.24);
+    const projPts = bestProjectedPoints(f.id, isHome ? "home" : "away", winProb, f.drawProb ?? 0.24);
     const actualPts = scoreClubInFixture(f, isHome ? "home" : "away");
     return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchTextNoTime(f, club.id, opponent), actualPts, projPts };
   });
@@ -182,8 +205,8 @@ function gameweekClubDetail(clubId: string, round: number) {
   const opponent = opponentClub(fixture, clubId);
   const isHome = fixture.homeClubId === clubId;
   const winProb = winProbFor(fixture, clubId);
-  const projectedPoints = projectPoints(winProb, fixture.drawProb ?? 0.24);
   const side = isHome ? "home" : "away";
+  const projectedPoints = bestProjectedPoints(fixture.id, side, winProb, fixture.drawProb ?? 0.24);
   const breakdown = breakdownClubInFixture(fixture, side);
   const actualPoints = breakdown?.total ?? null;
 
