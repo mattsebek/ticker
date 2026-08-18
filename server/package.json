@@ -16,6 +16,7 @@
     "simulate-results": "tsx scripts/simulate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "better-sqlite3": "^11.3.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",

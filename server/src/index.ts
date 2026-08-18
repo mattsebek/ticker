@@ -17,6 +17,7 @@ import { standingsRouter } from "./routes/standings";
 import { adminRouter } from "./routes/admin";
 import { notificationsRouter } from "./routes/notifications";
 import { nuggetsRouter } from "./routes/nuggets";
+import { gameweekPreviewRouter } from "./routes/gameweekPreview";
 
 const app = express();
 app.use(cors());
@@ -41,6 +42,7 @@ app.use("/internal", internalRouter);
 app.use("/admin", adminRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/nuggets", nuggetsRouter);
+app.use("/gameweek-preview", gameweekPreviewRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

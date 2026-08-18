@@ -26,6 +26,10 @@ import { buildScoreMatrix } from "../projection/scoreDistribution";
 import { renderAdminIntelligencePage, AdminNuggetRow, IntelligenceFilter } from "../admin/adminIntelligencePage";
 import { intelligenceRepo } from "../intelligence/repo";
 import { generateCopy } from "../intelligence/copyTemplates";
+import { renderAdminGameweekPreviewPage, AdminPreviewRow } from "../admin/adminGameweekPreviewPage";
+import { editorialRepo } from "../editorial/repo";
+import { editorialConfig } from "../editorial/editorialConfig";
+import { generateGameweekPreview } from "../editorial/previewService";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -565,5 +569,62 @@ adminRouter.post("/nuggets/:id/regenerate", (req, res) => {
   const variant = Math.floor(existing.updatedAt / 1000) + 1;
   const copy = generateCopy({ signalType: existing.signalType, clubId: existing.clubId, facts }, clubName, variant);
   intelligenceRepo.regenerateCopy(existing.id, copy.category, copy.emoji, copy.headline, copy.body);
+  res.json({ ok: true });
+});
+
+// --- Gameweek Preview (long-form editorial — see editorial/) ---
+
+function toAdminPreviewRow(p: ReturnType<typeof editorialRepo.getById>): AdminPreviewRow {
+  const row = p!;
+  return {
+    id: row.id,
+    round: row.round,
+    headline: row.headline,
+    body: row.body,
+    status: row.status,
+    generatedAt: row.generatedAt,
+    updatedAt: row.updatedAt,
+    publishedAt: row.publishedAt,
+    wordCount: row.body.trim().split(/\s+/).filter(Boolean).length,
+  };
+}
+
+adminRouter.get("/gameweek-preview", (req, res) => {
+  const recent = editorialRepo.listRecent(20);
+  res.type("html").send(
+    renderAdminGameweekPreviewPage({
+      recent: recent.map((r) => toAdminPreviewRow(r)),
+      anthropicConfigured: !!editorialConfig.ANTHROPIC_API_KEY,
+    })
+  );
+});
+
+adminRouter.post("/gameweek-preview/generate", async (req, res) => {
+  try {
+    const preview = await generateGameweekPreview();
+    res.json({ ok: true, id: preview.id });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+adminRouter.post("/gameweek-preview/:id/publish", (req, res) => {
+  const existing = editorialRepo.getById(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, error: "Preview not found." });
+  editorialRepo.publish(existing.id, "admin");
+  res.json({ ok: true });
+});
+
+adminRouter.post("/gameweek-preview/:id/unpublish", (req, res) => {
+  const existing = editorialRepo.getById(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, error: "Preview not found." });
+  editorialRepo.unpublish(existing.id);
+  res.json({ ok: true });
+});
+
+adminRouter.post("/gameweek-preview/:id/edit", (req, res) => {
+  const { headline, body } = req.body ?? {};
+  if (!headline || !body) return res.status(400).json({ ok: false, error: "headline and body are required." });
+  editorialRepo.editCopy(req.params.id, String(headline), String(body));
   res.json({ ok: true });
 });
