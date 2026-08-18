@@ -9,7 +9,7 @@ import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
 import { fantasyRepo, LineupStatus } from "./fantasy/repo";
 import { fantasyConfig } from "./fantasy/fantasyConfig";
-import { projectPoints, difficultyFromWinProb } from "./fantasy/projection";
+import { expectedTickerPoints, difficultyFromWinProb } from "./fantasy/projection";
 import { breakdownClubInFixture, scoreClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
@@ -34,16 +34,18 @@ function winProbFor(fixture: Fixture, clubId: string): number {
  * (e.g. the odds provider hasn't posted lines for it, or it's a fixture
  * that predates the engine). Once a fixture is locked (kicked off), the
  * immutable OFFICIAL projection is authoritative; before that, the latest
- * (still-refining) projection is used. This is purely a display-layer
- * choice — it does not touch price_history/settlement/Price Pressure,
- * which still read fantasy/projection.ts exactly as before.
+ * (still-refining) projection is used. Kept to 2 decimal places (not
+ * rounded to a whole number) — the engine's real-number precision is the
+ * point of showing it. This is purely a display-layer choice — it does
+ * not touch price_history/settlement/Price Pressure, which still read
+ * fantasy/projection.ts exactly as before.
  */
 function bestProjectedPoints(fixtureId: string, side: "home" | "away", winProb: number, drawProb: number): number {
   const official = projectionRepo.getOfficialProjection(fixtureId);
-  if (official) return Math.round(side === "home" ? official.homeProjectedPoints : official.awayProjectedPoints);
+  if (official) return round2(side === "home" ? official.homeProjectedPoints : official.awayProjectedPoints);
   const latest = projectionRepo.getLatestFixtureProjection(fixtureId);
-  if (latest) return Math.round(side === "home" ? latest.homeProjectedPoints : latest.awayProjectedPoints);
-  return projectPoints(winProb, drawProb);
+  if (latest) return round2(side === "home" ? latest.homeProjectedPoints : latest.awayProjectedPoints);
+  return round2(expectedTickerPoints(winProb, drawProb));
 }
 
 // Kickoffs are stored as raw provider ISO timestamps (UTC) — the app has no
