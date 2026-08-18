@@ -359,7 +359,13 @@ adminRouter.get("/projections", (req, res) => {
       return row;
     })
     .filter((r): r is AdminProjectionRow => r != null);
-  res.type("html").send(renderAdminProjectionsPage(rows));
+
+  const availableRounds = [...new Set(rows.map((r) => r.round))].sort((a, b) => a - b);
+  const roundParam = parseInt(String(req.query.round ?? ""), 10);
+  const selectedRound = Number.isFinite(roundParam) ? roundParam : null;
+  const filteredRows = selectedRound == null ? rows : rows.filter((r) => r.round === selectedRound);
+
+  res.type("html").send(renderAdminProjectionsPage(filteredRows, availableRounds, selectedRound));
 });
 
 adminRouter.get("/projections/:fixtureId", (req, res) => {
