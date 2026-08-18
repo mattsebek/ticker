@@ -21,6 +21,7 @@ import { reconcileLeagues } from "../synthetic/leagueManager";
 import { runOddsRefreshAndReproject } from "../projection/projectionService";
 import { lockAndSettle } from "../projection/benchmarkLockService";
 import { recomputeAllForwardProjections } from "../projection/forwardProjectionService";
+import { runIntelligenceSweep } from "../intelligence/nuggetService";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -255,6 +256,21 @@ internalRouter.post("/lock-and-settle-projections", (req, res) => {
  * projection/forwardProjectionService.ts. Safe to call repeatedly (a new
  * row per club only lands on material change).
  */
+/**
+ * Dev/ops only: fires the Intelligence Engine's full signal-detection sweep
+ * on demand instead of waiting for its interval — see intelligence/nuggetService.ts.
+ * Safe to call repeatedly — dedup/material-change logic makes an unchanged
+ * signal a no-op on a second run.
+ */
+internalRouter.post("/run-intelligence-sweep", (req, res) => {
+  try {
+    const result = runIntelligenceSweep();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
 internalRouter.post("/recompute-forward-projections", (req, res) => {
   try {
     const result = recomputeAllForwardProjections();

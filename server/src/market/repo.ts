@@ -417,6 +417,26 @@ export const marketRepo = {
   getPriceSeries(clubId: string): { round: number; price: number }[] {
     return db.prepare("SELECT round, price FROM price_history WHERE club_id = ? ORDER BY round ASC").all(clubId) as any[];
   },
+  /** Raw BUY/SELL transaction counts for a club in a window — used by the Intelligence Engine's volume-spike detectors. Distinct from getNetTraderCounts, which nets per-user rather than counting raw transactions. */
+  getTransactionCounts(clubId: string, sinceMs: number, untilMs: number): { buys: number; sells: number } {
+    const rows = db
+      .prepare("SELECT entry_type, COUNT(*) as n FROM ledger_entries WHERE club_id = ? AND created_at > ? AND created_at <= ? AND entry_type IN ('BUY','SELL') GROUP BY entry_type")
+      .all(clubId, sinceMs, untilMs) as { entry_type: "BUY" | "SELL"; n: number }[];
+    const out = { buys: 0, sells: 0 };
+    for (const r of rows) {
+      if (r.entry_type === "BUY") out.buys = r.n;
+      else out.sells = r.n;
+    }
+    return out;
+  },
+  /** Season-to-date price extremes — used by the Intelligence Engine's PRICE_SEASON_HIGH/LOW detectors. Excludes seedHistoricalPrice's round=-999 demo rows (see its own doc comment) since those are backdated screenshot flavor, not real season history. */
+  getSeasonPriceExtremes(clubId: string): { min: number; max: number } | null {
+    const row = db.prepare("SELECT MIN(price) as min, MAX(price) as max FROM price_history WHERE club_id = ? AND round != -999").get(clubId) as
+      | { min: number | null; max: number | null }
+      | undefined;
+    if (!row || row.min == null || row.max == null) return null;
+    return { min: row.min, max: row.max };
+  },
   /** Most recent recorded price at or before a point in time — used to reconstruct historical lineup lock prices during the one-time backfill. `id DESC` (insertion order) breaks ties within the same timestamp. */
   getPriceAtOrBefore(clubId: string, atMs: number): number | null {
     const row = db

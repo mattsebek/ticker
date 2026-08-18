@@ -306,6 +306,11 @@ export const projectionRepo = {
   listUnsettledLockedFixtureIds(): string[] {
     return (db.prepare("SELECT fixture_id FROM official_fixture_projections WHERE settled_at IS NULL").all() as { fixture_id: string }[]).map((r) => r.fixture_id);
   },
+  /** Every settled fixture's official projection + actual/surprise — the Intelligence Engine's performance-divergence detectors read this directly rather than recomputing anything. Cheap to query in full (a season is ~380 fixtures); dedup on the consuming side makes re-processing an already-seen fixture a no-op. */
+  listSettledOfficialProjections(): OfficialFixtureProjectionRow[] {
+    const rows = db.prepare("SELECT * FROM official_fixture_projections WHERE settled_at IS NOT NULL").all();
+    return rows.map(rowToOfficial);
+  },
 
   // --- forward projections (threshold-gated, per club+window) ---
   getLatestForwardProjection(clubId: string, gameweeks: number): ForwardProjectionRow | undefined {

@@ -15,8 +15,10 @@ import * as syntheticPopulationManager from "./syntheticPopulationManager";
 import * as syntheticLeagueManager from "./syntheticLeagueManager";
 import * as refreshOddsAndReproject from "./refreshOddsAndReproject";
 import * as lockAndSettleProjections from "./lockAndSettleProjections";
+import * as detectMarketSignals from "./detectMarketSignals";
 import { pricingConfig } from "../market/pricingConfig";
 import { projectionConfig } from "../projection/projectionConfig";
+import { intelligenceConfig } from "../intelligence/intelligenceConfig";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -87,6 +89,13 @@ export function registerJobs() {
       initialDelayMs: 150_000,
     });
     scheduler.register({ name: "lockAndSettleProjections", intervalMs: intervalFromEnv("JOB_LOCK_PROJECTIONS_MS", 2 * MINUTE), run: lockAndSettleProjections.run, initialDelayMs: 160_000 });
+  }
+
+  // Intelligence Engine (Market Nuggets — see intelligence/). Gated by its
+  // own kill switch, checked inside the job itself, same precedent as the
+  // Projection Engine's ENABLED flag.
+  if (intelligenceConfig.ENABLED) {
+    scheduler.register({ name: "detectMarketSignals", intervalMs: intervalFromEnv("JOB_DETECT_SIGNALS_MS", 45 * MINUTE), run: detectMarketSignals.run, initialDelayMs: 170_000 });
   }
 }
 
