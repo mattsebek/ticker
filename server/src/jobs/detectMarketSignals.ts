@@ -9,6 +9,6 @@ export async function run(): Promise<JobResult> {
   const result = runIntelligenceSweep();
   return {
     ok: true,
-    detail: `${result.candidatesEvaluated} candidate(s) evaluated: ${result.created} created, ${result.updated} updated, ${result.belowThreshold} below threshold`,
+    detail: `${result.candidatesEvaluated} candidate(s) evaluated: ${result.created} created, ${result.updated} updated, ${result.belowThreshold} below threshold, ${result.onCooldown} suppressed by cooldown`,
   };
 }

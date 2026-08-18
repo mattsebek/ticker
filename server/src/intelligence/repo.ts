@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS market_nuggets (
 );
 CREATE INDEX IF NOT EXISTS idx_nuggets_status_score ON market_nuggets(status, interest_score DESC);
 CREATE INDEX IF NOT EXISTS idx_nuggets_dedup ON market_nuggets(dedup_key);
+CREATE INDEX IF NOT EXISTS idx_nuggets_signal_club ON market_nuggets(signal_type, club_id, generated_at);
 
 -- One row per club per sweep — the only historical PPS reference point that
 -- exists anywhere (pricePressure.ts computes it live, on demand, with no
@@ -130,6 +131,14 @@ export const intelligenceRepo = {
     const row = db
       .prepare("SELECT * FROM market_nuggets WHERE dedup_key = ? AND status IN ('CANDIDATE','PUBLISHED') ORDER BY id DESC LIMIT 1")
       .get(dedupKey);
+    return row ? rowToNugget(row) : undefined;
+  },
+
+  /** Most recent nugget (any status, any dedup_key) for this exact signal type + club generated since `sinceMs` — the cross-day/cross-fixture cooldown check, independent of a detector's own windowLabel granularity. */
+  findRecentBySignalAndClub(signalType: string, clubId: string | null, sinceMs: number): MarketNuggetRow | undefined {
+    const row = clubId
+      ? db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id = ? AND generated_at >= ? ORDER BY id DESC LIMIT 1").get(signalType, clubId, sinceMs)
+      : db.prepare("SELECT * FROM market_nuggets WHERE signal_type = ? AND club_id IS NULL AND generated_at >= ? ORDER BY id DESC LIMIT 1").get(signalType, sinceMs);
     return row ? rowToNugget(row) : undefined;
   },
 

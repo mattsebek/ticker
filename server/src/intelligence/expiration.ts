@@ -33,6 +33,32 @@ const SIGNAL_EXPIRATION_CLASS: Record<string, ExpirationClass> = {
   MANUAL: "DAILY_MARKET_SIGNAL",
 };
 
+/**
+ * Cross-window cooldown, keyed off the same class as expiry: how long a
+ * still-true condition for a given (signalType, clubId) pair goes without
+ * re-alerting, independent of the detector's own dedup-key granularity
+ * (day bucket, fixture id, etc). Without this, a persistently-true
+ * condition — a club sitting above the crowded-ownership threshold every
+ * gameweek, a club with chronically elevated PPS every day — generates a
+ * "fresh" candidate every single day/gameweek it remains true, forever,
+ * since each of those windowLabels is technically a new dedup key. The
+ * cooldown mirrors the expiry duration deliberately: don't re-alert on the
+ * same story before the previous alert about it would even have expired.
+ */
+export function cooldownMs(signalType: string): number {
+  const cls = SIGNAL_EXPIRATION_CLASS[signalType] ?? "DAILY_MARKET_SIGNAL";
+  switch (cls) {
+    case "INTRADAY_ACTIVITY":
+      return 24 * HOUR;
+    case "DAILY_MARKET_SIGNAL":
+      return 48 * HOUR;
+    case "MATCHWEEK_ACTIVITY":
+      return 7 * DAY;
+    case "SEASON_MILESTONE":
+      return 14 * DAY;
+  }
+}
+
 /** Default expires_at for a freshly-generated candidate — spec section 38's four default rules, admin can always override on publish/edit. */
 export function defaultExpiresAt(signalType: string, generatedAt: number, currentRound: number): number | null {
   const cls = SIGNAL_EXPIRATION_CLASS[signalType] ?? "DAILY_MARKET_SIGNAL";
