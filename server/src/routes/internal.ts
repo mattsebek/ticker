@@ -23,6 +23,7 @@ import { lockAndSettle } from "../projection/benchmarkLockService";
 import { recomputeAllForwardProjections } from "../projection/forwardProjectionService";
 import { runIntelligenceSweep } from "../intelligence/nuggetService";
 import { intelligenceRepo } from "../intelligence/repo";
+import { intelligenceConfig } from "../intelligence/intelligenceConfig";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -276,6 +277,21 @@ internalRouter.post("/run-intelligence-sweep", (req, res) => {
 internalRouter.post("/cleanup-redundant-nuggets", (req, res) => {
   try {
     const result = intelligenceRepo.consolidateRedundantCandidates();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
+ * One-time ops action: applies the review-queue category cap
+ * (INTELLIGENCE_MAX_CANDIDATES_PER_CATEGORY) to the current CANDIDATE
+ * backlog immediately, rather than waiting for the next sweep — see
+ * intelligenceRepo.capCandidatesByCategory. Safe to call repeatedly.
+ */
+internalRouter.post("/cap-nugget-categories", (req, res) => {
+  try {
+    const result = intelligenceRepo.capCandidatesByCategory(intelligenceConfig.MAX_CANDIDATES_PER_CATEGORY, "system:category-cap");
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err?.message || String(err) });

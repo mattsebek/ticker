@@ -330,6 +330,38 @@ export const intelligenceRepo = {
     return { groupsCollapsed: groups.length, dismissed };
   },
 
+  /**
+   * Review-queue cap: for every category label with more than
+   * `maxPerCategory` still-open CANDIDATE rows (across all clubs — this is
+   * a different axis than consolidateRedundantCandidates, which groups by
+   * signal_type+club), keeps only the highest-scored `maxPerCategory` and
+   * dismisses the rest. Runs at the end of every sweep (nuggetService) so
+   * the queue stays capped going forward, not just as a one-time cleanup.
+   * MANUAL nuggets are excluded — same reasoning as consolidateRedundantCandidates.
+   */
+  capCandidatesByCategory(maxPerCategory: number, dismissedBy: string): { categoriesCapped: number; dismissed: number } {
+    const groups = db
+      .prepare(
+        `SELECT category, COUNT(*) as n FROM market_nuggets
+         WHERE status = 'CANDIDATE' AND signal_type != 'MANUAL'
+         GROUP BY category HAVING COUNT(*) > ?`
+      )
+      .all(maxPerCategory) as { category: string; n: number }[];
+
+    const now = Date.now();
+    let dismissed = 0;
+    for (const g of groups) {
+      const rows = db
+        .prepare("SELECT id FROM market_nuggets WHERE status = 'CANDIDATE' AND category = ? AND signal_type != 'MANUAL' ORDER BY interest_score DESC, generated_at DESC")
+        .all(g.category) as { id: string }[];
+      for (let i = maxPerCategory; i < rows.length; i++) {
+        db.prepare("UPDATE market_nuggets SET status = 'DISMISSED', dismissed_at = ?, dismissed_by = ?, updated_at = ? WHERE id = ?").run(now, dismissedBy, now, rows[i].id);
+        dismissed++;
+      }
+    }
+    return { categoriesCapped: groups.length, dismissed };
+  },
+
   /** Admin manual copy edit — leaves generated_headline/body (and source_data_json) untouched, so "was this edited?" is always recoverable as headline !== generated_headline. */
   editCopy(id: string, headline: string, body: string) {
     db.prepare("UPDATE market_nuggets SET headline = ?, body = ?, updated_at = ? WHERE id = ?").run(headline, body, Date.now(), id);

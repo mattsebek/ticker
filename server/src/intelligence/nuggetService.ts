@@ -19,6 +19,7 @@ export interface SweepResult {
   updated: number;
   belowThreshold: number;
   onCooldown: number;
+  categoryCapped: number;
 }
 
 function runAllDetectors(): CandidateSignal[] {
@@ -125,5 +126,7 @@ export function runIntelligenceSweep(): SweepResult {
     else if (outcome === "cooldown") onCooldown++;
   }
 
-  return { candidatesEvaluated: signals.length, created, updated, belowThreshold, onCooldown };
+  const { dismissed: categoryCapped } = intelligenceRepo.capCandidatesByCategory(intelligenceConfig.MAX_CANDIDATES_PER_CATEGORY, "system:category-cap");
+
+  return { candidatesEvaluated: signals.length, created, updated, belowThreshold, onCooldown, categoryCapped };
 }

@@ -52,6 +52,9 @@ export const intelligenceConfig = {
   /** How far back from a fixture locking (≈ kickoff) counts as its "pre-match" trading window. */
   PRE_MATCH_WINDOW_DAYS: floatFromEnv("INTELLIGENCE_PRE_MATCH_WINDOW_DAYS", 3),
 
+  /** Admin review queue cap: at most this many still-open CANDIDATE nuggets per category label (HEATING_UP, MILESTONE, SMART_MONEY, etc.) at once — the weakest excess are auto-dismissed so the queue never re-floods with many different clubs all wearing the same category. */
+  MAX_CANDIDATES_PER_CATEGORY: floatFromEnv("INTELLIGENCE_MAX_CANDIDATES_PER_CATEGORY", 2),
+
   /** Full-scale references for normalizing "market magnitude" in the interest score (section 16) — each signal's raw magnitude divided by its own reference, capped at 1. */
   MAGNITUDE_SCALE: {
     volumeRatio: 4, // e.g. a 4x-average spike reads as "maximum" magnitude
