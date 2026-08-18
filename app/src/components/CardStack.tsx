@@ -144,7 +144,7 @@ export function CardStack({ cards, dismissed }: { cards: BriefCard[]; dismissed:
   const behind = remaining.slice(1, 3);
 
   return (
-    <View style={{ marginTop: 16, marginHorizontal: -10 }}>
+    <View style={{ marginTop: 10, marginHorizontal: -10 }}>
       <View style={{ height: CARD_HEIGHT + behind.length * PEEK_OFFSET }}>
         {behind
           .map((_, i) => i + 1)
