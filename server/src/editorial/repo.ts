@@ -22,9 +22,45 @@ CREATE TABLE IF NOT EXISTS gameweek_previews (
 );
 CREATE INDEX IF NOT EXISTS idx_gw_previews_round ON gameweek_previews(round, id);
 CREATE INDEX IF NOT EXISTS idx_gw_previews_status ON gameweek_previews(status, published_at DESC);
+
+-- Singleton row (same pattern as synthetic_system_config) — one shared
+-- thumbnail mark for the whole feature, not per-article. Clients own the
+-- actual icon geometry (see app/website GameweekPreviewArt.tsx); this only
+-- stores which of the known options is currently selected, so admin can
+-- change it without a code deploy.
+CREATE TABLE IF NOT EXISTS gameweek_preview_icon_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  icon TEXT NOT NULL DEFAULT 'football',
+  badge TEXT NOT NULL DEFAULT 'trending',
+  background TEXT NOT NULL DEFAULT 'diagonal',
+  color TEXT NOT NULL DEFAULT 'ink',
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT
+);
+INSERT OR IGNORE INTO gameweek_preview_icon_config (id, icon, badge, background, color, updated_at)
+  VALUES (1, 'football', 'trending', 'diagonal', 'ink', ${Date.now()});
 `);
 
 export type PreviewStatus = "DRAFT" | "PUBLISHED";
+
+export const ICON_OPTIONS = ["football", "trophy", "flame", "chartCandle", "rocket"] as const;
+export const BADGE_OPTIONS = ["none", "trending"] as const;
+export const BACKGROUND_OPTIONS = ["diagonal", "vertical", "radial", "card"] as const;
+export const COLOR_OPTIONS = ["ink", "white"] as const;
+
+export type IconKey = (typeof ICON_OPTIONS)[number];
+export type BadgeKey = (typeof BADGE_OPTIONS)[number];
+export type BackgroundKey = (typeof BACKGROUND_OPTIONS)[number];
+export type ColorKey = (typeof COLOR_OPTIONS)[number];
+
+export interface IconConfig {
+  icon: IconKey;
+  badge: BadgeKey;
+  background: BackgroundKey;
+  color: ColorKey;
+  updatedAt: number;
+  updatedBy: string | null;
+}
 
 export interface GameweekPreviewRow {
   id: string;
@@ -110,5 +146,21 @@ export const editorialRepo = {
   /** Pulls a published piece back to draft — the "Retract" action, mirrors intelligenceRepo.dismiss's role for nuggets but keeps the row (never a terminal/deleted state; can be re-published). */
   unpublish(id: string) {
     db.prepare("UPDATE gameweek_previews SET status = 'DRAFT', updated_at = ? WHERE id = ?").run(Date.now(), id);
+  },
+
+  getIconConfig(): IconConfig {
+    const row = db.prepare("SELECT * FROM gameweek_preview_icon_config WHERE id = 1").get() as any;
+    return { icon: row.icon, badge: row.badge, background: row.background, color: row.color, updatedAt: row.updated_at, updatedBy: row.updated_by };
+  },
+
+  setIconConfig(input: { icon: IconKey; badge: BadgeKey; background: BackgroundKey; color: ColorKey }, updatedBy: string) {
+    db.prepare("UPDATE gameweek_preview_icon_config SET icon = ?, badge = ?, background = ?, color = ?, updated_at = ?, updated_by = ? WHERE id = 1").run(
+      input.icon,
+      input.badge,
+      input.background,
+      input.color,
+      Date.now(),
+      updatedBy
+    );
   },
 };

@@ -27,7 +27,7 @@ import { renderAdminIntelligencePage, AdminNuggetRow, IntelligenceFilter } from 
 import { intelligenceRepo } from "../intelligence/repo";
 import { generateCopy } from "../intelligence/copyTemplates";
 import { renderAdminGameweekPreviewPage, AdminPreviewRow } from "../admin/adminGameweekPreviewPage";
-import { editorialRepo } from "../editorial/repo";
+import { editorialRepo, ICON_OPTIONS, BADGE_OPTIONS, BACKGROUND_OPTIONS, COLOR_OPTIONS } from "../editorial/repo";
 import { editorialConfig } from "../editorial/editorialConfig";
 import { generateGameweekPreview } from "../editorial/previewService";
 
@@ -595,6 +595,7 @@ adminRouter.get("/gameweek-preview", (req, res) => {
     renderAdminGameweekPreviewPage({
       recent: recent.map((r) => toAdminPreviewRow(r)),
       anthropicConfigured: !!editorialConfig.ANTHROPIC_API_KEY,
+      iconConfig: editorialRepo.getIconConfig(),
     })
   );
 });
@@ -626,5 +627,15 @@ adminRouter.post("/gameweek-preview/:id/edit", (req, res) => {
   const { headline, body } = req.body ?? {};
   if (!headline || !body) return res.status(400).json({ ok: false, error: "headline and body are required." });
   editorialRepo.editCopy(req.params.id, String(headline), String(body));
+  res.json({ ok: true });
+});
+
+adminRouter.post("/gameweek-preview/icon", (req, res) => {
+  const { icon, badge, background, color } = req.body ?? {};
+  if (!ICON_OPTIONS.includes(icon)) return res.status(400).json({ ok: false, error: "Invalid icon." });
+  if (!BADGE_OPTIONS.includes(badge)) return res.status(400).json({ ok: false, error: "Invalid badge." });
+  if (!BACKGROUND_OPTIONS.includes(background)) return res.status(400).json({ ok: false, error: "Invalid background." });
+  if (!COLOR_OPTIONS.includes(color)) return res.status(400).json({ ok: false, error: "Invalid color." });
+  editorialRepo.setIconConfig({ icon, badge, background, color }, "admin");
   res.json({ ok: true });
 });

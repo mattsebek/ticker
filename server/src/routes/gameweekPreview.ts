@@ -17,3 +17,9 @@ gameweekPreviewRouter.get("/latest", (req, res) => {
     },
   });
 });
+
+/** Public, read-only — the current shared thumbnail mark (icon/badge/background/color). Admin-editable at /admin/gameweek-preview; clients own the actual icon geometry, this just says which option is selected. */
+gameweekPreviewRouter.get("/icon-config", (req, res) => {
+  const config = editorialRepo.getIconConfig();
+  res.json({ icon: config.icon, badge: config.badge, background: config.background, color: config.color });
+});

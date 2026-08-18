@@ -234,6 +234,13 @@ export interface GameweekPreview {
   publishedAt: string;
 }
 
+export interface GameweekPreviewIconConfig {
+  icon: "football" | "trophy" | "flame" | "chartCandle" | "rocket";
+  badge: "none" | "trending";
+  background: "diagonal" | "vertical" | "radial" | "card";
+  color: "ink" | "white";
+}
+
 export interface SellPreviewResponse {
   clubName: string;
   currentPrice: number;
