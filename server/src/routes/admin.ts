@@ -18,6 +18,11 @@ import { computePricePressure, priceDirection, ppsDirection } from "../market/pr
 import { renderAdminSyntheticPage, AdminSyntheticUserRow } from "../admin/adminSyntheticPage";
 import { syntheticRepo } from "../synthetic/syntheticRepo";
 import { forceEvaluateUser } from "../synthetic/orchestrator";
+import { renderAdminProjectionsPage, AdminProjectionRow } from "../admin/adminProjectionsPage";
+import { renderAdminProjectionDetailPage } from "../admin/adminProjectionDetailPage";
+import { projectionRepo } from "../projection/repo";
+import { projectionConfig } from "../projection/projectionConfig";
+import { buildScoreMatrix } from "../projection/scoreDistribution";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -230,6 +235,12 @@ adminRouter.get("/clubs/:id", (req, res) => {
   const diag = clubPricingDiagnostics(club.id, currentPrice);
   const timeline = marketRepo.getPriceHistoryTimeline(club.id, 100);
 
+  const forwardGameweeks = projectionConfig.FORWARD_PROJECTION_GAMEWEEKS;
+  const storedForward = projectionRepo.getLatestForwardProjection(club.id, forwardGameweeks);
+  const forwardProjection = storedForward
+    ? { points: storedForward.forwardProjectedPoints, delta: storedForward.forwardProjectionDelta, gameweeks: forwardGameweeks, fixtureCount: storedForward.fixtureCount }
+    : null;
+
   res.type("html").send(
     renderAdminClubDetailPage({
       id: club.id,
@@ -244,6 +255,7 @@ adminRouter.get("/clubs/:id", (req, res) => {
       ppsDirection: diag.ppsDir,
       divergence: diag.divergence,
       timeline,
+      forwardProjection,
     })
   );
 });
@@ -308,4 +320,128 @@ adminRouter.post("/synthetic/users/:id/force", (req, res) => {
   const result = forceEvaluateUser(req.params.id);
   if (!result) return res.status(404).json({ ok: false, error: "No synthetic profile for that user." });
   res.json({ ok: true, result });
+});
+
+// --- Market-Calibrated Points Projection Engine (shadow mode — see projection/) ---
+
+function fmtDateTime(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+adminRouter.get("/projections", (req, res) => {
+  const fixtureIds = projectionRepo.listDistinctProjectedFixtureIds();
+  const rows: AdminProjectionRow[] = fixtureIds
+    .map((fixtureId) => {
+      const fixture = footballRepo.getFixture(fixtureId);
+      if (!fixture) return null;
+      const home = footballRepo.getClub(fixture.homeClubId);
+      const away = footballRepo.getClub(fixture.awayClubId);
+      const snapshot = projectionRepo.getLatestSnapshotForFixture(fixtureId);
+      const projection = projectionRepo.getLatestFixtureProjection(fixtureId);
+      const official = projectionRepo.getOfficialProjection(fixtureId);
+      const row: AdminProjectionRow = {
+        fixtureId,
+        homeClubName: home?.name ?? fixture.homeClubId,
+        awayClubName: away?.name ?? fixture.awayClubId,
+        round: fixture.round,
+        kickoffStr: fmtDateTime(new Date(fixture.kickoff).getTime()),
+        status: fixture.status,
+        consensusHomeProb: snapshot?.consensusHomeProb ?? null,
+        consensusDrawProb: snapshot?.consensusDrawProb ?? null,
+        consensusAwayProb: snapshot?.consensusAwayProb ?? null,
+        lambdaHome: projection?.lambdaHome ?? null,
+        lambdaAway: projection?.lambdaAway ?? null,
+        homeProjectedPoints: projection?.homeProjectedPoints ?? null,
+        awayProjectedPoints: projection?.awayProjectedPoints ?? null,
+        locked: !!official,
+        settled: !!official?.settledAt,
+      };
+      return row;
+    })
+    .filter((r): r is AdminProjectionRow => r != null);
+  res.type("html").send(renderAdminProjectionsPage(rows));
+});
+
+adminRouter.get("/projections/:fixtureId", (req, res) => {
+  const fixture = footballRepo.getFixture(req.params.fixtureId);
+  if (!fixture) return res.status(404).send("Fixture not found.");
+  const home = footballRepo.getClub(fixture.homeClubId);
+  const away = footballRepo.getClub(fixture.awayClubId);
+
+  const snapshot = projectionRepo.getLatestSnapshotForFixture(fixture.id);
+  const bookmakers = snapshot ? projectionRepo.getSnapshotBookmakers(snapshot.id) : [];
+  const latestProjection = projectionRepo.getLatestFixtureProjection(fixture.id);
+  const official = projectionRepo.getOfficialProjection(fixture.id);
+  const history = projectionRepo.getFixtureProjectionHistory(fixture.id);
+
+  const topScorelines = latestProjection
+    ? buildScoreMatrix(latestProjection.lambdaHome, latestProjection.lambdaAway, projectionConfig.MAX_GOALS_PER_TEAM)
+        .matrix.slice()
+        .sort((a, b) => b.probability - a.probability)
+        .slice(0, 15)
+    : [];
+
+  res.type("html").send(
+    renderAdminProjectionDetailPage({
+      fixtureId: fixture.id,
+      homeClubName: home?.name ?? fixture.homeClubId,
+      awayClubName: away?.name ?? fixture.awayClubId,
+      round: fixture.round,
+      kickoffStr: fmtDateTime(new Date(fixture.kickoff).getTime()),
+      status: fixture.status,
+      latestSnapshot: snapshot
+        ? {
+            consensusHomeProb: snapshot.consensusHomeProb,
+            consensusDrawProb: snapshot.consensusDrawProb,
+            consensusAwayProb: snapshot.consensusAwayProb,
+            consensusTotalsLine: snapshot.consensusTotalsLine,
+            consensusOverProb: snapshot.consensusOverProb,
+            consensusUnderProb: snapshot.consensusUnderProb,
+            fetchedAtStr: fmtDateTime(snapshot.fetchedAt),
+          }
+        : null,
+      bookmakers: bookmakers.map((b) => ({
+        bookmakerTitle: b.bookmakerTitle,
+        homeOdds: b.homeOdds,
+        drawOdds: b.drawOdds,
+        awayOdds: b.awayOdds,
+        impliedHomeProb: b.impliedHomeProb,
+        impliedDrawProb: b.impliedDrawProb,
+        impliedAwayProb: b.impliedAwayProb,
+        overroundPct: b.overroundPct,
+        totalsLine: b.totalsLine,
+        overOdds: b.overOdds,
+        underOdds: b.underOdds,
+      })),
+      latestProjection: latestProjection
+        ? {
+            lambdaHome: latestProjection.lambdaHome,
+            lambdaAway: latestProjection.lambdaAway,
+            homeProjectedPoints: latestProjection.homeProjectedPoints,
+            awayProjectedPoints: latestProjection.awayProjectedPoints,
+            cumulativeProbabilityCovered: latestProjection.cumulativeProbabilityCovered,
+          }
+        : null,
+      topScorelines,
+      official: official
+        ? {
+            homeProjectedPoints: official.homeProjectedPoints,
+            awayProjectedPoints: official.awayProjectedPoints,
+            lockedAtStr: fmtDateTime(official.lockedAt),
+            homeActualPoints: official.homeActualPoints,
+            awayActualPoints: official.awayActualPoints,
+            homePerformanceSurprise: official.homePerformanceSurprise,
+            awayPerformanceSurprise: official.awayPerformanceSurprise,
+            settledAtStr: official.settledAt ? fmtDateTime(official.settledAt) : null,
+          }
+        : null,
+      history: history.map((h) => ({
+        computedAtStr: fmtDateTime(h.computedAt),
+        lambdaHome: h.lambdaHome,
+        lambdaAway: h.lambdaAway,
+        homeProjectedPoints: h.homeProjectedPoints,
+        awayProjectedPoints: h.awayProjectedPoints,
+      })),
+    })
+  );
 });

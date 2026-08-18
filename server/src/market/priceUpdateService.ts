@@ -15,6 +15,15 @@ import { db } from "../db";
  * calling this twice for the same fixture is a safe no-op. Each club's
  * read-compute-write-history sequence is one db.transaction() so a demand
  * tick can never observe or write over a half-applied settlement.
+ *
+ * "Expectation" here (computePerformanceChangeForClub, below) still comes
+ * from fantasy/projection.ts's naive winProb-only formula. The market-
+ * calibrated Points Projection Engine (projection/, shadow mode) computes a
+ * real expected-goals/Poisson-distribution projection in parallel, locked
+ * pre-kickoff as official_fixture_projections — but this function is
+ * deliberately NOT repointed at it yet. A future, separately-confirmed pass
+ * would swap `expectedPoints` here for that locked official value; until
+ * then, live pricing is unaffected by anything in projection/.
  */
 export const priceUpdateService = {
   applyFixtureSettlement(fixture: Fixture): void {

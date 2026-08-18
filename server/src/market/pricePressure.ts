@@ -26,7 +26,20 @@ function computeFormScore(clubId: string): number | null {
   return weightedAverage(results);
 }
 
-/** Expectation component (40%): last 5 settled fixtures' actual-vs-expected Ticker points, stored at settlement time. Rows from before this migration (null points) are skipped, not treated as 0. */
+/**
+ * Expectation component (40%): last 5 settled fixtures' actual-vs-expected
+ * Ticker points, stored at settlement time. Rows from before this migration
+ * (null points) are skipped, not treated as 0.
+ *
+ * The "expected" half of that comparison is still fantasy/projection.ts's
+ * naive winProb-only formula — the market-calibrated Points Projection
+ * Engine (projection/, shadow mode) computes a real expected-goals/Poisson-
+ * distribution projection alongside it, but is deliberately NOT wired in
+ * here yet. A future, separately-confirmed pass would read
+ * official_fixture_projections's home/awayPerformanceSurprise instead of
+ * recomputing this component from fantasy/projection.ts's numbers — until
+ * then this function's behavior is unchanged.
+ */
 function computeExpectationScore(clubId: string): number | null {
   const events = marketRepo.getRecentPerformanceEvents(clubId, 5).filter((e) => e.expectedTickerPoints != null && e.actualTickerPoints != null);
   const scores = events.map((e) => clamp((e.actualTickerPoints! - e.expectedTickerPoints!) / pricingConfig.PPS_FULL_SCALE_POINT_DELTA, -1, 1) * 100);

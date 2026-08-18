@@ -21,12 +21,14 @@ const ICON_USERS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ICON_LEAGUES = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>`;
 const ICON_CLUBS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8l3 2.2-1.1 3.6h-3.8L9 10.2 12 8z"/><path d="M12 3v5M4.7 8.7l4.3 1.5M19.3 8.7L15 10.2M6.3 17.5l3.9-3.7M17.7 17.5l-3.9-3.7"/></svg>`;
 const ICON_SYNTHETIC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M8 3v4M16 3v4"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 16.5c1 .8 5 .8 6 0"/></svg>`;
+const ICON_PROJECTIONS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg>`;
 
 const NAV_ITEMS: { key: string; label: string; href: string; icon: string }[] = [
   { key: "users", label: "Users", href: "/admin/users", icon: ICON_USERS },
   { key: "leagues", label: "Leagues", href: "/admin/leagues", icon: ICON_LEAGUES },
   { key: "clubs", label: "Clubs", href: "/admin/clubs", icon: ICON_CLUBS },
   { key: "synthetic", label: "Synthetic", href: "/admin/synthetic", icon: ICON_SYNTHETIC },
+  { key: "projections", label: "Projections", href: "/admin/projections", icon: ICON_PROJECTIONS },
 ];
 
 /** Icon + wordmark lockup, ported from ticker-website's Logo.tsx (same gradient square + arrow glyph). */
@@ -47,7 +49,7 @@ const LOGO_HTML = `
  * shared page reload between sections is a non-issue for an internal tool.
  * `active` highlights the current section in the sidebar.
  */
-export function renderAdminShell(opts: { active: "users" | "leagues" | "clubs" | "synthetic"; title: string; bodyHtml: string; headExtra?: string }): string {
+export function renderAdminShell(opts: { active: "users" | "leagues" | "clubs" | "synthetic" | "projections"; title: string; bodyHtml: string; headExtra?: string }): string {
   const navLinks = NAV_ITEMS.map(
     (item) => `
       <a href="${item.href}" style="

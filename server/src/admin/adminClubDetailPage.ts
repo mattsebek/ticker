@@ -17,6 +17,8 @@ export interface AdminClubDetail {
   ppsDirection: Direction;
   divergence: "ALIGNED" | "DIVERGENCE" | null;
   timeline: any[]; // raw price_history rows, newest first — see market/repo.ts getPriceHistoryTimeline
+  /** From the shadow-mode Projection Engine (projection/) — not wired into pricing yet, shown here for visibility only. Null if no forward projection has been computed for this club. */
+  forwardProjection: { points: number; delta: number | null; gameweeks: number; fixtureCount: number } | null;
 }
 
 function fmt(n: number): string {
@@ -126,6 +128,14 @@ export function renderAdminClubDetailPage(d: AdminClubDetail): string {
       ${statCard("Opening Price", fmt(d.startingPrice))}
       ${statCard("24H Change", pct(d.pctChange24h), pctColor(d.pctChange24h))}
       ${statCard("7D Change", pct(d.pctChange7d), pctColor(d.pctChange7d))}
+      ${
+        d.forwardProjection
+          ? statCard(
+              `Forward Projection (${d.forwardProjection.gameweeks} GW)`,
+              `${d.forwardProjection.points.toFixed(1)} pts` + (d.forwardProjection.delta != null ? ` <span style="font-size:12px;color:${d.forwardProjection.delta >= 0 ? T.accent : T.red};">${d.forwardProjection.delta >= 0 ? "+" : ""}${d.forwardProjection.delta.toFixed(1)}</span>` : "")
+            )
+          : statCard(`Forward Projection`, "—")
+      }
     </div>
 
     <div style="background:${T.card};border:1px solid ${T.border};border-radius:12px;padding:16px;margin-bottom:20px;">

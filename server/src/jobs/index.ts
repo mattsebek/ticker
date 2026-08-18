@@ -13,7 +13,10 @@ import * as gameweekDeadlineReminder from "./gameweekDeadlineReminder";
 import * as syntheticActivityOrchestrator from "./syntheticActivityOrchestrator";
 import * as syntheticPopulationManager from "./syntheticPopulationManager";
 import * as syntheticLeagueManager from "./syntheticLeagueManager";
+import * as refreshOddsAndReproject from "./refreshOddsAndReproject";
+import * as lockAndSettleProjections from "./lockAndSettleProjections";
 import { pricingConfig } from "../market/pricingConfig";
+import { projectionConfig } from "../projection/projectionConfig";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -67,6 +70,19 @@ export function registerJobs() {
   scheduler.register({ name: "syntheticActivityOrchestrator", intervalMs: intervalFromEnv("JOB_SYNTHETIC_ORCHESTRATOR_MS", HOUR), run: syntheticActivityOrchestrator.run, initialDelayMs: 120_000 });
   scheduler.register({ name: "syntheticPopulationManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_POPULATION_MS", 24 * HOUR), run: syntheticPopulationManager.run, initialDelayMs: 130_000 });
   scheduler.register({ name: "syntheticLeagueManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_LEAGUE_MS", 24 * HOUR), run: syntheticLeagueManager.run, initialDelayMs: 140_000 });
+
+  // Market-Calibrated Points Projection Engine (shadow mode — see
+  // projection/). Gated by its own kill switch, checked inside the job
+  // itself so it stays a true no-op (not even a log line change) when off.
+  if (projectionConfig.ENABLED) {
+    scheduler.register({
+      name: "refreshOddsAndReproject",
+      intervalMs: intervalFromEnv("JOB_REFRESH_ODDS_PROJECTIONS_MS", 3 * HOUR),
+      run: refreshOddsAndReproject.run,
+      initialDelayMs: 150_000,
+    });
+    scheduler.register({ name: "lockAndSettleProjections", intervalMs: intervalFromEnv("JOB_LOCK_PROJECTIONS_MS", 2 * MINUTE), run: lockAndSettleProjections.run, initialDelayMs: 160_000 });
+  }
 }
 
 export { scheduler };

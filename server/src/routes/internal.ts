@@ -18,6 +18,9 @@ import { syntheticRepo } from "../synthetic/syntheticRepo";
 import { runOrchestratorBatch, forceEvaluateUser } from "../synthetic/orchestrator";
 import { reconcilePopulation } from "../synthetic/populationManager";
 import { reconcileLeagues } from "../synthetic/leagueManager";
+import { runOddsRefreshAndReproject } from "../projection/projectionService";
+import { lockAndSettle } from "../projection/benchmarkLockService";
+import { recomputeAllForwardProjections } from "../projection/forwardProjectionService";
 
 // Every table in the app, across every domain — see each domain's repo.ts
 // for the owning CREATE TABLE. Kept as one explicit list (rather than
@@ -209,6 +212,52 @@ internalRouter.post("/reset-to-pregameweek1", async (req, res) => {
     const parsed = resetToPreGw1Schema.safeParse(req.body ?? {});
     const days = parsed.success ? (parsed.data.daysUntilFirstKickoff ?? 2) : 2;
     const result = await resetToPreGameweek1(days);
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
+ * Dev/ops only: fires the projection engine's odds-refresh-and-reproject
+ * cycle on demand instead of waiting for its interval — see
+ * projection/projectionService.ts. Shadow mode: writes only to
+ * projection/'s own tables, never touches club_prices/price_history. Safe
+ * to call repeatedly (each fixture's snapshot is always written; a new
+ * fixture_projections row only lands on material change).
+ */
+internalRouter.post("/refresh-odds-projections", async (req, res) => {
+  try {
+    const result = await runOddsRefreshAndReproject();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
+ * Dev/ops only: fires the projection engine's pre-kickoff lock + post-match
+ * settlement pass on demand — see projection/benchmarkLockService.ts. Safe
+ * to call repeatedly (locking is idempotent per fixture; settlement only
+ * fills a still-NULL settled_at).
+ */
+internalRouter.post("/lock-and-settle-projections", (req, res) => {
+  try {
+    const result = lockAndSettle();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+/**
+ * Dev/ops only: recomputes every club's Forward Projection on demand — see
+ * projection/forwardProjectionService.ts. Safe to call repeatedly (a new
+ * row per club only lands on material change).
+ */
+internalRouter.post("/recompute-forward-projections", (req, res) => {
+  try {
+    const result = recomputeAllForwardProjections();
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err?.message || String(err) });
