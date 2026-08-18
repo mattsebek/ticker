@@ -7,6 +7,8 @@ import { fantasyRepo } from "../fantasy/repo";
 import { usersRepo } from "../shared/usersRepo";
 import { clubSummary } from "../presenters";
 import { round2 } from "../shared/rng";
+import { intelligenceRepo } from "../intelligence/repo";
+import { widgetRank } from "../intelligence/interestScore";
 
 export const briefingRouter = Router();
 
@@ -60,6 +62,35 @@ function didYouKnowCards() {
   return rotatedTips().map((t) => ({ label: t.label, emoji: t.emoji, segments: [{ text: t.text }], ...(t.cta ? { cta: t.cta } : {}) }));
 }
 
+/**
+ * Real, admin-published Market Nuggets (Intelligence Engine — see
+ * intelligence/) mapped into the same BriefCard shape the client already
+ * renders — zero app/website changes needed beyond CardStack's CTA
+ * switch-case for "view-club:<id>". Pinned nuggets stay first; everything
+ * else is re-ranked by widgetRank's recency-decayed score so a nugget
+ * published a week ago naturally fades from rotation without its stored
+ * interest_score (what the admin saw when reviewing it) ever changing.
+ */
+function liveNuggetCards(limit: number) {
+  const now = Date.now();
+  const pool = intelligenceRepo.getActiveForWidget(Math.max(limit, 15));
+  const pinned = pool.filter((n) => n.isPinned);
+  const rest = pool
+    .filter((n) => !n.isPinned)
+    .slice()
+    .sort((a, b) => widgetRank(b.interestScore, b.generatedAt, now) - widgetRank(a.interestScore, a.generatedAt, now));
+
+  return [...pinned, ...rest].slice(0, limit).map((n) => {
+    const club = n.ctaClubId ? footballService.getClub(n.ctaClubId) : undefined;
+    return {
+      label: n.headline,
+      emoji: n.emoji,
+      segments: [{ text: n.body }],
+      ...(club ? { cta: { text: `View ${club.name} →`, action: `view-club:${n.ctaClubId}` } } : {}),
+    };
+  });
+}
+
 function fmtMoney(v: number) {
   return "$" + v.toFixed(2);
 }
@@ -85,7 +116,11 @@ briefingRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   if (holdingIds.length === 0) return res.json({ morningBrief: null, cards: [] });
 
   const isFirstWeek = Date.now() - user.created_at < 7 * DAY_MS;
-  if (isFirstWeek || fantasyRepo.maxScoredRound() === 0) return res.json({ morningBrief: didYouKnowBrief(), cards: didYouKnowCards() });
+  if (isFirstWeek || fantasyRepo.maxScoredRound() === 0) {
+    const liveCards = liveNuggetCards(6);
+    if (liveCards.length > 0) return res.json({ morningBrief: { text: liveCards[0].segments[0].text, recommendation: "", label: liveCards[0].label }, cards: liveCards });
+    return res.json({ morningBrief: didYouKnowBrief(), cards: didYouKnowCards() });
+  }
 
   const holdings = holdingIds.map((id) => footballService.getClub(id)!).filter(Boolean);
   const holdingSummaries = holdings.map((c) => clubSummary(c, round));
@@ -138,6 +173,7 @@ briefingRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   ];
 
   const cards = [
+    ...liveNuggetCards(2),
     { label: "Buying power", emoji: "💰", segments: buyingPower },
     { label: "Market summary", emoji: "📊", segments: summary },
     { label: "Biggest opportunity", emoji: "🚀", segments: opportunity },

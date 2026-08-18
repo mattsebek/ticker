@@ -7,6 +7,7 @@ import { CloseIcon } from "./icons";
 import { api } from "../api/client";
 import { useDataStore } from "../store/dataStore";
 import { useCompeteIntentStore } from "../store/competeIntentStore";
+import { useClubOverlayStore } from "../store/overlayStore";
 import { GREEN, RED } from "../theme/theme";
 import type { BriefCard } from "../api/types";
 import type { ThemeTokens } from "../theme/theme";
@@ -17,6 +18,8 @@ function runCtaAction(action: string, navigation: BottomTabNavigationProp<MainTa
   if (action === "create-league") {
     useCompeteIntentStore.getState().requestCreateLeague();
     navigation.navigate("Compete");
+  } else if (action.startsWith("view-club:")) {
+    useClubOverlayStore.getState().open(action.slice("view-club:".length));
   }
 }
 
