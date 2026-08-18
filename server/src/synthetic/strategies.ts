@@ -54,7 +54,13 @@ function clamp(v: number): number {
 export const STRATEGY_SCORERS: Record<StrategyType, (s: ClubSignals) => number> = {
   momentum: (s) => clamp(s.pctChange24h * 8 + n100(s.pps) * 0.4 + (s.isFavorite ? 0.15 : 0)),
   value: (s) => clamp(n100(s.expectationScore) * 0.6 - (s.pricePercentile - 0.5) * 0.4 + (s.isFavorite ? 0.1 : 0)),
-  favorites: (s) => clamp(s.pricePercentile * 0.7 + (s.isFavorite ? 0.4 : 0)),
+  // Re-centered around 0.5 (not raw 0..1) so a cheap, unloved holding can
+  // actually score as a sell candidate — the raw pricePercentile*0.7 form
+  // has a floor of exactly 0, meaning it could never go negative and this
+  // strategy could never sell anything, regardless of how bad a holding
+  // got. Still biased toward expensive/big clubs (unchanged direction),
+  // just no longer structurally sell-proof.
+  favorites: (s) => clamp((s.pricePercentile - 0.5) * 0.7 + (s.isFavorite ? 0.4 : 0)),
   contrarian: (s) => clamp(-s.pctChange24h * 6 - n100(s.pps) * 0.4 + (s.isFavorite ? 0.1 : 0)),
   diamond_hands: (s) => clamp(0.2 + (s.isFavorite ? 0.3 : 0)),
   active_trader: (s) => clamp(n100(s.pps) * 0.4 + s.pctChange24h * 5 + n100(s.formScore) * 0.3),
