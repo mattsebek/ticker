@@ -8,6 +8,8 @@ export const ACCENT = GREEN;
 
 export const DIFF_COLOR: Record<"Easy" | "Medium" | "Hard", string> = { Easy: GREEN, Medium: GRAY, Hard: RED };
 export const DIFF_DOT: Record<"Easy" | "Medium" | "Hard", string> = { Easy: GREEN, Medium: "#F0A202", Hard: RED };
+/** Muted border tint for a difficulty-colored card — a full-strength accent/red border reads as an active selection state (e.g. the lineup picker), not a passive info card. */
+export const DIFF_BORDER_SOFT: Record<"Easy" | "Hard", string> = { Easy: "rgba(0,200,5,0.35)", Hard: "rgba(224,57,62,0.35)" };
 
 export interface ThemeTokens {
   mode: "light" | "dark";

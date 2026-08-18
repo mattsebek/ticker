@@ -9,7 +9,7 @@ import { footballRepo } from "./football/repo";
 import { marketRepo } from "./market/repo";
 import { fantasyRepo, LineupStatus } from "./fantasy/repo";
 import { fantasyConfig } from "./fantasy/fantasyConfig";
-import { expectedTickerPoints, difficultyFromWinProb, difficultyFromProjectedPoints } from "./fantasy/projection";
+import { expectedTickerPoints, difficultyFromProjectedPoints } from "./fantasy/projection";
 import { breakdownClubInFixture, scoreClubInFixture } from "./fantasy/scoringService";
 import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
@@ -100,6 +100,9 @@ export function clubSummary(club: Club, currentRound: number) {
   const opponent = nextFixture ? opponentClub(nextFixture, club.id) : undefined;
   const winProb = nextFixture ? winProbFor(nextFixture, club.id) : 0.33;
   const drawProb = nextFixture?.drawProb ?? 0.24;
+  const nextFixtureProjPts = nextFixture
+    ? bestProjectedPoints(nextFixture.id, nextFixture.homeClubId === club.id ? "home" : "away", winProb, drawProb)
+    : null;
 
   // Real elapsed-time price movement (Market Pricing V2) — not a round-based
   // proxy. getPriceAtOrBefore finds the closest recorded price at-or-before
@@ -144,9 +147,13 @@ export function clubSummary(club: Club, currentRound: number) {
       ? {
           opp: opponent?.name ?? "TBD",
           home: nextFixture.homeClubId === club.id,
-          diff: difficultyFromWinProb(winProb),
+          // Same points-derived pipeline as clubDetail()'s fixtures — see
+          // difficultyFromProjectedPoints's doc comment. Portfolio's
+          // "Upcoming fixtures" list and the club overlay's pills now
+          // always agree on a given fixture's difficulty/color.
+          diff: difficultyFromProjectedPoints(nextFixtureProjPts!),
           matchText: fixtureMatchText(nextFixture, club.id, opponent),
-          projPts: bestProjectedPoints(nextFixture.id, nextFixture.homeClubId === club.id ? "home" : "away", winProb, drawProb),
+          projPts: nextFixtureProjPts!,
           kickoff: nextFixture.kickoff,
         }
       : null,

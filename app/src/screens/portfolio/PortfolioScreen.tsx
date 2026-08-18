@@ -10,7 +10,7 @@ import { renderBoldSegments } from "../../utils/richText";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
-import { FONT_SERIF, colorForPct } from "../../theme/theme";
+import { FONT_SERIF, colorForPct, RED, DIFF_BORDER_SOFT } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { PillRow, Pill } from "../../components/Pill";
 import { PortfolioChart } from "../../components/PortfolioChart";
@@ -337,18 +337,30 @@ export function PortfolioScreen() {
             {portfolio.holdings
               .filter((h) => h.nextFixture)
               .sort((a, b) => new Date(a.nextFixture!.kickoff).getTime() - new Date(b.nextFixture!.kickoff).getTime())
-              .map((h) => (
-                <View key={h.id} style={[styles.fixtureRow, { borderBottomColor: T.border }]}>
-                  <View style={[styles.badge, { backgroundColor: h.color }]}>
-                    <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>{h.code}</Text>
+              .map((h) => {
+                const diff = h.nextFixture!.diff;
+                const bg = diff === "Easy" ? T.accentTint : diff === "Hard" ? T.redTint : T.card;
+                const borderColor = diff === "Easy" ? DIFF_BORDER_SOFT.Easy : diff === "Hard" ? DIFF_BORDER_SOFT.Hard : T.border;
+                const pointsColor = diff === "Easy" ? T.accent : diff === "Hard" ? RED : T.textSecondary;
+                const diffLabel = diff === "Easy" ? "Favorable" : diff === "Hard" ? "Difficult" : "Neutral";
+                return (
+                  <View
+                    key={h.id}
+                    style={[styles.fixtureRow, { backgroundColor: bg, borderColor }]}
+                    accessible
+                    accessibilityLabel={`${h.name}. ${h.nextFixture!.matchText}. Projected ${h.nextFixture!.projPts.toFixed(2)} points. ${diffLabel} fixture.`}
+                  >
+                    <View style={[styles.badge, { backgroundColor: h.color }]}>
+                      <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>{h.code}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "400", color: T.text }}>{h.name}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: "400", color: T.textSecondary, marginTop: 3 }}>{h.nextFixture!.matchText}</Text>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: pointsColor }}>{h.nextFixture!.projPts.toFixed(2)} pts</Text>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "400", color: T.text }}>{h.name}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "400", color: T.textSecondary, marginTop: 3 }}>{h.nextFixture!.matchText}</Text>
-                  </View>
-                  <Text style={{ fontSize: 15, fontWeight: "500", color: T.accent }}>{h.nextFixture!.projPts} pts</Text>
-                </View>
-              ))}
+                );
+              })}
           </>
         )}
       </ScrollView>
@@ -359,6 +371,6 @@ export function PortfolioScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 13, paddingBottom: 40 },
   sectionHeader: { marginTop: 28, marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1 },
+  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
   badge: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });

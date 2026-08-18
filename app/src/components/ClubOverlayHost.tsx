@@ -14,7 +14,7 @@ import { FormChip } from "./FormChip";
 import { SparkLine } from "./SparkLine";
 import { CloseIcon } from "./icons";
 import { fmtMoney, fmtPct } from "../utils/format";
-import { FONT_SERIF, colorForPct, GREEN, RED } from "../theme/theme";
+import { FONT_SERIF, colorForPct, GREEN, RED, DIFF_BORDER_SOFT } from "../theme/theme";
 import type { ThemeTokens } from "../theme/theme";
 import { Button } from "./Button";
 
@@ -52,7 +52,7 @@ function FixturePill({ index, fixture, T }: { index: number; fixture: ClubDetail
   const hasProjection = Number.isFinite(fixture.projPts);
   const diff = hasProjection ? fixture.diff : "Medium";
   const bg = diff === "Easy" ? T.accentTint : diff === "Hard" ? T.redTint : T.card;
-  const borderColor = diff === "Easy" ? T.accent : diff === "Hard" ? RED : T.border;
+  const borderColor = diff === "Easy" ? DIFF_BORDER_SOFT.Easy : diff === "Hard" ? DIFF_BORDER_SOFT.Hard : T.border;
   const pointsColor = !hasProjection ? T.textSecondary : diff === "Easy" ? T.accent : diff === "Hard" ? RED : T.textSecondary;
   const diffLabel = diff === "Easy" ? "Favorable" : diff === "Hard" ? "Difficult" : "Neutral";
   const venue = fixture.home ? "home" : "away";
@@ -253,7 +253,7 @@ export function ClubOverlayHost() {
               </>
             )}
 
-            <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 18, marginBottom: 8 }}>Upcoming Fixtures</Text>
+            <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 18, marginBottom: 14 }}>Upcoming Fixtures</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {[0, 1, 2].map((i) => (
                 <FixturePill key={i} index={i} fixture={detail.fixtures[i]} T={T} />
