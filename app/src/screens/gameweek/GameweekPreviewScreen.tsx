@@ -33,7 +33,7 @@ export function GameweekPreviewScreen({ navigation }: Props) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}>
-          <GameweekPreviewArt size={96} radius={18} />
+          <GameweekPreviewArt icon={preview.icon} badge={preview.badge} background={preview.background} color={preview.color} size={96} radius={18} />
           <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>
             Gameweek {preview.round} Preview
           </Text>

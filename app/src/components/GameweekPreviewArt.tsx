@@ -1,21 +1,17 @@
 import React from "react";
 import { View } from "react-native";
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Path, G } from "react-native-svg";
-import { useGameweekPreviewIconConfig } from "../hooks/useGameweekPreviewIconConfig";
-import type { GameweekPreviewIconConfig } from "../api/types";
+import type { GameweekPreview } from "../api/types";
 
 /**
  * On-brand thumbnail for the Gameweek Preview. Icon geometry is real
  * Tabler Icons outline paths (MIT licensed, https://tabler.io/icons) —
  * chosen after a hand-drawn illustration didn't land. Which icon/badge/
- * background/color is live is admin-editable at /admin/gameweek-preview
- * (see server's editorial/repo.ts's gameweek_preview_icon_config), fetched
- * here via useGameweekPreviewIconConfig — this component owns the actual
- * path data (the config only ever stores a key), so it renders correctly
- * the instant the config loads, with the server's own defaults as a
- * fallback while that request is in flight.
+ * background/color to render is now each article's OWN selection
+ * (admin-editable at /admin/gameweek-preview), passed in as props rather
+ * than fetched here — this component owns only the path geometry.
  */
-const ICONS: Record<GameweekPreviewIconConfig["icon"], string[]> = {
+const ICONS: Record<GameweekPreview["icon"], string[]> = {
   football: [
     "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0",
     "M12 7l4.76 3.45l-1.76 5.55h-6l-1.76 -5.55l4.76 -3.45",
@@ -35,13 +31,22 @@ const ICONS: Record<GameweekPreviewIconConfig["icon"], string[]> = {
     "M18 11l0 9",
   ],
   rocket: ["M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3", "M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3", "M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"],
+  calendar: ["M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12", "M16 3v4", "M8 3v4", "M4 11h16", "M11 15h1", "M12 15v3"],
 };
 
 const BADGE_PATHS = ["M3 17l6 -6l4 4l8 -8", "M14 7l7 0l0 7"];
 
-export function GameweekPreviewArt({ size = 64, radius = 14 }: { size?: number; radius?: number }) {
-  const config = useGameweekPreviewIconConfig();
-  const strokeColor = config.color === "white" ? "#FFFFFF" : "#00170c";
+export interface GameweekPreviewArtProps {
+  icon: GameweekPreview["icon"];
+  badge: GameweekPreview["badge"];
+  background: GameweekPreview["background"];
+  color: GameweekPreview["color"];
+  size?: number;
+  radius?: number;
+}
+
+export function GameweekPreviewArt({ icon, badge, background, color, size = 64, radius = 14 }: GameweekPreviewArtProps) {
+  const strokeColor = color === "white" ? "#FFFFFF" : "#00170c";
 
   return (
     <View style={{ width: size, height: size, borderRadius: radius, overflow: "hidden" }}>
@@ -63,14 +68,14 @@ export function GameweekPreviewArt({ size = 64, radius = 14 }: { size?: number; 
         <Rect
           width={100}
           height={100}
-          fill={config.background === "card" ? "#151718" : config.background === "vertical" ? "url(#gwpBgVert)" : config.background === "radial" ? "url(#gwpBgRadial)" : "url(#gwpBgDiag)"}
+          fill={background === "card" ? "#151718" : background === "vertical" ? "url(#gwpBgVert)" : background === "radial" ? "url(#gwpBgRadial)" : "url(#gwpBgDiag)"}
         />
         <G transform="translate(19,19) scale(2.6)" stroke={strokeColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round">
-          {ICONS[config.icon].map((d, i) => (
+          {ICONS[icon].map((d, i) => (
             <Path key={i} d={d} />
           ))}
         </G>
-        {config.badge === "trending" && (
+        {badge === "trending" && (
           <G transform="translate(69,10)" stroke={strokeColor} strokeWidth={2.2} fill="none" strokeLinecap="round" strokeLinejoin="round">
             {BADGE_PATHS.map((d, i) => (
               <Path key={i} d={d} />

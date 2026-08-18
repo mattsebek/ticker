@@ -304,7 +304,7 @@ export function PortfolioScreen() {
             onPress={() => navigation.navigate("GameweekPreview")}
             style={{ marginTop: 10, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}
           >
-            <GameweekPreviewArt size={52} radius={12} />
+            <GameweekPreviewArt icon={gameweekPreview.icon} badge={gameweekPreview.badge} background={gameweekPreview.background} color={gameweekPreview.color} size={52} radius={12} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Gameweek {gameweekPreview.round} Preview</Text>
               <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }} numberOfLines={2}>

@@ -3,23 +3,31 @@ import { editorialRepo } from "../editorial/repo";
 
 export const gameweekPreviewRouter = Router();
 
+function toPublicPreview(preview: NonNullable<ReturnType<typeof editorialRepo.getLatestPublished>>) {
+  return {
+    id: preview.id,
+    slug: preview.slug,
+    round: preview.round,
+    headline: preview.headline,
+    body: preview.body,
+    publishedAt: new Date(preview.publishedAt!).toISOString(),
+    icon: preview.icon,
+    badge: preview.badge,
+    background: preview.background,
+    color: preview.color,
+  };
+}
+
 /** Public, read-only — the current published Gameweek Preview, if any. Both app/website surfaces (Portfolio card + Market News) read from this. */
 gameweekPreviewRouter.get("/latest", (req, res) => {
   const preview = editorialRepo.getLatestPublished();
   if (!preview) return res.json({ preview: null });
-  res.json({
-    preview: {
-      id: preview.id,
-      round: preview.round,
-      headline: preview.headline,
-      body: preview.body,
-      publishedAt: new Date(preview.publishedAt!).toISOString(),
-    },
-  });
+  res.json({ preview: toPublicPreview(preview) });
 });
 
-/** Public, read-only — the current shared thumbnail mark (icon/badge/background/color). Admin-editable at /admin/gameweek-preview; clients own the actual icon geometry, this just says which option is selected. */
-gameweekPreviewRouter.get("/icon-config", (req, res) => {
-  const config = editorialRepo.getIconConfig();
-  res.json({ icon: config.icon, badge: config.badge, background: config.background, color: config.color });
+/** Public, read-only — the SEO permalink lookup, by the article's own permanent slug. Only ever returns a still-published article (a retracted/draft piece has no public page), regardless of whether a newer piece has since become "latest". */
+gameweekPreviewRouter.get("/by-slug/:slug", (req, res) => {
+  const preview = editorialRepo.getPublishedBySlug(req.params.slug);
+  if (!preview) return res.json({ preview: null });
+  res.json({ preview: toPublicPreview(preview) });
 });

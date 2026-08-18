@@ -22,28 +22,30 @@ CREATE TABLE IF NOT EXISTS gameweek_previews (
 );
 CREATE INDEX IF NOT EXISTS idx_gw_previews_round ON gameweek_previews(round, id);
 CREATE INDEX IF NOT EXISTS idx_gw_previews_status ON gameweek_previews(status, published_at DESC);
-
--- Singleton row (same pattern as synthetic_system_config) — one shared
--- thumbnail mark for the whole feature, not per-article. Clients own the
--- actual icon geometry (see app/website GameweekPreviewArt.tsx); this only
--- stores which of the known options is currently selected, so admin can
--- change it without a code deploy.
-CREATE TABLE IF NOT EXISTS gameweek_preview_icon_config (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  icon TEXT NOT NULL DEFAULT 'football',
-  badge TEXT NOT NULL DEFAULT 'trending',
-  background TEXT NOT NULL DEFAULT 'diagonal',
-  color TEXT NOT NULL DEFAULT 'ink',
-  updated_at INTEGER NOT NULL,
-  updated_by TEXT
-);
-INSERT OR IGNORE INTO gameweek_preview_icon_config (id, icon, badge, background, color, updated_at)
-  VALUES (1, 'football', 'trending', 'diagonal', 'ink', ${Date.now()});
 `);
+
+// slug: the SEO permalink — assigned once at generation/regeneration time
+// (see generateUniqueSlug below) and never touched again once a row has
+// been published, so a live URL never breaks out from under a later copy
+// edit. icon/badge/background/color: each article's OWN thumbnail
+// selection — this replaced an earlier single global setting shared by
+// every article, which the user explicitly asked to move away from.
+try {
+  db.exec("ALTER TABLE gameweek_previews ADD COLUMN slug TEXT");
+  db.exec("ALTER TABLE gameweek_previews ADD COLUMN icon TEXT NOT NULL DEFAULT 'football'");
+  db.exec("ALTER TABLE gameweek_previews ADD COLUMN badge TEXT NOT NULL DEFAULT 'trending'");
+  db.exec("ALTER TABLE gameweek_previews ADD COLUMN background TEXT NOT NULL DEFAULT 'diagonal'");
+  db.exec("ALTER TABLE gameweek_previews ADD COLUMN color TEXT NOT NULL DEFAULT 'ink'");
+} catch {
+  // already applied
+}
+// Multiple NULL slugs (legacy rows predating this column) are fine under a
+// UNIQUE index in SQLite — only non-null duplicates are rejected.
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_gw_previews_slug ON gameweek_previews(slug)");
 
 export type PreviewStatus = "DRAFT" | "PUBLISHED";
 
-export const ICON_OPTIONS = ["football", "trophy", "flame", "chartCandle", "rocket"] as const;
+export const ICON_OPTIONS = ["football", "trophy", "flame", "chartCandle", "rocket", "calendar"] as const;
 export const BADGE_OPTIONS = ["none", "trending"] as const;
 export const BACKGROUND_OPTIONS = ["diagonal", "vertical", "radial", "card"] as const;
 export const COLOR_OPTIONS = ["ink", "white"] as const;
@@ -53,22 +55,21 @@ export type BadgeKey = (typeof BADGE_OPTIONS)[number];
 export type BackgroundKey = (typeof BACKGROUND_OPTIONS)[number];
 export type ColorKey = (typeof COLOR_OPTIONS)[number];
 
-export interface IconConfig {
+export interface IconSelection {
   icon: IconKey;
   badge: BadgeKey;
   background: BackgroundKey;
   color: ColorKey;
-  updatedAt: number;
-  updatedBy: string | null;
 }
 
-export interface GameweekPreviewRow {
+export interface GameweekPreviewRow extends IconSelection {
   id: string;
   round: number;
   headline: string;
   body: string;
   factsJson: string;
   status: PreviewStatus;
+  slug: string | null;
   generatedAt: number;
   updatedAt: number;
   publishedAt: number | null;
@@ -83,11 +84,46 @@ function rowToPreview(row: any): GameweekPreviewRow {
     body: row.body,
     factsJson: row.facts_json,
     status: row.status,
+    slug: row.slug,
+    icon: row.icon,
+    badge: row.badge,
+    background: row.background,
+    color: row.color,
     generatedAt: row.generated_at,
     updatedAt: row.updated_at,
     publishedAt: row.published_at,
     publishedBy: row.published_by,
   };
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 60)
+    .replace(/-+$/, "");
+}
+
+/** gameweek-{round} prefix means two different rounds can never collide on their own; the numeric suffix only ever kicks in for the rare case of two pieces in the SAME round producing an identical slugified headline. */
+function generateUniqueSlug(round: number, headline: string, excludeId: string | null): string {
+  const base = `gameweek-${round}-${slugify(headline)}`;
+  let candidate = base;
+  let n = 2;
+  while (slugTaken(candidate, excludeId)) {
+    candidate = `${base}-${n}`;
+    n++;
+  }
+  return candidate;
+}
+
+function slugTaken(slug: string, excludeId: string | null): boolean {
+  const row = excludeId
+    ? db.prepare("SELECT 1 FROM gameweek_previews WHERE slug = ? AND id != ?").get(slug, excludeId)
+    : db.prepare("SELECT 1 FROM gameweek_previews WHERE slug = ?").get(slug);
+  return !!row;
 }
 
 export const editorialRepo = {
@@ -100,6 +136,12 @@ export const editorialRepo = {
   /** The current live piece shown to end users, regardless of which round generated it (covers a slipped cadence — better to keep showing last week's than nothing). */
   getLatestPublished(): GameweekPreviewRow | undefined {
     const row = db.prepare("SELECT * FROM gameweek_previews WHERE status = 'PUBLISHED' ORDER BY published_at DESC LIMIT 1").get();
+    return row ? rowToPreview(row) : undefined;
+  },
+
+  /** The real permalink lookup — any row that has EVER been published, by its own permanent slug, regardless of whether a newer piece has since become "latest". Never returns a DRAFT (an unpublished/retracted piece has no public page). */
+  getPublishedBySlug(slug: string): GameweekPreviewRow | undefined {
+    const row = db.prepare("SELECT * FROM gameweek_previews WHERE slug = ? AND status = 'PUBLISHED'").get(slug);
     return row ? rowToPreview(row) : undefined;
   },
 
@@ -116,19 +158,31 @@ export const editorialRepo = {
   insertDraft(input: { round: number; headline: string; body: string; facts: unknown }): GameweekPreviewRow {
     const id = randomUUID();
     const now = Date.now();
+    const slug = generateUniqueSlug(input.round, input.headline, null);
     db.prepare(
-      `INSERT INTO gameweek_previews (id, round, headline, body, facts_json, status, generated_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?)`
-    ).run(id, input.round, input.headline, input.body, JSON.stringify(input.facts), now, now);
+      `INSERT INTO gameweek_previews (id, round, headline, body, facts_json, status, slug, generated_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?)`
+    ).run(id, input.round, input.headline, input.body, JSON.stringify(input.facts), slug, now, now);
     return this.getById(id)!;
   },
 
-  /** Regenerate: replaces copy + facts on an existing (typically still-DRAFT) row rather than inserting a sibling, mirroring intelligenceRepo.regenerateCopy. Callable on a PUBLISHED row too (admin may want to refresh a live piece); the caller decides which is appropriate. */
+  /**
+   * Regenerate: replaces copy + facts + slug on an existing (always
+   * still-DRAFT — see generateGameweekPreview's branch logic, this is
+   * never called on a published row) row rather than inserting a sibling.
+   * The slug is recomputed from the fresh headline since nothing public
+   * points at a draft's slug yet; icon/badge/background/color are left
+   * untouched — regenerating the WRITING shouldn't discard an admin's
+   * already-chosen thumbnail for this piece.
+   */
   regenerateInPlace(id: string, input: { headline: string; body: string; facts: unknown }) {
-    db.prepare("UPDATE gameweek_previews SET headline = ?, body = ?, facts_json = ?, updated_at = ? WHERE id = ?").run(
+    const round = this.getById(id)!.round;
+    const slug = generateUniqueSlug(round, input.headline, id);
+    db.prepare("UPDATE gameweek_previews SET headline = ?, body = ?, facts_json = ?, slug = ?, updated_at = ? WHERE id = ?").run(
       input.headline,
       input.body,
       JSON.stringify(input.facts),
+      slug,
       Date.now(),
       id
     );
@@ -138,29 +192,25 @@ export const editorialRepo = {
     db.prepare("UPDATE gameweek_previews SET headline = ?, body = ?, updated_at = ? WHERE id = ?").run(headline, body, Date.now(), id);
   },
 
-  publish(id: string, adminId: string) {
-    const now = Date.now();
-    db.prepare("UPDATE gameweek_previews SET status = 'PUBLISHED', published_at = ?, published_by = ?, updated_at = ? WHERE id = ?").run(now, adminId, now, id);
-  },
-
-  /** Pulls a published piece back to draft — the "Retract" action, mirrors intelligenceRepo.dismiss's role for nuggets but keeps the row (never a terminal/deleted state; can be re-published). */
-  unpublish(id: string) {
-    db.prepare("UPDATE gameweek_previews SET status = 'DRAFT', updated_at = ? WHERE id = ?").run(Date.now(), id);
-  },
-
-  getIconConfig(): IconConfig {
-    const row = db.prepare("SELECT * FROM gameweek_preview_icon_config WHERE id = 1").get() as any;
-    return { icon: row.icon, badge: row.badge, background: row.background, color: row.color, updatedAt: row.updated_at, updatedBy: row.updated_by };
-  },
-
-  setIconConfig(input: { icon: IconKey; badge: BadgeKey; background: BackgroundKey; color: ColorKey }, updatedBy: string) {
-    db.prepare("UPDATE gameweek_preview_icon_config SET icon = ?, badge = ?, background = ?, color = ?, updated_at = ?, updated_by = ? WHERE id = 1").run(
+  /** Per-article thumbnail selection — independent of copy edits, and independent of every other article's own selection. */
+  setIconSelection(id: string, input: IconSelection) {
+    db.prepare("UPDATE gameweek_previews SET icon = ?, badge = ?, background = ?, color = ?, updated_at = ? WHERE id = ?").run(
       input.icon,
       input.badge,
       input.background,
       input.color,
       Date.now(),
-      updatedBy
+      id
     );
+  },
+
+  publish(id: string, adminId: string) {
+    const now = Date.now();
+    db.prepare("UPDATE gameweek_previews SET status = 'PUBLISHED', published_at = ?, published_by = ?, updated_at = ? WHERE id = ?").run(now, adminId, now, id);
+  },
+
+  /** Pulls a published piece back to draft — the "Retract" action, mirrors intelligenceRepo.dismiss's role for nuggets but keeps the row (never a terminal/deleted state; can be re-published, and its slug is preserved so a re-publish resurrects the same permalink). */
+  unpublish(id: string) {
+    db.prepare("UPDATE gameweek_previews SET status = 'DRAFT', updated_at = ? WHERE id = ?").run(Date.now(), id);
   },
 };

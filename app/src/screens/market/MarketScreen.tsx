@@ -163,7 +163,7 @@ export function MarketScreen() {
                   onPress={() => navigation.navigate("GameweekPreview")}
                   style={[styles.newsRow, { borderBottomColor: T.borderLight, borderBottomWidth: news.length > 0 ? 1 : 0 }]}
                 >
-                  <GameweekPreviewArt size={56} radius={10} />
+                  <GameweekPreviewArt icon={gameweekPreview.icon} badge={gameweekPreview.badge} background={gameweekPreview.background} color={gameweekPreview.color} size={56} radius={10} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 11, fontWeight: "700", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Gameweek {gameweekPreview.round} Preview</Text>
                     <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{renderBoldSegments(gameweekPreview.headline)}</Text>

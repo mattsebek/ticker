@@ -582,6 +582,11 @@ function toAdminPreviewRow(p: ReturnType<typeof editorialRepo.getById>): AdminPr
     headline: row.headline,
     body: row.body,
     status: row.status,
+    slug: row.slug,
+    icon: row.icon,
+    badge: row.badge,
+    background: row.background,
+    color: row.color,
     generatedAt: row.generatedAt,
     updatedAt: row.updatedAt,
     publishedAt: row.publishedAt,
@@ -595,7 +600,6 @@ adminRouter.get("/gameweek-preview", (req, res) => {
     renderAdminGameweekPreviewPage({
       recent: recent.map((r) => toAdminPreviewRow(r)),
       anthropicConfigured: !!editorialConfig.ANTHROPIC_API_KEY,
-      iconConfig: editorialRepo.getIconConfig(),
     })
   );
 });
@@ -630,12 +634,14 @@ adminRouter.post("/gameweek-preview/:id/edit", (req, res) => {
   res.json({ ok: true });
 });
 
-adminRouter.post("/gameweek-preview/icon", (req, res) => {
+adminRouter.post("/gameweek-preview/:id/icon", (req, res) => {
+  const existing = editorialRepo.getById(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, error: "Preview not found." });
   const { icon, badge, background, color } = req.body ?? {};
   if (!ICON_OPTIONS.includes(icon)) return res.status(400).json({ ok: false, error: "Invalid icon." });
   if (!BADGE_OPTIONS.includes(badge)) return res.status(400).json({ ok: false, error: "Invalid badge." });
   if (!BACKGROUND_OPTIONS.includes(background)) return res.status(400).json({ ok: false, error: "Invalid background." });
   if (!COLOR_OPTIONS.includes(color)) return res.status(400).json({ ok: false, error: "Invalid color." });
-  editorialRepo.setIconConfig({ icon, badge, background, color }, "admin");
+  editorialRepo.setIconSelection(existing.id, { icon, badge, background, color });
   res.json({ ok: true });
 });

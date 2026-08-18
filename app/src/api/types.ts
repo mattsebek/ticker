@@ -228,14 +228,12 @@ export interface BuyPreviewResponse {
 
 export interface GameweekPreview {
   id: string;
+  slug: string;
   round: number;
   headline: string;
   body: string;
   publishedAt: string;
-}
-
-export interface GameweekPreviewIconConfig {
-  icon: "football" | "trophy" | "flame" | "chartCandle" | "rocket";
+  icon: "football" | "trophy" | "flame" | "chartCandle" | "rocket" | "calendar";
   badge: "none" | "trending";
   background: "diagonal" | "vertical" | "radial" | "card";
   color: "ink" | "white";

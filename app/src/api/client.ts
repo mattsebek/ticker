@@ -17,7 +17,6 @@ import type {
   SellPreviewResponse,
   User,
   GameweekPreview,
-  GameweekPreviewIconConfig,
 } from "./types";
 
 export class ApiError extends Error {
@@ -101,6 +100,5 @@ export const api = {
   },
   gameweekPreview: {
     latest: () => request<{ preview: GameweekPreview | null }>("/gameweek-preview/latest"),
-    iconConfig: () => request<GameweekPreviewIconConfig>("/gameweek-preview/icon-config"),
   },
 };
