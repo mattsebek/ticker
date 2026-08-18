@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
 import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
+import { renderBoldSegments } from "../../utils/richText";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useAuthStore } from "../../store/authStore";
@@ -222,7 +223,7 @@ export function PortfolioScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Gameweek {gameweekPreview.round} Preview</Text>
               <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }} numberOfLines={2}>
-                {gameweekPreview.headline}
+                {renderBoldSegments(gameweekPreview.headline)}
               </Text>
             </View>
             <Text style={{ fontSize: 20, color: T.accent }}>›</Text>

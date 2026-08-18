@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
 import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
+import { renderBoldSegments } from "../../utils/richText";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useClubOverlayStore } from "../../store/overlayStore";
@@ -165,7 +166,7 @@ export function MarketScreen() {
                   <GameweekPreviewArt size={56} radius={10} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 11, fontWeight: "700", color: T.accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Gameweek {gameweekPreview.round} Preview</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{gameweekPreview.headline}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "400", color: T.text, lineHeight: 19 }}>{renderBoldSegments(gameweekPreview.headline)}</Text>
                   </View>
                   <ChevronRightIcon color={T.textSecondary} />
                 </Pressable>

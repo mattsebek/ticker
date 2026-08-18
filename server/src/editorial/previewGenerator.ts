@@ -13,13 +13,19 @@ Voice: r/WallStreetBets. Degenerate-gambler energy applied to a football stock m
 
 Hard rules:
 - Every club name, price, percentage, and stat you use MUST come from the facts provided in the user message. Never invent a number, a stat, or an event that isn't given to you.
-- Plain text only — no markdown syntax (no #, no **, no bullet dashes). Use blank lines between sections, emoji, and CAPS for emphasis instead.
-- Structure: (1) an opening hook covering the market's overall mood and the hottest clubs, (2) a section spotlighting the games given to you as the week's closest/most competitive, one at a time, (3) a closing section profiling the #1 overall manager — who they hold, how those clubs have performed, roasted/celebrated in the same voice.
+- Plain text with ONE markdown exception: wrap a short phrase in **double asterisks** when it genuinely deserves bold emphasis (a club name at a key moment, a standout stat, a punchline) — use it sparingly, a handful of times total, never whole sentences. No other markdown syntax at all (no #, no bullet dashes, no italics, no links).
+- Never use an em dash (—). Use a comma, a period, or a hyphen instead.
+- Structure: (1) an opening hook covering the market's overall mood and the hottest clubs, (2) a section spotlighting the games given to you as the week's closest/most competitive, one at a time, (3) a closing section profiling the #1 overall manager, who they hold, how those clubs have performed, roasted/celebrated in the same voice.
 - Target length: about ${editorialConfig.TARGET_WORD_COUNT} words total.
 - Output format, exactly: a single line starting with "HEADLINE: " followed by a punchy headline under 80 characters, then a line containing only "---", then the full body text.`;
 
 function buildUserPrompt(facts: GameweekPreviewFacts): string {
   return `Here is this week's real data. Write the Gameweek Preview from it.\n\n${JSON.stringify(facts, null, 2)}`;
+}
+
+/** Belt-and-suspenders alongside the system prompt's own "never use an em dash" rule — models don't always follow style instructions consistently, and a stray — is one of the more recognizable "obviously AI-written" tells. */
+function stripEmDashes(s: string): string {
+  return s.replace(/—/g, "-");
 }
 
 function parseResponse(text: string): GeneratedPreview {
@@ -29,7 +35,7 @@ function parseResponse(text: string): GeneratedPreview {
   const body = text.slice(separatorIdx + 3).trim();
   const headline = headlineLine.replace(/^HEADLINE:\s*/i, "").trim();
   if (!headline || !body) throw new Error("Model response had an empty headline or body after parsing.");
-  return { headline, body };
+  return { headline: stripEmDashes(headline), body: stripEmDashes(body) };
 }
 
 /** Real, non-deterministic LLM generation — deliberately isolated in this one module (mirrors intelligence/copyTemplates.ts's role) so the rest of the domain never has to know it's talking to an external API. Throws on any failure; callers (previewService) decide how to surface that, never silently fall back to placeholder text. */

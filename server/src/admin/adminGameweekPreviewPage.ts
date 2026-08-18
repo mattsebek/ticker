@@ -21,6 +21,11 @@ function fmtTime(ms: number): string {
   return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+/** Renders **bold** markers as real <b> tags for the read-only preview — applied to already-escaped text, so it's safe against the raw ** in the escaped string (esc() doesn't touch asterisks). The edit textarea below keeps the raw markers untouched, since that's what an admin types back. */
+function withBoldMarkers(escapedText: string): string {
+  return escapedText.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+}
+
 function previewCard(p: AdminPreviewRow, isLatest: boolean): string {
   const statusColor = p.status === "PUBLISHED" ? T.accent : T.textSecondary;
   const actions: string[] = [];
@@ -38,8 +43,8 @@ function previewCard(p: AdminPreviewRow, isLatest: boolean): string {
       <div style="font-size:12px;color:${T.textSecondary};">Round ${p.round} · <b style="color:${statusColor};">${esc(p.status)}</b> · ${p.wordCount} words · generated ${fmtTime(p.generatedAt)}${p.publishedAt ? ` · published ${fmtTime(p.publishedAt)}` : ""}</div>
     </div>
     <div class="display-copy">
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${esc(p.headline)}</div>
-      <div style="font-size:13px;color:${T.text};line-height:1.6;white-space:pre-wrap;max-height:220px;overflow-y:auto;padding:10px;background:${T.bg};border-radius:8px;">${esc(p.body)}</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${withBoldMarkers(esc(p.headline))}</div>
+      <div style="font-size:13px;color:${T.text};line-height:1.6;white-space:pre-wrap;max-height:220px;overflow-y:auto;padding:10px;background:${T.bg};border-radius:8px;">${withBoldMarkers(esc(p.body))}</div>
     </div>
     <form class="edit-form" data-id="${esc(p.id)}" style="display:none;margin-top:10px;">
       <input type="text" name="headline" value="${esc(p.headline)}" style="width:100%;padding:7px 10px;margin-bottom:6px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;" />
