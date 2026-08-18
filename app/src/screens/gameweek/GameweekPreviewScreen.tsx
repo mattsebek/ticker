@@ -34,10 +34,12 @@ export function GameweekPreviewScreen({ navigation }: Props) {
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}>
           <GameweekPreviewArt icon={preview.icon} badge={preview.badge} background={preview.background} color={preview.color} size={96} radius={18} />
-          <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>
+          <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 16, marginBottom: 14 }}>
             Gameweek {preview.round} Preview
           </Text>
-          <Text style={{ fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "600", letterSpacing: -0.3, color: T.text, marginBottom: 20 }}>{renderBoldSegments(preview.headline)}</Text>
+          <Text style={{ fontFamily: FONT_SERIF, fontSize: 28, fontWeight: "600", lineHeight: 36, letterSpacing: -0.3, color: T.text, marginBottom: 20 }}>
+            {renderBoldSegments(preview.headline)}
+          </Text>
           {preview.body
             .split(/\n{2,}/)
             .map((s) => s.trim())
