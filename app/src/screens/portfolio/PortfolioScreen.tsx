@@ -340,14 +340,14 @@ export function PortfolioScreen() {
               .filter((h) => h.upcomingFixtures?.length)
               .map((h) => (
                 <Pressable key={h.id} onPress={() => openClub(h.id)} style={[styles.fixtureRow, { borderBottomColor: T.border }]}>
-                  {/* Name column is ~1/3 of the row's width (flex:1 vs. the pills' flex:2) — enough room for the name to breathe without crowding the pills. */}
-                  <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {/* Fixed ~43% of the row's width (was ~33%) — the extra 10% comes out of the pills' share. */}
+                  <View style={{ flexBasis: "43%", flexGrow: 0, flexShrink: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <ClubBadge code={h.code} color={h.color} size={40} />
                     <Text style={{ flex: 1, fontSize: 12, fontWeight: "500", color: T.text }} numberOfLines={2}>
                       {h.name}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: "row", gap: 5, flex: 2 }}>
+                  <View style={{ flexDirection: "row", gap: 5, flex: 1 }}>
                     {[0, 1, 2].map((i) => (
                       <FixturePill key={i} index={i} fixture={h.upcomingFixtures[i]} T={T} size="compact" />
                     ))}
