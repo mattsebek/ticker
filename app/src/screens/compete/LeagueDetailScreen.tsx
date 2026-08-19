@@ -89,7 +89,7 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
             >
               <Text style={{ width: 28, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.rank}</Text>
               <Text style={{ flex: 1, fontSize: 15, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
-              <Text style={{ width: 80, textAlign: "center", fontSize: 13, fontWeight: "500", color: T.textSecondary }}>{r.portfolioStr}</Text>
+              <Text style={{ width: 80, textAlign: "center", fontSize: 13, fontWeight: sort === "portfolio" ? "700" : "500", color: sort === "portfolio" ? T.text : T.textSecondary }}>{r.portfolioStr}</Text>
               <Text style={{ width: 64, textAlign: "center", fontSize: 13, fontWeight: "700", color: T.text }}>{r.points}</Text>
             </Pressable>
           ))}

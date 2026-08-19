@@ -13,6 +13,7 @@ import { renderAdminClubsPage, AdminClubRow } from "../admin/adminClubsPage";
 import { renderAdminClubDetailPage } from "../admin/adminClubDetailPage";
 import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
 import { renderAdminLeagueDetailPage, AdminLeagueStandingRow } from "../admin/adminLeagueDetailPage";
+import { DEFAULT_AUTO_JOIN_LEAGUE_IDS } from "../fantasy/leagueService";
 import { JWT_SECRET } from "../shared/auth";
 import { computePricePressure, priceDirection, ppsDirection } from "../market/pricePressure";
 import { renderAdminSyntheticPage, AdminSyntheticUserRow } from "../admin/adminSyntheticPage";
@@ -190,8 +191,26 @@ adminRouter.get("/leagues/:id", (req, res) => {
     .getStandingsCache(league.id)
     .map((s) => ({ rank: s.rank, name: s.name, points: s.points, portfolio: s.portfolio, isBot: botIds.has(s.memberId) }));
   res.type("html").send(
-    renderAdminLeagueDetailPage({ name: league.name, isPrivate: !!league.is_private, code: league.code, commissioner: league.commissioner, standings })
+    renderAdminLeagueDetailPage({
+      id: league.id,
+      name: league.name,
+      isPrivate: !!league.is_private,
+      code: league.code,
+      commissioner: league.commissioner,
+      standings,
+      deletable: !DEFAULT_AUTO_JOIN_LEAGUE_IDS.includes(league.id),
+    })
   );
+});
+
+adminRouter.post("/leagues/:id/delete", (req, res) => {
+  const league = fantasyRepo.getLeagueById(req.params.id);
+  if (!league) return res.status(404).json({ ok: false, error: "League not found." });
+  if (DEFAULT_AUTO_JOIN_LEAGUE_IDS.includes(league.id)) {
+    return res.status(400).json({ ok: false, error: "Can't delete a default auto-join league." });
+  }
+  fantasyRepo.deleteLeague(league.id);
+  res.json({ ok: true });
 });
 
 // --- Clubs ---

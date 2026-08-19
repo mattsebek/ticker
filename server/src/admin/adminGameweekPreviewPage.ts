@@ -27,9 +27,11 @@ function fmtTime(ms: number): string {
   return `<span class="local-time" data-ts="${ms}"></span>`;
 }
 
-/** Renders **bold** markers as real <b> tags for the read-only preview — applied to already-escaped text, so it's safe against the raw ** in the escaped string (esc() doesn't touch asterisks). The edit textarea below keeps the raw markers untouched, since that's what an admin types back. */
+/** Renders **bold** and ++green bold++ markers as real tags for the read-only preview — applied to already-escaped text, so it's safe against the raw markers in the escaped string (esc() doesn't touch ** or ++). The edit textarea below keeps the raw markers untouched, since that's what an admin types back. */
 function withBoldMarkers(escapedText: string): string {
-  return escapedText.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  return escapedText
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\+\+([^+]+)\+\+/g, `<b style="color:${T.accent};">$1</b>`);
 }
 
 /**
@@ -125,6 +127,7 @@ function previewCard(p: AdminPreviewRow, isLatest: boolean): string {
     <form class="edit-form" data-id="${esc(p.id)}" style="display:none;margin-top:10px;">
       <input type="text" name="headline" value="${esc(p.headline)}" style="width:100%;padding:7px 10px;margin-bottom:6px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;" />
       <textarea name="body" rows="12" style="width:100%;padding:7px 10px;margin-bottom:6px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;font-family:inherit;">${esc(p.body)}</textarea>
+      <div style="font-size:11px;color:${T.textSecondary};margin-bottom:8px;">**bold** for bold &nbsp;·&nbsp; ++green bold++ for green bold (headlines)</div>
       <button type="submit" style="font-size:12px;padding:6px 12px;border-radius:8px;background:${T.accent};color:#00170c;border:none;font-weight:700;cursor:pointer;">Save</button>
       <button type="button" class="cancel-edit" style="font-size:12px;padding:6px 12px;border-radius:8px;background:transparent;color:${T.textSecondary};border:1px solid ${T.border};cursor:pointer;">Cancel</button>
     </form>

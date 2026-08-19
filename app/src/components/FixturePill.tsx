@@ -76,7 +76,7 @@ const compactPillStyles = StyleSheet.create({
 });
 
 const miniPillStyles = StyleSheet.create({
-  pill: { width: 48, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
+  pill: { width: 54, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
   opponent: { fontSize: 9, fontWeight: "700" },
   // Unused by the "mini" render path (no venue suffix or points line) — kept only so `s.venue`/`s.points` type-check for the shared full/compact code above.
   venue: { fontSize: 0, width: 0, height: 0 },

@@ -302,10 +302,11 @@ export const fantasyRepo = {
       .all(userId) as LeagueRow[];
   },
   publicLeaguesNotJoined(userId: string): LeagueRow[] {
+    // Pinned above the member-count sort per explicit request — id is the deterministic one leagueSeeder.ts assigns "USA Footy Fans 🇺🇸" (synth-league-geo-${slug}).
     return db
       .prepare(
         `SELECT l.* FROM leagues l WHERE l.is_private = 0 AND l.id NOT IN (SELECT league_id FROM league_members WHERE member_id = ?)
-         ORDER BY (SELECT COUNT(*) FROM league_members WHERE league_id = l.id) DESC`
+         ORDER BY (CASE WHEN l.id = 'synth-league-geo-usa-footy-fans' THEN 0 ELSE 1 END), (SELECT COUNT(*) FROM league_members WHERE league_id = l.id) DESC`
       )
       .all(userId) as LeagueRow[];
   },
