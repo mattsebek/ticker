@@ -3,6 +3,7 @@ import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStore } from "../../store/themeStore";
 import { ClubBadge } from "../../components/ClubBadge";
+import { FixturePill } from "../../components/FixturePill";
 import { Button } from "../../components/Button";
 import { api } from "../../api/client";
 import type { ClubSummary } from "../../api/types";
@@ -27,17 +28,10 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.clubs.all().then((r) =>
-      setClubs(
-        r.clubs.slice().sort((a, b) => {
-          // Preseason title expectations first (higher last-season points =
-          // stronger side), newly-promoted/unranked clubs last.
-          if (a.priorSeasonPoints == null && b.priorSeasonPoints == null) return 0;
-          if (a.priorSeasonPoints == null) return 1;
-          if (b.priorSeasonPoints == null) return -1;
-          return b.priorSeasonPoints - a.priorSeasonPoints;
-        })
-      )
+    api.clubs.all({ withFixtures: true }).then((r) =>
+      // Highest Ticker price first — a manager comparing what they can
+      // afford wants the most expensive (most title-fancied) clubs up top.
+      setClubs(r.clubs.slice().sort((a, b) => b.price - a.price))
     );
   }, []);
 
@@ -98,19 +92,31 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
               disabled={!affordable}
               style={[styles.row, { borderBottomColor: T.borderLight, opacity: affordable ? 1 : 0.4 }]}
             >
-              <ClubBadge code={c.code} color={c.color} size={36} />
-              <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
-              <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{fmtMoney(c.price)}</Text>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
-              </View>
-              {selected ? (
-                <View style={[styles.ownedPill, { backgroundColor: T.accentTint }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent }}>Selected</Text>
+              <View style={styles.rowTop}>
+                <ClubBadge code={c.code} color={c.color} size={36} />
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
+                <View style={{ alignItems: "flex-end", marginRight: 10 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{fmtMoney(c.price)}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
                 </View>
-              ) : (
-                <View style={[styles.buyPill, { borderColor: T.border }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.text }}>Buy</Text>
+                {selected ? (
+                  <View style={[styles.ownedPill, { backgroundColor: T.accentTint }]}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent }}>Selected</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.buyPill, { borderColor: T.border }]}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: T.text }}>Buy</Text>
+                  </View>
+                )}
+              </View>
+              {!!c.upcomingFixtures?.length && (
+                // Indented to align under the name, not the badge (badge width 36 + row gap 12).
+                // alignSelf:flex-start keeps this row sized to its own small pills, not
+                // stretched to the row's full width (which reached under price/Buy).
+                <View style={{ flexDirection: "row", gap: 4, marginLeft: 48, alignSelf: "flex-start" }}>
+                  {[0, 1, 2].map((i) => (
+                    <FixturePill key={i} index={i} fixture={c.upcomingFixtures![i]} T={T} size="mini" />
+                  ))}
                 </View>
               )}
             </Pressable>
@@ -128,7 +134,8 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
 const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   statsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
+  row: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, gap: 8 },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   ownedPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100 },
   buyPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 100, borderWidth: 1 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, alignItems: "center" },

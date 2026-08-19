@@ -4,26 +4,29 @@ import type { ClubFixture } from "../api/types";
 import { RED, DIFF_BORDER_SOFT } from "../theme/theme";
 import type { ThemeTokens } from "../theme/theme";
 
+type Size = "full" | "compact" | "mini";
+
 /**
- * One compact GW pill — used both by the club detail overlay's row of
- * three (its own next fixtures) and by the Portfolio screen's Upcoming
- * Fixtures table (one column per gameweek, one row per held club — where
- * `compact` shrinks it further to leave room for a full-size club badge
- * matching My Clubs). Color/difficulty comes straight off the fixture's
- * own projPts (already the Points Projection Engine's output, computed
+ * One compact GW pill — used by the club detail overlay's row of three
+ * (its own next fixtures), the Portfolio screen's Upcoming Fixtures table
+ * ("compact", shrunk to leave room for a full-size club badge matching My
+ * Clubs), and the onboarding club picker ("mini" — just opponent + venue,
+ * no GW label or points, since that row already shows price/selection
+ * state up top). Color/difficulty comes straight off the fixture's own
+ * projPts (already the Points Projection Engine's output, computed
  * server-side in presenters.ts) — never a second, independently-invented
  * difficulty read, so a favorable-looking pill and a high projected-
  * points number always tell the same story.
  */
-export function FixturePill({ index, fixture, T, compact }: { index: number; fixture: ClubFixture | undefined; T: ThemeTokens; compact?: boolean }) {
-  const s = compact ? compactPillStyles : pillStyles;
+export function FixturePill({ index, fixture, T, size = "full" }: { index: number; fixture: ClubFixture | undefined; T: ThemeTokens; size?: Size }) {
+  const s = size === "compact" ? compactPillStyles : size === "mini" ? miniPillStyles : pillStyles;
 
   if (!fixture) {
     // No data at all for this slot — index+1 is a best guess, not a real gameweek number.
     const gw = `GW${index + 1}`;
     return (
       <View style={[s.pill, { backgroundColor: T.card, borderColor: T.border }]} accessible accessibilityLabel={`${gw}. No fixture scheduled yet.`}>
-        <Text style={[s.gwLabel, { color: T.textSecondary }]}>{gw}</Text>
+        {size !== "mini" && <Text style={[s.gwLabel, { color: T.textSecondary }]}>{gw}</Text>}
         <Text style={[s.opponent, { color: T.textSecondary }]}>—</Text>
       </View>
     );
@@ -38,6 +41,16 @@ export function FixturePill({ index, fixture, T, compact }: { index: number; fix
   const diffLabel = diff === "Easy" ? "Favorable" : diff === "Hard" ? "Difficult" : "Neutral";
   const venue = fixture.home ? "home" : "away";
   const a11yLabel = `${gw}. ${fixture.opp} ${venue}. ${hasProjection ? `Projected ${fixture.projPts.toFixed(2)} points.` : "Projection unavailable."} ${diffLabel} fixture.`;
+
+  if (size === "mini") {
+    return (
+      <View style={[s.pill, { backgroundColor: bg, borderColor }]} accessible accessibilityLabel={a11yLabel}>
+        <Text style={[s.opponent, { color: T.text }]} numberOfLines={1}>
+          {fixture.code} ({fixture.home ? "H" : "A"})
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[s.pill, { backgroundColor: bg, borderColor }]} accessible accessibilityLabel={a11yLabel}>
@@ -62,4 +75,11 @@ const compactPillStyles = StyleSheet.create({
   gwLabel: { fontSize: 8, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 },
   opponent: { fontSize: 11, fontWeight: "700" },
   points: { fontSize: 9, fontWeight: "600" },
+});
+
+const miniPillStyles = StyleSheet.create({
+  pill: { width: 46, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
+  gwLabel: { fontSize: 0, height: 0 },
+  opponent: { fontSize: 9, fontWeight: "700" },
+  points: { fontSize: 0, height: 0 },
 });

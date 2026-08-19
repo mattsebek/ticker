@@ -50,7 +50,7 @@ export const api = {
     me: () => request<{ user: User }>("/auth/me"),
   },
   clubs: {
-    all: () => request<{ clubs: ClubSummary[] }>("/clubs"),
+    all: (opts?: { withFixtures?: boolean }) => request<{ clubs: ClubSummary[] }>(opts?.withFixtures ? "/clubs?fixtures=1" : "/clubs"),
     search: (q: string) => request<{ clubs: ClubSummary[] }>(`/clubs/search?q=${encodeURIComponent(q)}`),
     movers: () => request<{ clubs: ClubSummary[] }>("/clubs/movers"),
     topEarners: (range: "gw" | "ytd") => request<{ clubs: ClubSummary[] }>(`/clubs/top-earners?range=${range}`),

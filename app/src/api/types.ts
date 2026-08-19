@@ -41,6 +41,8 @@ export interface ClubSummary {
   sparkline: number[];
   form: ("W" | "D" | "L")[];
   nextFixture: NextFixture | null;
+  /** Only present when requested via GET /clubs?fixtures=1 (the onboarding club picker) — omitted everywhere else clubSummary() is used. */
+  upcomingFixtures?: ClubFixture[];
 }
 
 export interface ClubFixture {

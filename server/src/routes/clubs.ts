@@ -1,14 +1,22 @@
 import { Router } from "express";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
-import { clubSummary, clubDetail } from "../presenters";
+import { clubSummary, clubDetail, upcomingFixturesForClub } from "../presenters";
 import { newsService } from "../briefing/newsService";
 
 export const clubsRouter = Router();
 
 clubsRouter.get("/", (req, res) => {
   const round = gameweekService.currentRound();
-  res.json({ clubs: footballService.listClubs().map((c) => clubSummary(c, round)) });
+  // fixtures=1 is opt-in — the plain summary is on the hot path (dataStore
+  // polls it constantly); the 3-fixture-per-club projection lookup is only
+  // worth paying for on the onboarding club picker, which asks explicitly.
+  const withFixtures = req.query.fixtures === "1";
+  const clubs = footballService.listClubs().map((c) => {
+    const summary = clubSummary(c, round);
+    return withFixtures ? { ...summary, upcomingFixtures: upcomingFixturesForClub(c, 3) } : summary;
+  });
+  res.json({ clubs });
 });
 
 clubsRouter.get("/search", (req, res) => {
