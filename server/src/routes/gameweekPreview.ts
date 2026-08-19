@@ -31,3 +31,8 @@ gameweekPreviewRouter.get("/by-slug/:slug", (req, res) => {
   if (!preview) return res.json({ preview: null });
   res.json({ preview: toPublicPreview(preview) });
 });
+
+/** Public, read-only — every published article's slug (no headline/body), for the website's dynamic sitemap.xml. */
+gameweekPreviewRouter.get("/published", (req, res) => {
+  res.json({ previews: editorialRepo.listPublishedSlugs() });
+});

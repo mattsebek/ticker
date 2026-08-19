@@ -165,6 +165,13 @@ export const editorialRepo = {
     return rows.map(rowToPreview);
   },
 
+  /** Slug + publish date only, for the public sitemap — never leaks draft/unpublished headlines or bodies. */
+  listPublishedSlugs(limit = 200): { slug: string; publishedAt: number }[] {
+    return db
+      .prepare("SELECT slug, published_at as publishedAt FROM gameweek_previews WHERE status = 'PUBLISHED' AND slug IS NOT NULL ORDER BY published_at DESC LIMIT ?")
+      .all(limit) as { slug: string; publishedAt: number }[];
+  },
+
   insertDraft(input: { round: number; headline: string; body: string; facts: unknown }): GameweekPreviewRow {
     const id = randomUUID();
     const now = Date.now();
