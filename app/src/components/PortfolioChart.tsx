@@ -7,7 +7,6 @@ import { GREEN, RED } from "../theme/theme";
 
 const CHART_H = 120;
 const PAD_Y = 10;
-const REFERENCE_VALUE = 100; // the exact starting portfolio value at inception
 const REFERENCE_COLOR = "#8A8F98";
 
 function fmtTooltipDate(t: number): string {
@@ -87,7 +86,12 @@ export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[];
 
   if (points.length < 2) return <View onLayout={onLayout} style={{ height: CHART_H }} />;
 
-  const color = series[series.length - 1] >= series[0] ? GREEN : RED;
+  // The dashed reference line marks where THIS window started, not the
+  // account's all-time $100 inception balance — a hardcoded 100 here used
+  // to make a genuinely-up 24H/7D line (which started somewhere other than
+  // exactly $100) look like it was drawn below its own starting point.
+  const referenceValue = series[0];
+  const color = series[series.length - 1] >= referenceValue ? GREEN : RED;
   const linePoints = edgeSparkPath(series, Math.max(width, 1), CHART_H, PAD_Y);
   const areaPath = edgeSparkAreaPath(series, Math.max(width, 1), CHART_H, PAD_Y);
   const hoverPt = hoverIdx != null ? edgeSparkPointAt(series, width, CHART_H, PAD_Y, hoverIdx) : null;
@@ -95,8 +99,7 @@ export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[];
   const min = Math.min(...series);
   const max = Math.max(...series);
   const range = max - min || 1;
-  const referenceY = PAD_Y + (CHART_H - PAD_Y * 2) * (1 - (REFERENCE_VALUE - min) / range);
-  const showReference = REFERENCE_VALUE >= min && REFERENCE_VALUE <= max;
+  const referenceY = PAD_Y + (CHART_H - PAD_Y * 2) * (1 - (referenceValue - min) / range);
 
   return (
     <View onLayout={onLayout} style={{ width: "100%", height: CHART_H }} {...pan.panHandlers}>
@@ -111,7 +114,7 @@ export function PortfolioChart({ points, rangeKey, onScrub }: { points: Point[];
                 </LinearGradient>
               </Defs>
               <Path d={areaPath} fill="url(#portfolioGrad)" stroke="none" />
-              {showReference && <Line x1={0} y1={referenceY} x2={width} y2={referenceY} stroke={REFERENCE_COLOR} strokeWidth={1} strokeDasharray="4,4" />}
+              <Line x1={0} y1={referenceY} x2={width} y2={referenceY} stroke={REFERENCE_COLOR} strokeWidth={1} strokeDasharray="4,4" />
               <Polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
               {hoverPt && <Line x1={hoverPt.x} y1={0} x2={hoverPt.x} y2={CHART_H} stroke={T.text} strokeOpacity={0.55} strokeWidth={1} strokeDasharray="3,3" />}
               {hoverPt && <Circle cx={hoverPt.x} cy={hoverPt.y} r={4} fill={T.accent} stroke={T.bg} strokeWidth={2} />}
