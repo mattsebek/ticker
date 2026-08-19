@@ -138,6 +138,19 @@ function resampleWithFlatFill(points: Point[], windowStart: number, windowEnd: n
   const grid: Point[] = [];
   let pi = 0;
   let last = startingValue;
+  // Fast-forward through everything BEFORE the window starts to find the
+  // real value to seed the left edge — plain overwrite, no deviation
+  // tracking, since these points aren't inside any bucket's own time
+  // range. Without this separate pass, a big pre-window swing (e.g. a real
+  // fixture settlement from days ago) could get caught by bucket 0's own
+  // max-deviation logic below and displayed as if it were that bucket's
+  // value, even though the true value by window start had already moved
+  // well past it — corrupting not just that one bucket but everything
+  // downstream that reads series[0] (the color, the reference line).
+  while (pi < points.length && points[pi].t < windowStart) {
+    last = points[pi].v;
+    pi++;
+  }
   for (let i = 0; i < gridSize; i++) {
     const gt = gridSize === 1 ? windowEnd : windowStart + (i / (gridSize - 1)) * (windowEnd - windowStart);
     let display = last;
