@@ -26,7 +26,6 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
     const gw = `GW${index + 1}`;
     return (
       <View style={[s.pill, { backgroundColor: T.card, borderColor: T.border }]} accessible accessibilityLabel={`${gw}. No fixture scheduled yet.`}>
-        {size !== "mini" && <Text style={[s.gwLabel, { color: T.textSecondary }]}>{gw}</Text>}
         <Text style={[s.opponent, { color: T.textSecondary }]}>—</Text>
       </View>
     );
@@ -54,9 +53,8 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
 
   return (
     <View style={[s.pill, { backgroundColor: bg, borderColor }]} accessible accessibilityLabel={a11yLabel}>
-      <Text style={[s.gwLabel, { color: T.textSecondary }]}>{gw}</Text>
       <Text style={[s.opponent, { color: T.text }]} numberOfLines={1}>
-        {fixture.code} ({fixture.home ? "H" : "A"})
+        {fixture.code} <Text style={[s.venue, { color: T.text }]}>({fixture.home ? "H" : "A"})</Text>
       </Text>
       <Text style={[s.points, { color: pointsColor }]}>{hasProjection ? `${fixture.projPts.toFixed(2)} pts` : "— pts"}</Text>
     </View>
@@ -65,21 +63,22 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
 
 const pillStyles = StyleSheet.create({
   pill: { flex: 1, borderRadius: 14, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center", gap: 3 },
-  gwLabel: { fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  opponent: { fontSize: 14, fontWeight: "700" },
-  points: { fontSize: 12, fontWeight: "600" },
+  opponent: { fontSize: 14, fontWeight: "700", textAlign: "center" },
+  venue: { fontSize: 12, fontWeight: "700" },
+  points: { fontSize: 13, fontWeight: "600" },
 });
 
 const compactPillStyles = StyleSheet.create({
   pill: { flex: 1, borderRadius: 10, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 3, alignItems: "center", justifyContent: "center", gap: 1 },
-  gwLabel: { fontSize: 8, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 },
-  opponent: { fontSize: 11, fontWeight: "700" },
-  points: { fontSize: 9, fontWeight: "600" },
+  opponent: { fontSize: 11, fontWeight: "700", textAlign: "center" },
+  venue: { fontSize: 9, fontWeight: "700" },
+  points: { fontSize: 10, fontWeight: "600" },
 });
 
 const miniPillStyles = StyleSheet.create({
   pill: { width: 48, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
-  gwLabel: { fontSize: 0, height: 0 },
   opponent: { fontSize: 9, fontWeight: "700" },
-  points: { fontSize: 0, height: 0 },
+  // Unused by the "mini" render path (no venue suffix or points line) — kept only so `s.venue`/`s.points` type-check for the shared full/compact code above.
+  venue: { fontSize: 0, width: 0, height: 0 },
+  points: { fontSize: 0, width: 0, height: 0 },
 });

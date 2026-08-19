@@ -105,7 +105,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
                   // Indented to align under the name, not the badge (badge width 36 + row gap 12).
                   // alignSelf:flex-start keeps this row sized to its own small pills, not
                   // stretched to the column's full width.
-                  <View style={{ flexDirection: "row", gap: 4, marginLeft: 48, marginTop: 4, alignSelf: "flex-start" }}>
+                  <View style={{ flexDirection: "row", gap: 4, marginLeft: 48, marginTop: 1, alignSelf: "flex-start" }}>
                     {[0, 1, 2].map((i) => (
                       <FixturePill key={i} index={i} fixture={c.upcomingFixtures![i]} T={T} size="mini" />
                     ))}
