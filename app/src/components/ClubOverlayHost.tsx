@@ -121,8 +121,16 @@ export function ClubOverlayHost() {
   const isOwned = !!holding;
   // Same fallback chain as ClubRow's My Clubs list, so this card's weekly
   // change always matches what the portfolio list already shows for this
-  // club — never the fabricated-flat "—" a brand-new club used to show.
-  const gwPct = detail.hasWeeklyHistory ? detail.weeklyPct : detail.priceBreakdown ? detail.priceBreakdown.performancePct * 100 : detail.seasonPct;
+  // club — never the fabricated-flat "—" a brand-new club used to show,
+  // and never a multi-day-old settlement's impact shown as if current
+  // once a real dailyPct (24h) comparison is available.
+  const gwPct = detail.hasWeeklyHistory
+    ? detail.weeklyPct
+    : detail.hasDailyHistory
+      ? detail.dailyPct
+      : detail.priceBreakdown
+        ? detail.priceBreakdown.performancePct * 100
+        : detail.seasonPct;
 
   function buy() {
     close();

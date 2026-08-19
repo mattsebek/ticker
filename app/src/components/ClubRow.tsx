@@ -17,11 +17,20 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
   // weeklyPct reads 0 (not just "small") until the club has a real price
   // point 7 days old — before that, showing it verbatim next to a club
   // that just scored real points and moved real price (see priceBreakdown)
-  // reads as "nothing happened" when something very much did. Fall back to
-  // the most recent real settlement's own impact, then season-to-date,
-  // rather than a fabricated 0 — same "never show a fake flat" precedent
+  // reads as "nothing happened" when something very much did. dailyPct
+  // (a real, elapsed-time 24h comparison) only needs a day-old point, so
+  // it's almost always available well before weeklyPct is — prefer it over
+  // the settlement-impact fallback, which can otherwise show a multi-day-
+  // old event's impact as if it were current. Season-to-date is the last
+  // resort, not a fabricated 0 — same "never show a fake flat" precedent
   // as Top Movers' hasDailyHistory fallback.
-  const gwPct = club.hasWeeklyHistory ? club.weeklyPct : club.priceBreakdown ? club.priceBreakdown.performancePct * 100 : club.seasonPct;
+  const gwPct = club.hasWeeklyHistory
+    ? club.weeklyPct
+    : club.hasDailyHistory
+      ? club.dailyPct
+      : club.priceBreakdown
+        ? club.priceBreakdown.performancePct * 100
+        : club.seasonPct;
   const pct = isYear ? ((club.price - club.purchasePrice) / (club.purchasePrice || 1)) * 100 : gwPct;
   const pts = isYear ? club.seasonPts : club.gwPts;
   const trendColor = colorForPct(pct);
