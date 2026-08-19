@@ -10,6 +10,31 @@ const provider = createFootballDataProvider();
 const ODDS_IMPORT_CAP = 20;
 
 /**
+ * Unlike fetchOddsBestEffort/fetchPriorSeasonStandings below, there's no
+ * reasonable way to degrade gracefully when the season import's own
+ * competitions/seasons lookup fails — there's no fixture data at all
+ * without it. A single per-minute rate-limit rejection here used to abort
+ * the entire bootstrap outright; retries with a real gap between them
+ * mean the (light, 1-2 call) lookup rides through a transient rate-limit
+ * window instead of requiring a whole separate bootstrap attempt.
+ */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 20_000): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        console.warn(`[football] provider call failed (attempt ${i + 1}/${attempts}), retrying in ${delayMs}ms: ${err instanceof Error ? err.message : String(err)}`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * A provider's season list isn't guaranteed to be sorted or to have its
  * "current" season actually accessible on every plan (e.g. a free
  * API-Football key can't see the live season, only a few past years) — so
@@ -58,15 +83,15 @@ export const footballService = {
   async importSeasonSchedule(): Promise<{ imported: number; skipped: boolean }> {
     if (footballRepo.countFixtures() > 0) return { imported: 0, skipped: true };
 
-    const [competitionRaw] = await provider.fetchCompetitions();
+    const [competitionRaw] = await withRetry(() => provider.fetchCompetitions());
     const competition = normalizeCompetition(provider.name, competitionRaw);
-    const seasonRaw = pickSeason(await provider.fetchSeasons(competitionRaw.providerId));
+    const seasonRaw = pickSeason(await withRetry(() => provider.fetchSeasons(competitionRaw.providerId)));
     const season = normalizeSeason(provider.name, seasonRaw, competition.id);
 
-    const clubsRaw = await provider.fetchClubs(seasonRaw.providerId);
+    const clubsRaw = await withRetry(() => provider.fetchClubs(seasonRaw.providerId));
     for (const c of clubsRaw) normalizeClub(provider.name, c);
 
-    const fixturesRaw = await provider.fetchFixtures(seasonRaw.providerId);
+    const fixturesRaw = await withRetry(() => provider.fetchFixtures(seasonRaw.providerId));
     // A provider like API-Football spends one request PER fixture on
     // `fetchOdds` — pulling odds for a whole season (hundreds of fixtures) in
     // one import would blow any reasonable rate limit by itself. Only the
@@ -147,17 +172,27 @@ export const footballService = {
    */
   async fetchPriorSeasonStandings(): Promise<Map<string, { position: number; points: number }>> {
     const result = new Map<string, { position: number; points: number }>();
-    const [competitionRaw] = await provider.fetchCompetitions();
-    const seasons = await provider.fetchSeasons(competitionRaw.providerId);
-    const current = pickSeason(seasons);
-    const priorYear = String(Number(current.year) - 1);
-    const prior = seasons.find((s) => s.year === priorYear);
-    if (!prior) return result;
+    // Best-effort per this function's own doc comment above — but until now
+    // that only covered "no prior season configured" (line below), not a
+    // failed provider call. A rate-limited /standings request threw straight
+    // through this function into bootstrap(), aborting the entire reset even
+    // though the caller (computeOpeningPrices) already degrades gracefully
+    // to form/title-odds-only pricing on an empty map.
+    try {
+      const [competitionRaw] = await provider.fetchCompetitions();
+      const seasons = await provider.fetchSeasons(competitionRaw.providerId);
+      const current = pickSeason(seasons);
+      const priorYear = String(Number(current.year) - 1);
+      const prior = seasons.find((s) => s.year === priorYear);
+      if (!prior) return result;
 
-    const rows = await provider.fetchStandings(prior.providerId);
-    for (const row of rows) {
-      const clubId = footballRepo.getMapping(provider.name, "club", row.teamProviderId);
-      if (clubId) result.set(clubId, { position: row.position, points: row.points });
+      const rows = await provider.fetchStandings(prior.providerId);
+      for (const row of rows) {
+        const clubId = footballRepo.getMapping(provider.name, "club", row.teamProviderId);
+        if (clubId) result.set(clubId, { position: row.position, points: row.points });
+      }
+    } catch (err) {
+      console.warn(`[football] fetchPriorSeasonStandings failed, pricing without prior-season data: ${err instanceof Error ? err.message : String(err)}`);
     }
     return result;
   },
