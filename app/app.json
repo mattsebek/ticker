@@ -26,6 +26,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withoutPushEntitlement",
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
