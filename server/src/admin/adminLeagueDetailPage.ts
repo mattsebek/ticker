@@ -31,7 +31,7 @@ export function renderAdminLeagueDetailPage(opts: {
 
   const deleteSection = opts.deletable
     ? `
-    <div style="margin:20px 0;padding-top:16px;border-top:1px solid ${T.border};">
+    <div style="margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid ${T.border};">
       <button id="delete-league-btn" data-id="${esc(opts.id)}" style="font-size:12px;padding:7px 14px;border-radius:100px;cursor:pointer;background:transparent;color:${T.red};border:1px solid ${T.red};font-weight:500;">Delete League</button>
       <span style="font-size:11.5px;color:${T.textSecondary};margin-left:8px;">Removes all ${opts.standings.length} member(s) from this league and deletes it permanently.</span>
     </div>
@@ -57,13 +57,13 @@ export function renderAdminLeagueDetailPage(opts: {
     <p style="color:${T.textSecondary};font-size:13px;margin:-12px 0 20px;">
       ${opts.isPrivate ? "Private" : "Public"} &middot; Code: ${opts.code ? esc(opts.code) : "—"} &middot; Commissioner: ${esc(opts.commissioner)} &middot; ${opts.standings.length} members
     </p>
+    ${deleteSection}
     <div class="table-wrap">
       <table>
         <thead><tr><th>Rank</th><th>Manager</th><th>Points</th><th>Portfolio</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="4" class="empty">No standings yet.</td></tr>`}</tbody>
       </table>
     </div>
-    ${deleteSection}
   `;
   return renderAdminShell({ active: "leagues", title: opts.name, bodyHtml: body });
 }
