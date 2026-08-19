@@ -105,6 +105,22 @@ internalRouter.get("/jobs/:name/history", (req, res) => {
   res.json({ jobName: req.params.name, runs: getJobRunHistory(req.params.name, limit) });
 });
 
+/** Quick sanity check on how much of the season actually imported — total fixture count, rounds covered, and per-round breakdown. Read-only, no mutation. */
+internalRouter.get("/fixture-summary", (req, res) => {
+  const scheduled = footballRepo.listFixturesByStatus("scheduled");
+  const finished = footballRepo.listFixturesByStatus("finished");
+  const all = [...scheduled, ...finished];
+  const byRound = new Map<number, number>();
+  for (const f of all) byRound.set(f.round, (byRound.get(f.round) ?? 0) + 1);
+  const rounds = [...byRound.keys()].sort((a, b) => a - b);
+  res.json({
+    totalFixtures: footballRepo.countFixtures(),
+    maxRound: footballRepo.maxRound(),
+    roundsPresent: rounds.length,
+    fixturesPerRound: Object.fromEntries(rounds.map((r) => [r, byRound.get(r)])),
+  });
+});
+
 internalRouter.get("/leagues", (req, res) => {
   const leagues = fantasyRepo.listAllLeagues();
   res.json({
