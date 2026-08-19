@@ -180,6 +180,7 @@ export function upcomingFixturesForClub(club: Club, n: number) {
     const side = f.homeClubId === club.id ? "home" : "away";
     const projPts = bestProjectedPoints(f.id, side, winProb, f.drawProb ?? 0.24);
     return {
+      round: f.round,
       opp: opponent?.name ?? "TBD",
       code: opponent?.code ?? "TBD",
       home: f.homeClubId === club.id,

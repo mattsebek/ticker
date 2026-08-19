@@ -44,6 +44,7 @@ export interface ClubSummary {
 }
 
 export interface ClubFixture {
+  round: number;
   opp: string;
   code: string;
   home: boolean;

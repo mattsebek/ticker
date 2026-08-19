@@ -336,8 +336,7 @@ export function PortfolioScreen() {
 
         {portfolio.holdings.some((h) => h.upcomingFixtures?.length) && (
           <>
-            <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 4 }}>Upcoming Fixtures</Text>
-            <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 14 }}>Visual difficulty view across your portfolio.</Text>
+            <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 14 }}>Upcoming Fixtures</Text>
 
             {portfolio.holdings
               .filter((h) => h.upcomingFixtures?.length)
@@ -366,5 +365,5 @@ export function PortfolioScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 13, paddingBottom: 40 },
   sectionHeader: { marginTop: 28, marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, borderBottomWidth: 1 },
+  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 20, paddingVertical: 14, borderBottomWidth: 1 },
 });

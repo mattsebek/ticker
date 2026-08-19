@@ -16,10 +16,11 @@ import type { ThemeTokens } from "../theme/theme";
  * points number always tell the same story.
  */
 export function FixturePill({ index, fixture, T, compact }: { index: number; fixture: ClubFixture | undefined; T: ThemeTokens; compact?: boolean }) {
-  const gw = `GW${index + 1}`;
   const s = compact ? compactPillStyles : pillStyles;
 
   if (!fixture) {
+    // No data at all for this slot — index+1 is a best guess, not a real gameweek number.
+    const gw = `GW${index + 1}`;
     return (
       <View style={[s.pill, { backgroundColor: T.card, borderColor: T.border }]} accessible accessibilityLabel={`${gw}. No fixture scheduled yet.`}>
         <Text style={[s.gwLabel, { color: T.textSecondary }]}>{gw}</Text>
@@ -28,6 +29,7 @@ export function FixturePill({ index, fixture, T, compact }: { index: number; fix
     );
   }
 
+  const gw = `GW${fixture.round}`;
   const hasProjection = Number.isFinite(fixture.projPts);
   const diff = hasProjection ? fixture.diff : "Medium";
   const bg = diff === "Easy" ? T.accentTint : diff === "Hard" ? T.redTint : T.card;
