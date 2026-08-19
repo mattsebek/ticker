@@ -39,6 +39,8 @@ export interface ClubSummary {
   gwPts: number;
   seasonPts: number;
   sparkline: number[];
+  /** Whole-season shape (opening price through now) — used for the "YTD" toggle, distinct from `sparkline`'s recent-only tail. */
+  sparklineSeason: number[];
   form: ("W" | "D" | "L")[];
   nextFixture: NextFixture | null;
   /** Only present when requested via GET /clubs?fixtures=1 (the onboarding club picker) — omitted everywhere else clubSummary() is used. */

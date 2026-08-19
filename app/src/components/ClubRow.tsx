@@ -25,6 +25,7 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
   const pct = isYear ? ((club.price - club.purchasePrice) / (club.purchasePrice || 1)) * 100 : gwPct;
   const pts = isYear ? club.seasonPts : club.gwPts;
   const trendColor = colorForPct(pct);
+  const sparklineValues = isYear ? club.sparklineSeason : club.sparkline;
 
   return (
     <Pressable onPress={() => open(club.id)} style={[styles.row, { borderBottomColor: T.border }]}>
@@ -38,7 +39,7 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
           </View>
         )}
       </View>
-      {club.sparkline?.length > 1 && <SparkLine values={club.sparkline} width={52} height={20} color={trendColor} />}
+      {sparklineValues?.length > 1 && <SparkLine values={sparklineValues} width={52} height={20} color={trendColor} />}
       <View style={{ alignItems: "flex-end", width: 72 }}>
         <Text style={{ fontSize: 11, fontWeight: "600", color: T.accent, marginBottom: 2 }}>{pts} pts</Text>
         <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{fmtMoney(priceNow)}</Text>

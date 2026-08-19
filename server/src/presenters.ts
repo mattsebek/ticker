@@ -15,6 +15,14 @@ import { commentaryService } from "./briefing/commentaryService";
 import { round2 } from "./shared/rng";
 import { projectionRepo } from "./projection/repo";
 
+/** Evenly-spaced sample of up to `n` points spanning the whole array — unlike a tail slice, this keeps the shape of a long season-length series instead of just its most recent sliver. */
+function downsample(values: number[], n: number): number[] {
+  if (values.length <= n) return values;
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) out.push(values[Math.round((i * (values.length - 1)) / (n - 1))]);
+  return out;
+}
+
 function opponentClub(fixture: Fixture, clubId: string): Club | undefined {
   const opponentId = fixture.homeClubId === clubId ? fixture.awayClubId : fixture.homeClubId;
   return footballService.getClub(opponentId);
@@ -142,6 +150,10 @@ export function clubSummary(club: Club, currentRound: number) {
     gwPts: fantasyRepo.pointsAtRound(club.id, currentRound),
     seasonPts: fantasyRepo.seasonPointsThroughRound(club.id, currentRound),
     sparkline: series.slice(-20),
+    // Whole-season shape (opening price through now), for the Portfolio "My
+    // Clubs" list's YTD toggle — `sparkline` above only covers the tail end
+    // of the series, so it looks identical regardless of GW/YTD selection.
+    sparklineSeason: downsample(series, 30),
     form: formLettersForClub(club.id, 5),
     nextFixture: nextFixture
       ? {
