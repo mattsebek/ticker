@@ -110,7 +110,13 @@ export function RootNavigator() {
                 fullScreenModal presentations. */}
             <Stack.Screen name="AiBriefing" component={AiBriefingScreen} options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="GameweekDetail" component={GameweekDetailScreen} options={{ presentation: "fullScreenModal" }} />
-            <Stack.Screen name="GameweekPreview" component={GameweekPreviewScreen} options={{ presentation: "fullScreenModal" }} />
+            {/* Plain push (not fullScreenModal, unlike its siblings above) — this
+                screen's "‹ Back" text button matches LeagueDetail/JoinLeague/Rules,
+                which are also plain push. fullScreenModal has a known
+                react-native-screens bug where SafeAreaView misreports the top
+                inset on first paint, which is exactly what made this screen's back
+                button overlap the status bar before this was a plain push. */}
+            <Stack.Screen name="GameweekPreview" component={GameweekPreviewScreen} />
           </>
         )}
       </Stack.Navigator>

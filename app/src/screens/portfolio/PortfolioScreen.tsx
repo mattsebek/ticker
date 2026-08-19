@@ -306,7 +306,8 @@ export function PortfolioScreen() {
         {gameweekPreview && (
           <Pressable
             onPress={() => navigation.navigate("GameweekPreview")}
-            style={{ marginTop: 10, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}
+            // marginHorizontal: -10 matches GameweekWidget's own cards above, so this card is the same width as them.
+            style={{ marginTop: 10, marginHorizontal: -10, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}
           >
             <GameweekPreviewArt icon={gameweekPreview.icon} badge={gameweekPreview.badge} background={gameweekPreview.background} color={gameweekPreview.color} size={56} radius={13} />
             <View style={{ flex: 1 }}>
