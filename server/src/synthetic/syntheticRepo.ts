@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_synthetic_profiles_due ON synthetic_profiles(stat
 CREATE TABLE IF NOT EXISTS synthetic_system_config (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   enabled INTEGER NOT NULL DEFAULT 1,
-  target_active_users INTEGER NOT NULL DEFAULT 300,
+  target_active_users INTEGER NOT NULL DEFAULT 1000,
   activity_multiplier REAL NOT NULL DEFAULT 3.0,
   max_synthetic_percentage_per_public_league REAL NOT NULL DEFAULT 0.75,
   minimum_public_league_population INTEGER NOT NULL DEFAULT 8,
@@ -69,6 +69,12 @@ CREATE INDEX IF NOT EXISTS idx_synthetic_activity_log_user ON synthetic_activity
 // market-wide). Only touches a row still sitting at the untouched old
 // default, so a deliberate admin override is never clobbered.
 db.prepare("UPDATE synthetic_system_config SET activity_multiplier = 3.0 WHERE id = 1 AND activity_multiplier = 1.0").run();
+
+// Same idea, one step further: 300 users still left most 2-5min demand
+// windows under DEMAND_MIN_SAMPLE's confidence threshold for any one club,
+// capping most ticks well below their max size. Only touches a row still
+// at the untouched old default.
+db.prepare("UPDATE synthetic_system_config SET target_active_users = 1000 WHERE id = 1 AND target_active_users = 300").run();
 
 export interface SyntheticProfile {
   userId: string;
@@ -271,6 +277,13 @@ export const syntheticRepo = {
       action_type: string;
       n: number;
     }[];
+    return Object.fromEntries(rows.map((r) => [r.action_type, r.n]));
+  },
+  /** Same breakdown as countActionsSince, but bounded on both ends — backs the orchestrator's per-run trail log, where each run's window is (previous run's timestamp, this run's timestamp]. */
+  countActionsBetween(startExclusiveMs: number, endInclusiveMs: number): Record<string, number> {
+    const rows = db
+      .prepare("SELECT action_type, COUNT(*) as n FROM synthetic_activity_log WHERE created_at > ? AND created_at <= ? GROUP BY action_type")
+      .all(startExclusiveMs, endInclusiveMs) as { action_type: string; n: number }[];
     return Object.fromEntries(rows.map((r) => [r.action_type, r.n]));
   },
   recentForUser(userId: string, limit: number): any[] {

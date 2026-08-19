@@ -69,7 +69,13 @@ export function registerJobs() {
 
   // Synthetic User Engine — see synthetic/. All three check the global kill
   // switch (synthetic_system_config.enabled) as their first step.
-  scheduler.register({ name: "syntheticActivityOrchestrator", intervalMs: intervalFromEnv("JOB_SYNTHETIC_ORCHESTRATOR_MS", HOUR), run: syntheticActivityOrchestrator.run, initialDelayMs: 120_000 });
+  // Matches MARKET_TICK_MINUTES: a user's own next_activity_at scheduling is
+  // meaningless if this job itself only checks in once an hour, since
+  // getDueForEvaluation only runs when this job fires — a profile due in 5
+  // minutes still waits for the top of the hour otherwise. Tightened
+  // together with the demand tick so real trades actually land inside the
+  // window each tick aggregates over.
+  scheduler.register({ name: "syntheticActivityOrchestrator", intervalMs: intervalFromEnv("JOB_SYNTHETIC_ORCHESTRATOR_MS", 2 * MINUTE), run: syntheticActivityOrchestrator.run, initialDelayMs: 120_000 });
   scheduler.register({ name: "syntheticPopulationManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_POPULATION_MS", 24 * HOUR), run: syntheticPopulationManager.run, initialDelayMs: 130_000 });
   scheduler.register({ name: "syntheticLeagueManager", intervalMs: intervalFromEnv("JOB_SYNTHETIC_LEAGUE_MS", 24 * HOUR), run: syntheticLeagueManager.run, initialDelayMs: 140_000 });
 

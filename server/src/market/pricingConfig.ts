@@ -38,7 +38,7 @@ export const pricingConfig = {
    * applied in smaller, more frequent increments instead of accumulating
    * into a single larger jump every 15 minutes.
    */
-  MARKET_TICK_MINUTES: floatFromEnv("PRICING_MARKET_TICK_MINUTES", 5),
+  MARKET_TICK_MINUTES: floatFromEnv("PRICING_MARKET_TICK_MINUTES", 2),
   /**
    * Demand is net buyers vs. net sellers (a user who both buys and sells in
    * the same window nets to neutral), which saturates instantly with a tiny

@@ -28,7 +28,10 @@ type Range = "24H" | "7D" | "YTD";
 type Point = { t: number; v: number };
 
 const DAY_MS = 86_400_000;
-const GRID_POINTS_24H = 200;
+// Matches server's MARKET_TICK_MINUTES=2 (up to 720 real ticks/day) closely
+// enough that most real ticks land in their own bucket instead of getting
+// averaged away with 1-2 neighbors — was 200, sized for the old 5-minute cadence.
+const GRID_POINTS_24H = 400;
 const GRID_POINTS_7D = 200;
 // "Today" always gets at least this fraction of the 7D chart's width,
 // regardless of how much of today has actually elapsed — a purely
