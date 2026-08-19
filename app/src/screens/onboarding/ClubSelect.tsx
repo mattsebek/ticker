@@ -92,31 +92,37 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
               disabled={!affordable}
               style={[styles.row, { borderBottomColor: T.borderLight, opacity: affordable ? 1 : 0.4 }]}
             >
-              <View style={styles.rowTop}>
-                <ClubBadge code={c.code} color={c.color} size={36} />
-                <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
-                <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{fmtMoney(c.price)}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
+              {/* Left column (badge/name + pills) and the price/Buy block are siblings in a
+                  row with alignItems:"center", so price/Buy vertically center against this
+                  column's full height (badge+name line plus the pills line below it), not
+                  just the top line. */}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <ClubBadge code={c.code} color={c.color} size={36} />
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
                 </View>
-                {selected ? (
-                  <View style={[styles.ownedPill, { backgroundColor: T.accentTint }]}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent }}>Selected</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.buyPill, { borderColor: T.border }]}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: T.text }}>Buy</Text>
+                {!!c.upcomingFixtures?.length && (
+                  // Indented to align under the name, not the badge (badge width 36 + row gap 12).
+                  // alignSelf:flex-start keeps this row sized to its own small pills, not
+                  // stretched to the column's full width.
+                  <View style={{ flexDirection: "row", gap: 4, marginLeft: 48, marginTop: 4, alignSelf: "flex-start" }}>
+                    {[0, 1, 2].map((i) => (
+                      <FixturePill key={i} index={i} fixture={c.upcomingFixtures![i]} T={T} size="mini" />
+                    ))}
                   </View>
                 )}
               </View>
-              {!!c.upcomingFixtures?.length && (
-                // Indented to align under the name, not the badge (badge width 36 + row gap 12).
-                // alignSelf:flex-start keeps this row sized to its own small pills, not
-                // stretched to the row's full width (which reached under price/Buy).
-                <View style={{ flexDirection: "row", gap: 4, marginLeft: 48, alignSelf: "flex-start" }}>
-                  {[0, 1, 2].map((i) => (
-                    <FixturePill key={i} index={i} fixture={c.upcomingFixtures![i]} T={T} size="mini" />
-                  ))}
+              <View style={{ alignItems: "flex-end", marginRight: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{fmtMoney(c.price)}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colorForPct(c.dailyPct) }}>{fmtPct(c.dailyPct)}</Text>
+              </View>
+              {selected ? (
+                <View style={[styles.ownedPill, { backgroundColor: T.accentTint }]}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.accent }}>Selected</Text>
+                </View>
+              ) : (
+                <View style={[styles.buyPill, { borderColor: T.border }]}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.text }}>Buy</Text>
                 </View>
               )}
             </Pressable>
@@ -134,8 +140,7 @@ export function ClubSelect({ onBack, onDone }: { onBack: () => void; onDone: (ca
 const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   statsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  row: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, gap: 8 },
-  rowTop: { flexDirection: "row", alignItems: "center", gap: 12 },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
   ownedPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100 },
   buyPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 100, borderWidth: 1 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, alignItems: "center" },
