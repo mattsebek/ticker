@@ -21,6 +21,7 @@ import { ClubRow } from "../../components/ClubRow";
 import { ClubBadge } from "../../components/ClubBadge";
 import { FixturePill } from "../../components/FixturePill";
 import { useBriefing } from "../../hooks/useBriefing";
+import { useClubOverlayStore } from "../../store/overlayStore";
 
 const FIXTURE_NAME_COL_WIDTH = 108;
 
@@ -206,6 +207,7 @@ function PctChange({ value, label }: { value: number; label: string }) {
 
 export function PortfolioScreen() {
   const T = useThemeStore((s) => s.tokens);
+  const openClub = useClubOverlayStore((s) => s.open);
   const portfolio = useDataStore((s) => s.portfolio);
   const chartPoints = useDataStore((s) => s.chartPoints);
   const user = useAuthStore((s) => s.user);
@@ -306,12 +308,12 @@ export function PortfolioScreen() {
         {gameweekPreview && (
           <Pressable
             onPress={() => navigation.navigate("GameweekPreview")}
-            style={{ marginTop: 10, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}
+            style={{ marginTop: 10, backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}
           >
-            <GameweekPreviewArt icon={gameweekPreview.icon} badge={gameweekPreview.badge} background={gameweekPreview.background} color={gameweekPreview.color} size={52} radius={12} />
+            <GameweekPreviewArt icon={gameweekPreview.icon} badge={gameweekPreview.badge} background={gameweekPreview.background} color={gameweekPreview.color} size={56} radius={13} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Gameweek {gameweekPreview.round} Preview</Text>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }} numberOfLines={2}>
+              <Text style={{ fontSize: 11, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>Gameweek {gameweekPreview.round} Preview</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: T.text, lineHeight: 20 }} numberOfLines={2}>
                 {renderBoldSegments(gameweekPreview.headline)}
               </Text>
             </View>
@@ -337,21 +339,10 @@ export function PortfolioScreen() {
             <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 4 }}>Upcoming Fixtures</Text>
             <Text style={{ fontSize: 12, color: T.textSecondary, marginBottom: 14 }}>Visual difficulty view across your portfolio.</Text>
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <View style={{ width: FIXTURE_NAME_COL_WIDTH }} />
-              <View style={{ flexDirection: "row", gap: 5, flex: 1 }}>
-                {["GW1", "GW2", "GW3"].map((label) => (
-                  <Text key={label} style={{ flex: 1, textAlign: "center", fontSize: 9, fontWeight: "600", color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                    {label}
-                  </Text>
-                ))}
-              </View>
-            </View>
-
             {portfolio.holdings
               .filter((h) => h.upcomingFixtures?.length)
               .map((h) => (
-                <View key={h.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Pressable key={h.id} onPress={() => openClub(h.id)} style={[styles.fixtureRow, { borderBottomColor: T.border }]}>
                   <View style={{ width: FIXTURE_NAME_COL_WIDTH, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <ClubBadge code={h.code} color={h.color} size={40} />
                     <Text style={{ flex: 1, fontSize: 12, fontWeight: "500", color: T.text }} numberOfLines={2}>
@@ -363,7 +354,7 @@ export function PortfolioScreen() {
                       <FixturePill key={i} index={i} fixture={h.upcomingFixtures[i]} T={T} compact />
                     ))}
                   </View>
-                </View>
+                </Pressable>
               ))}
           </>
         )}
@@ -375,4 +366,5 @@ export function PortfolioScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 13, paddingBottom: 40 },
   sectionHeader: { marginTop: 28, marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  fixtureRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, borderBottomWidth: 1 },
 });

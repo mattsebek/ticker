@@ -119,6 +119,10 @@ export function ClubOverlayHost() {
 
   const holding = portfolio?.holdings.find((h) => h.id === clubId);
   const isOwned = !!holding;
+  // Same fallback chain as ClubRow's My Clubs list, so this card's weekly
+  // change always matches what the portfolio list already shows for this
+  // club — never the fabricated-flat "—" a brand-new club used to show.
+  const gwPct = detail.hasWeeklyHistory ? detail.weeklyPct : detail.priceBreakdown ? detail.priceBreakdown.performancePct * 100 : detail.seasonPct;
 
   function buy() {
     close();
@@ -159,12 +163,7 @@ export function ClubOverlayHost() {
               )}
             </View>
             <View style={{ flexDirection: "row", gap: 16, paddingHorizontal: 24 }}>
-              <Text style={{ color: T.accent, fontSize: 13 }}>{detail.gwPts} pts this week</Text>
-              {detail.hasWeeklyHistory ? (
-                <Text style={{ color: colorForPct(detail.weeklyPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(detail.weeklyPct)} this week</Text>
-              ) : (
-                <Text style={{ color: T.textSecondary, fontSize: 13, fontWeight: "300" }}>— this week</Text>
-              )}
+              <Text style={{ color: colorForPct(gwPct), fontSize: 13, fontWeight: "300" }}>{fmtPct(gwPct)} this week</Text>
             </View>
           </View>
 
