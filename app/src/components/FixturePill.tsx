@@ -78,7 +78,7 @@ const compactPillStyles = StyleSheet.create({
 });
 
 const miniPillStyles = StyleSheet.create({
-  pill: { width: 46, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
+  pill: { width: 48, borderRadius: 6, borderWidth: 1, paddingVertical: 3, paddingHorizontal: 2, alignItems: "center", justifyContent: "center" },
   gwLabel: { fontSize: 0, height: 0 },
   opponent: { fontSize: 9, fontWeight: "700" },
   points: { fontSize: 0, height: 0 },
