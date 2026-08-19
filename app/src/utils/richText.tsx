@@ -10,8 +10,14 @@ import { GREEN } from "../theme/theme";
  * so plain strings with no markers pass through unchanged.
  */
 export function renderBoldSegments(text: string, boldStyle?: TextStyle): React.ReactNode {
+  // No early-return "no markers" fast path here on purpose — split() on a
+  // string that's ENTIRELY one marker (a standalone bold headline line, no
+  // surrounding text) also collapses to a single part after filter(Boolean),
+  // so that check can't tell "no markers" from "one marker spanning the
+  // whole string" and was skipping the latter. Mapping unconditionally
+  // handles both correctly (a genuinely plain part just falls through
+  // to `return part` below).
   const parts = text.split(/(\*\*[^*]+\*\*|\+\+[^+]+\+\+)/g).filter(Boolean);
-  if (parts.length === 1) return text;
   return parts.map((part, i) => {
     const boldMatch = /^\*\*([^*]+)\*\*$/.exec(part);
     if (boldMatch) {
