@@ -13,9 +13,10 @@ export interface LeagueManagerResult {
  * Daily League Manager (spec §27 Job D, §41-42): tops up any seeded public
  * league below minimum_public_league_population with additional synthetic
  * members (favorite-club/region-relevant ones prioritized where the league
- * category makes that meaningful), stopping once that league's synthetic
- * share would exceed max_synthetic_percentage_per_public_league. Never
- * removes an existing member just because humans joined later.
+ * category makes that meaningful). Never removes an existing member just
+ * because humans joined later. Deliberately has no max-synthetic-share cap
+ * — see the loop below for why one doesn't make sense for a "bootstrap an
+ * empty league up to a floor" mechanism specifically.
  */
 export function reconcileLeagues(): LeagueManagerResult {
   const config = syntheticRepo.getConfig();
@@ -31,7 +32,6 @@ export function reconcileLeagues(): LeagueManagerResult {
     const members = fantasyRepo.getMembers(lg.id);
     if (members.length >= config.minimumPublicLeaguePopulation) continue;
 
-    const syntheticMemberCount = members.filter((m) => usersRepo.isSynthetic(m.member_id)).length;
     const existingIds = new Set(members.map((m) => m.member_id));
 
     let candidates = activeSyntheticIds.filter((id) => !existingIds.has(id));
@@ -47,17 +47,22 @@ export function reconcileLeagues(): LeagueManagerResult {
 
     const needed = config.minimumPublicLeaguePopulation - members.length;
     let added = 0;
-    let currentTotal = members.length;
-    let currentSynthetic = syntheticMemberCount;
+    // No max-synthetic-share cap here — this loop only ever tops a league up
+    // TO minimumPublicLeaguePopulation, never beyond, and a league starting
+    // from few/no real members is *necessarily* mostly-or-entirely synthetic
+    // while it climbs to that floor (that's the bootstrap this job exists
+    // for). The old check compared (currentSynthetic+1)/(currentTotal+1)
+    // against the cap on every single addition, including the very first —
+    // for a 0-member league that's always 1/1 = 100%, which always exceeded
+    // any reasonable cap and broke out before adding anyone, permanently.
+    // The cap still has a real job to do elsewhere (never removing/blocking
+    // once a league already has organic growth) — it just doesn't belong in
+    // "get an empty league up to a minimum floor" specifically.
     for (const userId of candidates) {
       if (added >= needed) break;
-      const projectedShare = (currentSynthetic + 1) / (currentTotal + 1);
-      if (projectedShare > config.maxSyntheticPercentagePerPublicLeague) break;
       const user = usersRepo.getById(userId);
       if (!user) continue;
       leagueService.join(lg.id, userId, user.name);
-      currentTotal++;
-      currentSynthetic++;
       added++;
       membersAdded++;
     }
