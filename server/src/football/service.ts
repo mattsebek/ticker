@@ -6,8 +6,16 @@ import { RawOddsDTO, RawSeasonRef } from "./providers/types";
 
 const provider = createFootballDataProvider();
 
-/** Safety cap on how many fixtures a single import will fetch odds for — see importSeasonSchedule(). */
-const ODDS_IMPORT_CAP = 20;
+/**
+ * Safety cap on how many fixtures a single import/refresh will fetch odds
+ * for — see importSeasonSchedule() and refreshOdds(). At 10 fixtures/round,
+ * 100 covers ~10 gameweeks of real predictions before falling back to the
+ * generic default. Verified directly against the real API-Football key:
+ * the per-minute limit is 300 requests and the daily limit is 7500 (as of
+ * this check), so 100 sequential /predictions calls per refresh — run at
+ * most every JOB_REFRESH_ODDS_MS — has comfortable headroom on both.
+ */
+const ODDS_IMPORT_CAP = 100;
 
 /**
  * Unlike fetchOddsBestEffort/fetchPriorSeasonStandings below, there's no
