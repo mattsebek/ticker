@@ -9,6 +9,7 @@ import { formLettersForClub } from "../presenters";
 import { deleteUser } from "../bootstrap";
 import { renderAdminLoginPage } from "../admin/adminLoginPage";
 import { renderAdminUsersPage } from "../admin/adminUsersPage";
+import { renderAdminUserDetailPage, AdminUserLedgerRow } from "../admin/adminUserDetailPage";
 import { renderAdminClubsPage, AdminClubRow } from "../admin/adminClubsPage";
 import { renderAdminClubDetailPage } from "../admin/adminClubDetailPage";
 import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
@@ -166,6 +167,39 @@ adminRouter.post("/users/:id/delete", (req, res) => {
   const ok = deleteUser(req.params.id);
   if (!ok) return res.status(404).json({ ok: false, error: "User not found." });
   res.json({ ok: true });
+});
+
+adminRouter.get("/users/:id", (req, res) => {
+  const user = usersRepo.getById(req.params.id);
+  if (!user) return res.status(404).send("User not found.");
+
+  const clubNamesById = new Map(footballRepo.listClubs().map((c) => [c.id, c.name]));
+  const ledger: AdminUserLedgerRow[] = marketRepo
+    .getLedger(user.id)
+    .slice()
+    .reverse() // getLedger is oldest-first; the log reads newest-first, like every other admin timeline
+    .map((e) => ({
+      entryType: e.entryType,
+      clubName: e.clubId ? clubNamesById.get(e.clubId) ?? e.clubId : null,
+      amount: e.amount,
+      cashDelta: e.cashDelta,
+      balanceAfter: e.balanceAfter,
+      createdAt: e.createdAt,
+    }));
+
+  res.type("html").send(
+    renderAdminUserDetailPage({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      accountType: user.account_type,
+      birthday: user.birthday,
+      createdAt: user.created_at,
+      cash: marketRepo.getCash(user.id),
+      holdingsCount: marketRepo.getHoldings(user.id).length,
+      ledger,
+    })
+  );
 });
 
 // --- Leagues ---

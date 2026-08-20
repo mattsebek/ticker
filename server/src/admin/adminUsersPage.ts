@@ -62,7 +62,7 @@ export function renderAdminUsersPage(): string {
         }
         function rowHtml(u) {
           return "<tr data-id=\\"" + esc(u.id) + "\\">" +
-            "<td>" + esc(u.name) + "</td>" +
+            "<td><a href=\\"/admin/users/" + esc(u.id) + "\\" style=\\"color:${T.text};\\">" + esc(u.name) + "</a></td>" +
             "<td>" + typeBadge(u.accountType) + "</td>" +
             "<td>" + esc(u.email) + "</td>" +
             "<td>" + esc(u.birthday) + "</td>" +
