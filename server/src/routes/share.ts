@@ -12,13 +12,12 @@ export const shareRouter = Router();
 shareRouter.get("/join/:code/image.png", async (req, res) => {
   const league = fantasyRepo.getLeagueByCode(req.params.code.toLowerCase());
   const leagueName = league ? league.name : "Ticker";
-  const memberCount = league ? fantasyRepo.getMemberCount(league.id) : 0;
   try {
-    const png = await renderLeagueShareImage({ leagueName, memberCount, code: req.params.code });
+    const png = await renderLeagueShareImage({ leagueName });
     res.set("Content-Type", "image/png");
-    // Short cache — a league's member count/name can change, but a share
-    // preview a minute stale is fine, and this avoids re-rendering on every
-    // scraper hit (most platforms fetch og:image more than once).
+    // Short cache — a league's name can change, but a preview a few minutes
+    // stale is fine, and this avoids re-rendering on every scraper hit
+    // (most platforms fetch og:image more than once).
     res.set("Cache-Control", "public, max-age=300");
     res.send(png);
   } catch (err) {
@@ -42,13 +41,12 @@ shareRouter.get("/join/:code", (req, res) => {
     // Unknown/stale code — no card worth building, straight to the app (which already handles an invalid code itself).
     return res.redirect(302, destination);
   }
-  const memberCount = fantasyRepo.getMemberCount(league.id);
   // req.protocol reads the raw (unencrypted) connection Railway's edge
   // forwards internally after terminating TLS — always https from a real
   // client's perspective, and social scrapers require it for og:image.
   const imageUrl = `https://${req.get("host")}/share/join/${encodeURIComponent(code)}/image.png`;
   const title = `Join ${league.name} on Ticker`;
-  const description = `${memberCount} manager${memberCount === 1 ? "" : "s"} competing. Use code ${code.toUpperCase()} to join.`;
+  const description = `Use code ${code.toUpperCase()} to join.`;
 
   res.type("html").send(`<!DOCTYPE html>
 <html>
