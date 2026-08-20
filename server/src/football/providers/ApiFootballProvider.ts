@@ -119,12 +119,18 @@ export class ApiFootballProvider implements FootballDataProvider {
       const pct = rows[0]?.predictions?.percent;
       if (!pct) continue;
       const parse = (s: string) => parseFloat(String(s).replace("%", "")) / 100;
-      results.push({
-        fixtureProviderId: fixtureId,
-        homeWinProb: parse(pct.home),
-        drawProb: parse(pct.draw),
-        awayWinProb: parse(pct.away),
-      });
+      const homeWinProb = parse(pct.home);
+      const drawProb = parse(pct.draw);
+      const awayWinProb = parse(pct.away);
+      // API-Football returns a syntactically-valid but meaningless flat
+      // 33/33/33 split for fixtures its model hasn't actually analyzed yet
+      // (too far from kickoff, no team news/form to work from) — this is
+      // its own placeholder, not a real prediction, and passing it through
+      // would show a fabricated-looking number/color as if it were real.
+      // A genuine model tying all three outcomes exactly is essentially
+      // impossible, so treat an exact three-way tie as "no prediction yet."
+      if (homeWinProb === drawProb && drawProb === awayWinProb) continue;
+      results.push({ fixtureProviderId: fixtureId, homeWinProb, drawProb, awayWinProb });
     }
     return results;
   }

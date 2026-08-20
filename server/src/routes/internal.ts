@@ -128,6 +128,20 @@ internalRouter.post("/remove-random-league-members", (req, res) => {
   res.json({ ok: true, syntheticMembersEligible: members.length, removed: toRemove.length, remaining: fantasyRepo.getMemberCount(leagueId) });
 });
 
+/**
+ * Clears win/draw/away probabilities already stored from API-Football's
+ * flat 33/33/33 "no real prediction yet" placeholder (see
+ * ApiFootballProvider.fetchOdds's fix — this cleans up rows written before
+ * that fix existed). Nulling them makes bestProjectedPoints() correctly
+ * fall back to "no real projection" instead of a fabricated-looking number.
+ */
+internalRouter.post("/clear-placeholder-predictions", (req, res) => {
+  const result = db
+    .prepare("UPDATE ticker_fixtures SET home_win_prob = NULL, draw_prob = NULL, away_win_prob = NULL WHERE home_win_prob = draw_prob AND draw_prob = away_win_prob AND home_win_prob IS NOT NULL")
+    .run();
+  res.json({ ok: true, cleared: result.changes });
+});
+
 /** One-time backfill for leagues seeded before leagueSeeder.ts's code-collision fix — every seeded league's `code` used to truncate to the shared "synth-league" prefix, making them indistinguishable by code. Re-derives each from its id (idempotent: no-ops once already fixed). */
 internalRouter.post("/fix-seeded-league-codes", (req, res) => {
   const leagues = fantasyRepo.listAllLeagues();
