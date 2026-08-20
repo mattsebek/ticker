@@ -587,17 +587,33 @@ adminRouter.get("/intelligence", (req, res) => {
   );
 });
 
+// The set of non-club places a manually-created nugget can link to.
+// "action" is exactly the CTA action string CardStack.tsx already knows how
+// to handle on both platforms (app/src/components/CardStack.tsx,
+// ticker-website/src/components/CardStack.tsx) — a new destination needs a
+// branch added there too, this map alone isn't enough to wire one up.
+const MANUAL_CTA_DESTINATIONS: Record<string, { action: string; label: string }> = {
+  leagues: { action: "view-compete", label: "View Leagues →" },
+};
+
 adminRouter.post("/nuggets", (req, res) => {
   try {
-    const { category, emoji, headline, body, clubId, isPinned } = req.body ?? {};
+    const { category, emoji, headline, body, clubId, cta, isPinned } = req.body ?? {};
     if (!category || !emoji || !headline || !body) return res.status(400).json({ ok: false, error: "category, emoji, headline, and body are required." });
+
+    const ctaValue = typeof cta === "string" ? cta : "";
+    const ctaClubId = ctaValue.startsWith("club:") ? ctaValue.slice("club:".length) : null;
+    const destination = MANUAL_CTA_DESTINATIONS[ctaValue];
+
     const nugget = intelligenceRepo.insertManual({
       category: String(category),
       emoji: String(emoji),
       headline: String(headline),
       body: String(body),
-      clubId: clubId || null,
-      ctaClubId: clubId || null,
+      clubId: clubId || ctaClubId || null,
+      ctaClubId,
+      ctaAction: destination?.action ?? null,
+      ctaLabel: destination?.label ?? null,
       expiresAt: Date.now() + 48 * 60 * 60 * 1000,
       isPinned: !!isPinned,
     });

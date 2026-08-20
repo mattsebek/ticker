@@ -81,12 +81,21 @@ function liveNuggetCards(limit: number) {
     .sort((a, b) => widgetRank(b.interestScore, b.generatedAt, now) - widgetRank(a.interestScore, a.generatedAt, now));
 
   return [...pinned, ...rest].slice(0, limit).map((n) => {
-    const club = n.ctaClubId ? footballService.getClub(n.ctaClubId) : undefined;
+    // Manual nuggets can set an explicit non-club destination (cta_action) —
+    // see intelligence/repo.ts's schema comment. Falls back to the original
+    // "link to this club" shape every auto-detected signal still uses.
+    let cta: { text: string; action: string } | undefined;
+    if (n.ctaAction) {
+      cta = { text: n.ctaLabel || "Open →", action: n.ctaAction };
+    } else if (n.ctaClubId) {
+      const club = footballService.getClub(n.ctaClubId);
+      if (club) cta = { text: `View ${club.name} →`, action: `view-club:${n.ctaClubId}` };
+    }
     return {
       label: n.headline,
       emoji: n.emoji,
       segments: [{ text: n.body }],
-      ...(club ? { cta: { text: `View ${club.name} →`, action: `view-club:${n.ctaClubId}` } } : {}),
+      ...(cta ? { cta } : {}),
     };
   });
 }

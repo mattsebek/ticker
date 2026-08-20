@@ -18,6 +18,8 @@ function runCtaAction(action: string, navigation: BottomTabNavigationProp<MainTa
   if (action === "create-league") {
     useCompeteIntentStore.getState().requestCreateLeague();
     navigation.navigate("Compete");
+  } else if (action === "view-compete") {
+    navigation.navigate("Compete");
   } else if (action.startsWith("view-club:")) {
     useClubOverlayStore.getState().open(action.slice("view-club:".length));
   }

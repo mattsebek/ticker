@@ -30,7 +30,7 @@ nuggetsRouter.get("/", (req, res) => {
       isPinned: n.isPinned,
       publishedAt: n.publishedAt ? new Date(n.publishedAt).toISOString() : null,
       expiresAt: n.expiresAt ? new Date(n.expiresAt).toISOString() : null,
-      cta: n.ctaClubId ? { type: "CLUB", id: n.ctaClubId } : null,
+      cta: n.ctaAction ? { type: "ACTION", action: n.ctaAction, label: n.ctaLabel } : n.ctaClubId ? { type: "CLUB", id: n.ctaClubId } : null,
     })),
   });
 });

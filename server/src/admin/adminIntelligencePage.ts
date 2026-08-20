@@ -133,7 +133,7 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
     ">${esc(f.label)}${count != null ? ` (${count})` : ""}</a>`;
   }).join("");
 
-  const clubOptions = d.clubs.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  const clubOptions = d.clubs.map((c) => `<option value="club:${esc(c.id)}">${esc(c.name)}</option>`).join("");
 
   const manualForm = `
     <details style="margin-bottom:20px;">
@@ -147,10 +147,13 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
         <input type="text" name="headline" required style="width:100%;padding:7px 10px;margin-bottom:10px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;" />
         <label style="display:block;font-size:12px;color:${T.textSecondary};margin-bottom:4px;">Body</label>
         <textarea name="body" rows="2" required style="width:100%;padding:7px 10px;margin-bottom:10px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;"></textarea>
-        <label style="display:block;font-size:12px;color:${T.textSecondary};margin-bottom:4px;">Club (also used as the CTA target)</label>
-        <select name="clubId" style="width:100%;padding:7px 10px;margin-bottom:10px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;">
-          <option value="">— None —</option>
-          ${clubOptions}
+        <label style="display:block;font-size:12px;color:${T.textSecondary};margin-bottom:4px;">Link to (tapping the card's button takes the user here)</label>
+        <select name="cta" style="width:100%;padding:7px 10px;margin-bottom:10px;border-radius:8px;border:1px solid ${T.border};background:${T.bg};color:${T.text};font-size:13px;">
+          <option value="">— No link —</option>
+          <option value="leagues">Leagues page</option>
+          <optgroup label="A club">
+            ${clubOptions}
+          </optgroup>
         </select>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;"><input type="checkbox" name="isPinned" /> Pin immediately on publish</label>
         <button type="submit" style="padding:8px 18px;border-radius:100px;border:none;background:${T.accent};color:#00170c;font-weight:700;font-size:13px;cursor:pointer;">Create as candidate</button>
@@ -229,7 +232,7 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 category: fd.get("category"), emoji: fd.get("emoji"), headline: fd.get("headline"), body: fd.get("body"),
-                clubId: fd.get("clubId") || null, isPinned: manualForm.querySelector("[name=isPinned]").checked,
+                cta: fd.get("cta") || "", isPinned: manualForm.querySelector("[name=isPinned]").checked,
               }),
             })
               .then(function (r) { return r.json(); })

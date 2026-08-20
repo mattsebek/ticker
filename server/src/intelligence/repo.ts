@@ -54,6 +54,23 @@ CREATE TABLE IF NOT EXISTS intelligence_pps_snapshots (
 CREATE INDEX IF NOT EXISTS idx_pps_snapshots_club ON intelligence_pps_snapshots(club_id, id);
 `);
 
+// A nugget's CTA was originally always "view this club" (cta_club_id, still
+// how every auto-detected signal links out — see copyTemplates.ts). Manual
+// nuggets need to link anywhere in the app, not just a club, so these two
+// columns carry an explicit {action, label} pair instead when set — see
+// insertManual() and briefing.ts's liveNuggetCards(), which prefers these
+// over cta_club_id when both could theoretically apply.
+try {
+  db.exec("ALTER TABLE market_nuggets ADD COLUMN cta_action TEXT");
+} catch {
+  // already applied
+}
+try {
+  db.exec("ALTER TABLE market_nuggets ADD COLUMN cta_label TEXT");
+} catch {
+  // already applied
+}
+
 export type NuggetStatus = "CANDIDATE" | "PUBLISHED" | "DISMISSED";
 
 export interface MarketNuggetRow {
@@ -70,6 +87,9 @@ export interface MarketNuggetRow {
   generatedHeadline: string;
   generatedBody: string;
   ctaClubId: string | null;
+  /** Explicit CTA override for a destination that isn't a club (e.g. "view-compete" for the Leagues page) — see the schema comment above. */
+  ctaAction: string | null;
+  ctaLabel: string | null;
   status: NuggetStatus;
   isPinned: boolean;
   sourceDataJson: string;
@@ -112,6 +132,8 @@ function rowToNugget(row: any): MarketNuggetRow {
     generatedHeadline: row.generated_headline,
     generatedBody: row.generated_body,
     ctaClubId: row.cta_club_id,
+    ctaAction: row.cta_action,
+    ctaLabel: row.cta_label,
     status: row.status,
     isPinned: !!row.is_pinned,
     sourceDataJson: row.source_data_json,
@@ -381,6 +403,8 @@ export const intelligenceRepo = {
     body: string;
     clubId: string | null;
     ctaClubId: string | null;
+    ctaAction: string | null;
+    ctaLabel: string | null;
     expiresAt: number | null;
     isPinned: boolean;
   }): MarketNuggetRow {
@@ -388,9 +412,26 @@ export const intelligenceRepo = {
     const now = Date.now();
     db.prepare(
       `INSERT INTO market_nuggets
-        (id, signal_type, club_id, round, interest_score, dedup_key, category, emoji, headline, body, generated_headline, generated_body, cta_club_id, status, is_pinned, source_data_json, generated_at, updated_at, expires_at)
-       VALUES (?, 'MANUAL', ?, NULL, 100, ?, ?, ?, ?, ?, ?, ?, ?, 'CANDIDATE', ?, '{}', ?, ?, ?)`
-    ).run(id, input.clubId, `manual:${id}`, input.category, input.emoji, input.headline, input.body, input.headline, input.body, input.ctaClubId, input.isPinned ? 1 : 0, now, now, input.expiresAt);
+        (id, signal_type, club_id, round, interest_score, dedup_key, category, emoji, headline, body, generated_headline, generated_body, cta_club_id, cta_action, cta_label, status, is_pinned, source_data_json, generated_at, updated_at, expires_at)
+       VALUES (?, 'MANUAL', ?, NULL, 100, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CANDIDATE', ?, '{}', ?, ?, ?)`
+    ).run(
+      id,
+      input.clubId,
+      `manual:${id}`,
+      input.category,
+      input.emoji,
+      input.headline,
+      input.body,
+      input.headline,
+      input.body,
+      input.ctaClubId,
+      input.ctaAction,
+      input.ctaLabel,
+      input.isPinned ? 1 : 0,
+      now,
+      now,
+      input.expiresAt
+    );
     return this.getById(id)!;
   },
 
