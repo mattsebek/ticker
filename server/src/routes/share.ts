@@ -43,7 +43,10 @@ shareRouter.get("/join/:code", (req, res) => {
     return res.redirect(302, destination);
   }
   const memberCount = fantasyRepo.getMemberCount(league.id);
-  const imageUrl = `${req.protocol}://${req.get("host")}/share/join/${encodeURIComponent(code)}/image.png`;
+  // req.protocol reads the raw (unencrypted) connection Railway's edge
+  // forwards internally after terminating TLS — always https from a real
+  // client's perspective, and social scrapers require it for og:image.
+  const imageUrl = `https://${req.get("host")}/share/join/${encodeURIComponent(code)}/image.png`;
   const title = `Join ${league.name} on Ticker`;
   const description = `${memberCount} manager${memberCount === 1 ? "" : "s"} competing. Use code ${code.toUpperCase()} to join.`;
 
