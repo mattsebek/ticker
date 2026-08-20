@@ -82,7 +82,13 @@ export function ensureSeededLeagues(maxClubLeagues = 12): SeededLeague[] {
 
 function ensureLeague(id: string, name: string) {
   if (fantasyRepo.getLeagueById(id)) return;
-  fantasyRepo.insertLeague({ id, name, is_private: 0, code: id.slice(0, 12), commissioner: "Ticker", base_member_count: 0, created_at: Date.now() });
+  // Every id shares the "synth-league-" prefix — slicing the first 12 chars
+  // (the old code here) collapsed every seeded league onto the identical
+  // code "synth-league", so getLeagueByCode couldn't actually distinguish
+  // them. Strip the shared prefix instead so what's left is unique per league.
+  // Lowercase to match getLeagueByCode's own lowercasing of the stored value (it only lowercases the query side, not the column).
+  const code = id.replace(/^synth-league-/, "").toLowerCase();
+  fantasyRepo.insertLeague({ id, name, is_private: 0, code, commissioner: "Ticker", base_member_count: 0, created_at: Date.now() });
 }
 
 const STRATEGY_LEAGUE_AFFINITY: Partial<Record<StrategyType, string[]>> = {

@@ -128,6 +128,20 @@ internalRouter.post("/remove-random-league-members", (req, res) => {
   res.json({ ok: true, syntheticMembersEligible: members.length, removed: toRemove.length, remaining: fantasyRepo.getMemberCount(leagueId) });
 });
 
+/** One-time backfill for leagues seeded before leagueSeeder.ts's code-collision fix — every seeded league's `code` used to truncate to the shared "synth-league" prefix, making them indistinguishable by code. Re-derives each from its id (idempotent: no-ops once already fixed). */
+internalRouter.post("/fix-seeded-league-codes", (req, res) => {
+  const leagues = fantasyRepo.listAllLeagues();
+  let fixed = 0;
+  for (const lg of leagues) {
+    if (!lg.id.startsWith("synth-league-")) continue;
+    const correctCode = lg.id.replace(/^synth-league-/, "").toLowerCase();
+    if (lg.code === correctCode) continue;
+    fantasyRepo.updateLeagueSeedFields(lg.id, { name: lg.name, code: correctCode, commissioner: lg.commissioner, base_member_count: lg.base_member_count });
+    fixed++;
+  }
+  res.json({ ok: true, leaguesChecked: leagues.length, fixed });
+});
+
 /** One-time backfill for synthetic users seeded before autoJoinDefaultLeagues was wired into syntheticSeedService — joins every existing synthetic account to the default leagues (Overall League). Safe to re-run: addMember is INSERT OR IGNORE. */
 internalRouter.post("/backfill-default-leagues", (req, res) => {
   const userIds = usersRepo.listIds("synthetic");
