@@ -57,7 +57,7 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
       <Text style={[s.opponent, { color: T.text }]} numberOfLines={1}>
         {fixture.code} <Text style={[s.venue, { color: T.text }]}>({fixture.home ? "H" : "A"})</Text>
       </Text>
-      <Text style={[s.points, { color: pointsColor }]}>{hasProjection ? `${projPts.toFixed(2)} pts` : "— pts"}</Text>
+      <Text style={[s.points, { color: pointsColor }]}>{hasProjection ? `${projPts.toFixed(2)} pts` : "—"}</Text>
     </View>
   );
 }
