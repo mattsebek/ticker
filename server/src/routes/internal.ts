@@ -106,6 +106,28 @@ internalRouter.get("/jobs/:name/history", (req, res) => {
   res.json({ jobName: req.params.name, runs: getJobRunHistory(req.params.name, limit) });
 });
 
+/**
+ * Removes up to `count` random SYNTHETIC members from one league — never
+ * touches a real/human member, regardless of what's passed in. Body:
+ * { leagueId: string, count: number }.
+ */
+internalRouter.post("/remove-random-league-members", (req, res) => {
+  const leagueId = String(req.body?.leagueId ?? "");
+  const count = Math.max(0, parseInt(String(req.body?.count ?? "0"), 10) || 0);
+  if (!leagueId) return res.status(400).json({ ok: false, error: "leagueId required." });
+  if (!fantasyRepo.getLeagueById(leagueId)) return res.status(404).json({ ok: false, error: "League not found." });
+
+  const members = fantasyRepo.getMembers(leagueId).filter((m) => usersRepo.isSynthetic(m.member_id));
+  for (let i = members.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [members[i], members[j]] = [members[j], members[i]];
+  }
+  const toRemove = members.slice(0, Math.min(count, members.length));
+  for (const m of toRemove) fantasyRepo.removeMemberFromLeague(leagueId, m.member_id);
+
+  res.json({ ok: true, syntheticMembersEligible: members.length, removed: toRemove.length, remaining: fantasyRepo.getMemberCount(leagueId) });
+});
+
 /** One-time backfill for synthetic users seeded before autoJoinDefaultLeagues was wired into syntheticSeedService — joins every existing synthetic account to the default leagues (Overall League). Safe to re-run: addMember is INSERT OR IGNORE. */
 internalRouter.post("/backfill-default-leagues", (req, res) => {
   const userIds = usersRepo.listIds("synthetic");

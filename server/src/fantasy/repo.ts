@@ -255,6 +255,11 @@ export const fantasyRepo = {
     db.prepare("DELETE FROM standings_cache WHERE member_id = ?").run(memberId);
     db.prepare("DELETE FROM league_members WHERE member_id = ?").run(memberId);
   },
+  /** Removes one member from a single league only, leaving their other league memberships untouched. */
+  removeMemberFromLeague(leagueId: string, memberId: string) {
+    db.prepare("DELETE FROM standings_cache WHERE league_id = ? AND member_id = ?").run(leagueId, memberId);
+    db.prepare("DELETE FROM league_members WHERE league_id = ? AND member_id = ?").run(leagueId, memberId);
+  },
   insertLeague(lg: LeagueRow) {
     db.prepare("INSERT INTO leagues (id, name, is_private, code, commissioner, base_member_count, created_at) VALUES (?,?,?,?,?,?,?)").run(
       lg.id,
