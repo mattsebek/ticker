@@ -7,6 +7,8 @@ export interface AdminUserLedgerRow {
   cashDelta: number;
   balanceAfter: number;
   createdAt: number;
+  /** Realized profit/loss for this sale (sell price minus what they paid to buy that same club) — null for BUY/SEED rows, and for a SELL with no matching BUY in the ledger (e.g. a pre-ledger seeded holding). */
+  pnl: number | null;
 }
 
 export interface AdminUserDetail {
@@ -18,6 +20,8 @@ export interface AdminUserDetail {
   createdAt: number;
   cash: number;
   holdingsCount: number;
+  /** Sum of every SELL's realized P&L — unrealized gains on still-held clubs aren't included. */
+  realizedPnl: number;
   ledger: AdminUserLedgerRow[]; // newest first
 }
 
@@ -43,6 +47,13 @@ function typeBadge(entryType: AdminUserLedgerRow["entryType"]): string {
   return `<span style="color:${color};font-weight:600;">${entryType}</span>`;
 }
 
+function pnlCell(pnl: number | null): string {
+  if (pnl == null) return `<td>—</td>`;
+  const color = pnl > 0 ? T.accent : pnl < 0 ? T.red : T.textSecondary;
+  const sign = pnl >= 0 ? "+" : "";
+  return `<td style="color:${color};font-weight:600;">${sign}${fmt(pnl)}</td>`;
+}
+
 function ledgerRow(row: AdminUserLedgerRow): string {
   return `
     <tr>
@@ -52,6 +63,7 @@ function ledgerRow(row: AdminUserLedgerRow): string {
       <td>${row.entryType === "SEED" ? "—" : fmt(row.amount)}</td>
       <td style="color:${row.cashDelta >= 0 ? T.accent : T.red};">${row.cashDelta >= 0 ? "+" : ""}${fmt(row.cashDelta)}</td>
       <td>${fmt(row.balanceAfter)}</td>
+      ${pnlCell(row.pnl)}
     </tr>`;
 }
 
@@ -71,13 +83,14 @@ export function renderAdminUserDetailPage(d: AdminUserDetail): string {
       ${statCard("Holdings", String(d.holdingsCount))}
       ${statCard("Buys", String(buyCount))}
       ${statCard("Sells", String(sellCount))}
+      ${statCard("Realized P&L", `${d.realizedPnl >= 0 ? "+" : ""}${fmt(d.realizedPnl)}`, d.realizedPnl > 0 ? T.accent : d.realizedPnl < 0 ? T.red : T.textSecondary)}
     </div>
 
     <h1 style="font-size:16px;">Transaction Activity</h1>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Club</th><th>Amount</th><th>Cash Δ</th><th>Balance After</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="6" class="empty">No transactions yet.</td></tr>`}</tbody>
+        <thead><tr><th>Date</th><th>Type</th><th>Club</th><th>Amount</th><th>Cash Δ</th><th>Balance After</th><th>P&amp;L</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" class="empty">No transactions yet.</td></tr>`}</tbody>
       </table>
     </div>
 

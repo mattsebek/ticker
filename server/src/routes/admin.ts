@@ -174,8 +174,29 @@ adminRouter.get("/users/:id", (req, res) => {
   if (!user) return res.status(404).send("User not found.");
 
   const clubNamesById = new Map(footballRepo.listClubs().map((c) => [c.id, c.name]));
-  const ledger: AdminUserLedgerRow[] = marketRepo
-    .getLedger(user.id)
+
+  // holdings is one row per (user, club) — a club is fully bought or fully
+  // sold, never partial — so each SELL closes exactly one still-open BUY of
+  // that same club. Walking the ledger oldest-first and tracking the most
+  // recent unmatched BUY price per club_id pairs them correctly even across
+  // multiple buy/sell cycles of the same club over the season.
+  const openBuyPriceByClub = new Map<string, number>();
+  let realizedPnl = 0;
+  const chronological = marketRepo.getLedger(user.id);
+  const pnlByEntryId = new Map<number, number | null>();
+  for (const e of chronological) {
+    if (e.entryType === "BUY" && e.clubId) {
+      openBuyPriceByClub.set(e.clubId, e.amount);
+    } else if (e.entryType === "SELL" && e.clubId) {
+      const buyPrice = openBuyPriceByClub.get(e.clubId);
+      const pnl = buyPrice != null ? e.amount - buyPrice : null;
+      pnlByEntryId.set(e.id, pnl);
+      if (pnl != null) realizedPnl += pnl;
+      openBuyPriceByClub.delete(e.clubId);
+    }
+  }
+
+  const ledger: AdminUserLedgerRow[] = chronological
     .slice()
     .reverse() // getLedger is oldest-first; the log reads newest-first, like every other admin timeline
     .map((e) => ({
@@ -185,6 +206,7 @@ adminRouter.get("/users/:id", (req, res) => {
       cashDelta: e.cashDelta,
       balanceAfter: e.balanceAfter,
       createdAt: e.createdAt,
+      pnl: e.entryType === "SELL" ? pnlByEntryId.get(e.id) ?? null : null,
     }));
 
   res.type("html").send(
@@ -197,6 +219,7 @@ adminRouter.get("/users/:id", (req, res) => {
       createdAt: user.created_at,
       cash: marketRepo.getCash(user.id),
       holdingsCount: marketRepo.getHoldings(user.id).length,
+      realizedPnl,
       ledger,
     })
   );
