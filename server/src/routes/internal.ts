@@ -137,7 +137,7 @@ internalRouter.post("/remove-random-league-members", (req, res) => {
  */
 internalRouter.post("/clear-placeholder-predictions", (req, res) => {
   const result = db
-    .prepare("UPDATE ticker_fixtures SET home_win_prob = NULL, draw_prob = NULL, away_win_prob = NULL WHERE home_win_prob = draw_prob AND draw_prob = away_win_prob AND home_win_prob IS NOT NULL")
+    .prepare("UPDATE ticker_fixtures SET home_win_prob = NULL, draw_prob = NULL, away_win_prob = NULL WHERE home_win_prob IS NOT NULL AND (draw_prob = home_win_prob OR draw_prob = away_win_prob)")
     .run();
   res.json({ ok: true, cleared: result.changes });
 });

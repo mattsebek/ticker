@@ -122,14 +122,20 @@ export class ApiFootballProvider implements FootballDataProvider {
       const homeWinProb = parse(pct.home);
       const drawProb = parse(pct.draw);
       const awayWinProb = parse(pct.away);
-      // API-Football returns a syntactically-valid but meaningless flat
-      // 33/33/33 split for fixtures its model hasn't actually analyzed yet
-      // (too far from kickoff, no team news/form to work from) — this is
-      // its own placeholder, not a real prediction, and passing it through
-      // would show a fabricated-looking number/color as if it were real.
-      // A genuine model tying all three outcomes exactly is essentially
-      // impossible, so treat an exact three-way tie as "no prediction yet."
-      if (homeWinProb === drawProb && drawProb === awayWinProb) continue;
+      // API-Football returns syntactically-valid but meaningless placeholder
+      // splits for fixtures its model can't actually analyze yet — verified
+      // directly against the live API pre-season (zero teams have a
+      // last_5 form record yet, since no match has been played this
+      // season): 100/100 sampled fixtures beyond the very front of the
+      // schedule landed in exactly one of a handful of clean templates
+      // (33/33/33, 50/50/0, 0/50/50, 45/45/10, 10/45/45), and even a
+      // fixture confirmed to have a real, specific prediction earlier
+      // degraded to one of these same templates on a later call — this
+      // data source is flatly unreliable this far from kickoff, not just
+      // sparse. Every observed placeholder shares one trait a genuine
+      // model's continuous output essentially never would: the draw
+      // probability exactly ties one of the match-outcome probabilities.
+      if (drawProb === homeWinProb || drawProb === awayWinProb) continue;
       results.push({ fixtureProviderId: fixtureId, homeWinProb, drawProb, awayWinProb });
     }
     return results;
