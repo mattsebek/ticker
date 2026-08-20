@@ -11,7 +11,7 @@ export interface NextFixture {
   home: boolean;
   diff: FixtureDifficulty;
   matchText: string;
-  projPts: number;
+  projPts: number | null;
   /** Raw ISO kickoff — matchText is already human-formatted, this is for sorting (e.g. Portfolio's cross-club Upcoming Fixtures list). */
   kickoff: string;
 }
@@ -54,14 +54,14 @@ export interface ClubFixture {
   home: boolean;
   diff: FixtureDifficulty;
   matchText: string;
-  projPts: number;
+  projPts: number | null;
 }
 
 export interface ClubPastFixture {
   opp: string;
   matchText: string;
   actualPts: number;
-  projPts: number;
+  projPts: number | null;
 }
 
 export interface ClubDetail extends ClubSummary {

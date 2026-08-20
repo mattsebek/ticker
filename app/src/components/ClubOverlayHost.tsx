@@ -205,8 +205,8 @@ export function ClubOverlayHost() {
                         {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
                       </Text>
                       <Text style={{ fontSize: 13, fontWeight: "600" }}>
-                        <Text style={{ color: colorForPct(fx.actualPts - fx.projPts) }}>{fx.actualPts} pts</Text>
-                        <Text style={{ color: T.textSecondary, fontWeight: "400" }}> vs {fx.projPts} proj</Text>
+                        <Text style={{ color: fx.projPts != null ? colorForPct(fx.actualPts - fx.projPts) : T.text }}>{fx.actualPts} pts</Text>
+                        <Text style={{ color: T.textSecondary, fontWeight: "400" }}> vs {fx.projPts != null ? fx.projPts : "—"} proj</Text>
                       </Text>
                     </View>
                   );

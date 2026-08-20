@@ -28,9 +28,10 @@ function opponentClub(fixture: Fixture, clubId: string): Club | undefined {
   return footballService.getClub(opponentId);
 }
 
-function winProbFor(fixture: Fixture, clubId: string): number {
+/** Null (not a default guess) when neither provider has posted real predictions/odds for this fixture yet — bestProjectedPoints below is what decides whether that's actually a dead end or just means "check the newer engine instead." */
+function winProbFor(fixture: Fixture, clubId: string): number | null {
   const isHome = fixture.homeClubId === clubId;
-  return (isHome ? fixture.homeWinProb : fixture.awayWinProb) ?? 0.33;
+  return (isHome ? fixture.homeWinProb : fixture.awayWinProb) ?? null;
 }
 
 /**
@@ -47,13 +48,19 @@ function winProbFor(fixture: Fixture, clubId: string): number {
  * point of showing it. This is purely a display-layer choice — it does
  * not touch price_history/settlement/Price Pressure, which still read
  * fantasy/projection.ts exactly as before.
+ *
+ * Returns null — never a guessed default — when NEITHER the new engine nor
+ * the old formula has real data for this fixture (winProb null, meaning
+ * API-Football hasn't posted a prediction for it either), so the client
+ * shows an honest "—" instead of a fabricated number dressed up as real.
  */
-function bestProjectedPoints(fixtureId: string, side: "home" | "away", winProb: number, drawProb: number): number {
+function bestProjectedPoints(fixtureId: string, side: "home" | "away", winProb: number | null, drawProb: number | null): number | null {
   const official = projectionRepo.getOfficialProjection(fixtureId);
   if (official) return round2(side === "home" ? official.homeProjectedPoints : official.awayProjectedPoints);
   const latest = projectionRepo.getLatestFixtureProjection(fixtureId);
   if (latest) return round2(side === "home" ? latest.homeProjectedPoints : latest.awayProjectedPoints);
-  return round2(expectedTickerPoints(winProb, drawProb));
+  if (winProb === null) return null;
+  return round2(expectedTickerPoints(winProb, drawProb ?? 0.24));
 }
 
 // Kickoffs are stored as raw provider ISO timestamps (UTC) — the app has no
@@ -106,8 +113,8 @@ export function clubSummary(club: Club, currentRound: number) {
   const openPrice = series.length >= 1 ? series[0] : price;
   const nextFixture = footballService.getUpcomingFixtureForClub(club.id);
   const opponent = nextFixture ? opponentClub(nextFixture, club.id) : undefined;
-  const winProb = nextFixture ? winProbFor(nextFixture, club.id) : 0.33;
-  const drawProb = nextFixture?.drawProb ?? 0.24;
+  const winProb = nextFixture ? winProbFor(nextFixture, club.id) : null;
+  const drawProb = nextFixture?.drawProb ?? null;
   const nextFixtureProjPts = nextFixture
     ? bestProjectedPoints(nextFixture.id, nextFixture.homeClubId === club.id ? "home" : "away", winProb, drawProb)
     : null;
@@ -163,9 +170,9 @@ export function clubSummary(club: Club, currentRound: number) {
           // difficultyFromProjectedPoints's doc comment. Portfolio's
           // "Upcoming fixtures" list and the club overlay's pills now
           // always agree on a given fixture's difficulty/color.
-          diff: difficultyFromProjectedPoints(nextFixtureProjPts!),
+          diff: nextFixtureProjPts !== null ? difficultyFromProjectedPoints(nextFixtureProjPts) : "Medium",
           matchText: fixtureMatchText(nextFixture, club.id, opponent),
-          projPts: nextFixtureProjPts!,
+          projPts: nextFixtureProjPts,
           kickoff: nextFixture.kickoff,
         }
       : null,
@@ -190,15 +197,17 @@ export function upcomingFixturesForClub(club: Club, n: number) {
     const opponent = opponentClub(f, club.id);
     const winProb = winProbFor(f, club.id);
     const side = f.homeClubId === club.id ? "home" : "away";
-    const projPts = bestProjectedPoints(f.id, side, winProb, f.drawProb ?? 0.24);
+    const projPts = bestProjectedPoints(f.id, side, winProb, f.drawProb ?? null);
     return {
       round: f.round,
       opp: opponent?.name ?? "TBD",
       code: opponent?.code ?? "TBD",
       home: f.homeClubId === club.id,
       // Derived from this same projPts value, not a separately-computed
-      // signal — see difficultyFromProjectedPoints's doc comment.
-      diff: difficultyFromProjectedPoints(projPts),
+      // signal — see difficultyFromProjectedPoints's doc comment. Falls
+      // back to Medium (neutral) when there's no real projPts to derive
+      // difficulty from — same convention the client already applies.
+      diff: projPts !== null ? difficultyFromProjectedPoints(projPts) : "Medium",
       matchText: fixtureMatchText(f, club.id, opponent),
       projPts,
     };
@@ -218,7 +227,7 @@ export function clubDetail(club: Club, currentRound: number) {
     const opponent = opponentClub(f, club.id);
     const isHome = f.homeClubId === club.id;
     const winProb = winProbFor(f, club.id);
-    const projPts = bestProjectedPoints(f.id, isHome ? "home" : "away", winProb, f.drawProb ?? 0.24);
+    const projPts = bestProjectedPoints(f.id, isHome ? "home" : "away", winProb, f.drawProb ?? null);
     const actualPts = scoreClubInFixture(f, isHome ? "home" : "away");
     return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchTextNoTime(f, club.id, opponent), actualPts, projPts };
   });
@@ -248,7 +257,11 @@ function gameweekClubDetail(clubId: string, round: number) {
   const isHome = fixture.homeClubId === clubId;
   const winProb = winProbFor(fixture, clubId);
   const side = isHome ? "home" : "away";
-  const projectedPoints = bestProjectedPoints(fixture.id, side, winProb, fixture.drawProb ?? 0.24);
+  // Unlike the fixture-pill projections below, this is a locked-in gameweek's
+  // scoring comparison (Total vs. projected) — always shows a real number
+  // rather than "—", since by lock time the fixture is always well inside
+  // ODDS_IMPORT_CAP's window and this genuinely never hits the null case.
+  const projectedPoints = bestProjectedPoints(fixture.id, side, winProb, fixture.drawProb ?? null) ?? round2(expectedTickerPoints(winProb ?? 0.33, fixture.drawProb ?? 0.24));
   const breakdown = breakdownClubInFixture(fixture, side);
   const actualPoints = breakdown?.total ?? null;
 

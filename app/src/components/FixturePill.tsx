@@ -32,14 +32,15 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
   }
 
   const gw = `GW${fixture.round}`;
-  const hasProjection = Number.isFinite(fixture.projPts);
+  const projPts = fixture.projPts;
+  const hasProjection = projPts != null;
   const diff = hasProjection ? fixture.diff : "Medium";
   const bg = diff === "Easy" ? T.accentTint : diff === "Hard" ? T.redTint : T.card;
   const borderColor = diff === "Easy" ? DIFF_BORDER_SOFT.Easy : diff === "Hard" ? DIFF_BORDER_SOFT.Hard : T.border;
   const pointsColor = !hasProjection ? T.textSecondary : diff === "Easy" ? T.accent : diff === "Hard" ? RED : T.textSecondary;
   const diffLabel = diff === "Easy" ? "Favorable" : diff === "Hard" ? "Difficult" : "Neutral";
   const venue = fixture.home ? "home" : "away";
-  const a11yLabel = `${gw}. ${fixture.opp} ${venue}. ${hasProjection ? `Projected ${fixture.projPts.toFixed(2)} points.` : "Projection unavailable."} ${diffLabel} fixture.`;
+  const a11yLabel = `${gw}. ${fixture.opp} ${venue}. ${hasProjection ? `Projected ${projPts.toFixed(2)} points.` : "Projection unavailable."} ${diffLabel} fixture.`;
 
   if (size === "mini") {
     return (
@@ -56,7 +57,7 @@ export function FixturePill({ index, fixture, T, size = "full" }: { index: numbe
       <Text style={[s.opponent, { color: T.text }]} numberOfLines={1}>
         {fixture.code} <Text style={[s.venue, { color: T.text }]}>({fixture.home ? "H" : "A"})</Text>
       </Text>
-      <Text style={[s.points, { color: pointsColor }]}>{hasProjection ? `${fixture.projPts.toFixed(2)} pts` : "— pts"}</Text>
+      <Text style={[s.points, { color: pointsColor }]}>{hasProjection ? `${projPts.toFixed(2)} pts` : "— pts"}</Text>
     </View>
   );
 }
