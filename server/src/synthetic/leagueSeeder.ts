@@ -50,37 +50,46 @@ export function ensureSeededLeagues(maxClubLeagues = 12): SeededLeague[] {
   const seeded: SeededLeague[] = [];
   const rng = rngFor("league-seed", "v1");
 
+  // A deliberately-deleted league (admin CMS) must never come back — push
+  // only the ones ensureLeague actually kept/created, so callers (the daily
+  // League Manager job chief among them) don't turn around and add members
+  // to a league id that no longer has a row in `leagues` at all.
+  const pushIfLive = (entry: SeededLeague) => {
+    if (!fantasyRepo.isLeagueDeleted(entry.id)) seeded.push(entry);
+  };
+
   const clubs = footballRepo.listClubs().slice(0, maxClubLeagues);
   for (const club of clubs) {
     const id = `synth-league-club-${club.id}`;
     const suffix = pick(rng, FAN_SUFFIXES);
     const name = `${club.name} ${suffix}`;
     ensureLeague(id, name);
-    seeded.push({ id, name, category: "club", clubId: club.id });
+    pushIfLive({ id, name, category: "club", clubId: club.id });
   }
 
   for (const geo of GEO_LEAGUES) {
     const id = `synth-league-geo-${geo.slug}`;
     ensureLeague(id, geo.name);
-    seeded.push({ id, name: geo.name, category: "geo", regions: geo.regions });
+    pushIfLive({ id, name: geo.name, category: "geo", regions: geo.regions });
   }
 
   for (const name of GENERAL_LEAGUE_NAMES) {
     const id = `synth-league-general-${slugify(name)}`;
     ensureLeague(id, name);
-    seeded.push({ id, name, category: "general" });
+    pushIfLive({ id, name, category: "general" });
   }
 
   for (const name of TICKER_LEAGUE_NAMES) {
     const id = `synth-league-ticker-${slugify(name)}`;
     ensureLeague(id, name);
-    seeded.push({ id, name, category: "ticker" });
+    pushIfLive({ id, name, category: "ticker" });
   }
 
   return seeded;
 }
 
 function ensureLeague(id: string, name: string) {
+  if (fantasyRepo.isLeagueDeleted(id)) return;
   if (fantasyRepo.getLeagueById(id)) return;
   // Every id shares the "synth-league-" prefix — slicing the first 12 chars
   // (the old code here) collapsed every seeded league onto the identical

@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS league_members (
   PRIMARY KEY (league_id, member_id)
 );
 
+-- Permanent record of every deliberately-deleted league id. Several "ensure
+-- this league exists" call sites (leagueSeeder.ts's daily reconcileLeagues
+-- job chief among them) would otherwise silently recreate a deleted seeded
+-- league the next time they ran, since a missing row reads identically to
+-- "never seeded yet." Checked by deleteLeague's callers before any
+-- insert-if-missing — see leagueSeeder.ts's ensureLeague().
+CREATE TABLE IF NOT EXISTS deleted_league_ids (
+  id TEXT PRIMARY KEY,
+  deleted_at INTEGER NOT NULL
+);
+
 -- Immutable snapshot of EVERY club a manager held at a Gameweek deadline —
 -- not just starters. Scoring must always read from here, never from
 -- current (live-trading) holdings — see gameweekService/leagueService/
@@ -231,6 +242,10 @@ export const fantasyRepo = {
     db.prepare("DELETE FROM league_members WHERE league_id = ?").run(id);
     db.prepare("DELETE FROM standings_cache WHERE league_id = ?").run(id);
     db.prepare("DELETE FROM leagues WHERE id = ?").run(id);
+    db.prepare("INSERT OR IGNORE INTO deleted_league_ids (id, deleted_at) VALUES (?, ?)").run(id, Date.now());
+  },
+  isLeagueDeleted(id: string): boolean {
+    return !!db.prepare("SELECT 1 FROM deleted_league_ids WHERE id = ?").get(id);
   },
   /**
    * Removes every real human member from every league, leaving synthetic
