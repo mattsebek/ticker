@@ -37,10 +37,15 @@ export const leagueService = {
     fantasyRepo.addMember(leagueId, userId, name, false);
   },
 
-  autoJoinDefaultLeagues(userId: string, name: string) {
+  autoJoinDefaultLeagues(userId: string, name: string): string[] {
+    const joined: string[] = [];
     for (const leagueId of DEFAULT_AUTO_JOIN_LEAGUE_IDS) {
-      if (fantasyRepo.getLeagueById(leagueId)) fantasyRepo.addMember(leagueId, userId, name, false);
+      if (fantasyRepo.getLeagueById(leagueId)) {
+        fantasyRepo.addMember(leagueId, userId, name, false);
+        joined.push(leagueId);
+      }
     }
+    return joined;
   },
 
   /** customCode (private leagues) is caller-validated for format + uniqueness — see routes/leagues.ts. Normalized to lowercase to match getLeagueByCode's own lowercasing. */

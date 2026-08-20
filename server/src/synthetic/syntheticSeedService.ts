@@ -4,6 +4,7 @@ import { marketRepo } from "../market/repo";
 import { tradingService, TradingError } from "../market/tradingService";
 import { usersRepo } from "../shared/usersRepo";
 import { gameweekService } from "../fantasy/gameweekService";
+import { leagueService } from "../fantasy/leagueService";
 import { setLineup } from "../fantasy/lineupService";
 import { fantasyConfig } from "../fantasy/fantasyConfig";
 import { syntheticRepo, IdentityRegion, StrategyType } from "./syntheticRepo";
@@ -126,6 +127,8 @@ function createOneSyntheticUser(
 
   const user = usersRepo.create(identity.name, email, birthday, "synthetic");
   marketRepo.ensureAccount(user.id, 100);
+  const defaultLeaguesJoined = leagueService.autoJoinDefaultLeagues(user.id, user.name);
+  report.leagueMembershipsCreated += defaultLeaguesJoined.length;
 
   bump(report.identityTypeCounts, identity.identityType);
   bump(report.regionCounts, region);
