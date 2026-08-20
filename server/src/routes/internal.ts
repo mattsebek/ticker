@@ -7,6 +7,7 @@ import { footballRepo } from "../football/repo";
 import { marketRepo } from "../market/repo";
 import { fantasyRepo } from "../fantasy/repo";
 import { usersRepo } from "../shared/usersRepo";
+import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
@@ -103,6 +104,18 @@ internalRouter.get("/jobs", (req, res) => {
 internalRouter.get("/jobs/:name/history", (req, res) => {
   const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
   res.json({ jobName: req.params.name, runs: getJobRunHistory(req.params.name, limit) });
+});
+
+/** One-time backfill for synthetic users seeded before autoJoinDefaultLeagues was wired into syntheticSeedService — joins every existing synthetic account to the default leagues (Overall League). Safe to re-run: addMember is INSERT OR IGNORE. */
+internalRouter.post("/backfill-default-leagues", (req, res) => {
+  const userIds = usersRepo.listIds("synthetic");
+  let joined = 0;
+  for (const id of userIds) {
+    const user = usersRepo.getById(id);
+    if (!user) continue;
+    joined += leagueService.autoJoinDefaultLeagues(user.id, user.name).length;
+  }
+  res.json({ ok: true, syntheticUsers: userIds.length, membershipsJoined: joined });
 });
 
 /** Quick sanity check on how much of the season actually imported — total fixture count, rounds covered, and per-round breakdown. Read-only, no mutation. */
