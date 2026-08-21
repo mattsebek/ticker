@@ -8,14 +8,14 @@ import { ClubBadge } from "./ClubBadge";
 import { PortfolioChart } from "./PortfolioChart";
 import { CloseIcon } from "./icons";
 import { colorForPct, FONT_SERIF } from "../theme/theme";
-import { fmtPct } from "../utils/format";
+import { fmtPct, fmtMoney } from "../utils/format";
 
 /**
- * Shows a manager's current portfolio value + trend/YTD% (aggregate only —
- * never itemized by club, so which specific clubs make up that value stays
- * hidden) and the clubs that earned points in their last LOCKED Gameweek
- * (immutable snapshot; never bench, never their mutable pending selection).
- * See routes/leagues.ts's :id/members/:memberId.
+ * Shows a manager's current portfolio value + trend/YTD% (aggregate only),
+ * the clubs that earned points in their last LOCKED Gameweek (immutable
+ * snapshot; never bench, never their mutable pending selection), and — once
+ * that same lock has passed — their itemized current holdings. See
+ * routes/leagues.ts's :id/members/:memberId.
  */
 export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId: string; memberId: string | null; onClose: () => void }) {
   const T = useThemeStore((s) => s.tokens);
@@ -91,6 +91,19 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
                         <ClubBadge code={c.code} color={c.color} size={32} />
                         <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: T.text, marginLeft: 10 }}>{c.name}</Text>
                         <Text style={{ fontSize: 14, fontWeight: "600", color: T.accent }}>{c.points} pts</Text>
+                      </View>
+                    ))
+                  )}
+
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Holdings</Text>
+                  {summary.holdings.length === 0 ? (
+                    <Text style={{ fontSize: 13, color: T.textSecondary }}>No clubs currently held.</Text>
+                  ) : (
+                    summary.holdings.map((h) => (
+                      <View key={h.clubId} style={[styles.clubRow, { borderBottomColor: T.borderLight }]}>
+                        <ClubBadge code={h.code} color={h.color} size={32} />
+                        <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: T.text, marginLeft: 10 }}>{h.name}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: T.text }}>{fmtMoney(h.currentPrice)}</Text>
                       </View>
                     ))
                   )}

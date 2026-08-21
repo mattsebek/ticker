@@ -6,6 +6,7 @@ import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
 import { portfolioService } from "../market/portfolioService";
+import { footballService } from "../football/service";
 import { gameweekDetail } from "../presenters";
 import { round2 } from "../shared/rng";
 
@@ -68,12 +69,13 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
   });
 });
 
-// Deliberately minimal, transparency-not-surveillance: the last LOCKED
-// round's starters (never bench, never live/current holdings) plus current
-// portfolio value/trend/YTD% (aggregate only — never itemized by club, so a
-// manager can't see WHICH clubs make up another manager's current value,
-// only the total). Scoped under the league so a requester can only look up
-// managers they actually share a league with, not any user id.
+// Transparency-not-surveillance, but only up to the current lock boundary:
+// a manager's starters + itemized holdings only become visible for/after the
+// last LOCKED round (never their pending/mutable selection, which could
+// still change) — bench is still withheld, and portfolio value/trend/YTD%
+// stays aggregate-only until that same lock gate opens. Scoped under the
+// league so a requester can only look up managers they actually share a
+// league with, not any user id.
 leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, res) => {
   const lg = leagueService.getLeague(req.params.id);
   if (!lg) return res.status(404).json({ error: "League not found" });
@@ -90,6 +92,17 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
   const { starters } = hasLockedRound ? gameweekDetail(member.member_id, lastLockedRound, false) : { starters: [] };
   const points = starters.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
 
+  const holdings = hasLockedRound
+    ? portfolioService
+        .getHoldings(member.member_id)
+        .map((h) => {
+          const club = footballService.getClub(h.clubId);
+          if (!club) return null;
+          return { clubId: h.clubId, name: club.name, code: club.code, color: club.color, currentPrice: h.currentPrice, purchasePrice: h.purchasePrice };
+        })
+        .filter((h): h is NonNullable<typeof h> => h != null)
+    : [];
+
   res.json({
     name: member.member_name,
     currentValue,
@@ -99,6 +112,7 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     lastLockedRound: hasLockedRound ? lastLockedRound : null,
     points,
     starters: starters.map((c) => ({ clubId: c.clubId, name: c.name, code: c.code, color: c.color, points: c.actualPoints ?? 0 })),
+    holdings,
   });
 });
 

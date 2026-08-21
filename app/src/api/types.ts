@@ -177,6 +177,15 @@ export interface ManagerStarterClub {
   points: number;
 }
 
+export interface ManagerHolding {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  currentPrice: number;
+  purchasePrice: number;
+}
+
 export interface ManagerSummary {
   name: string;
   currentValue: number;
@@ -187,6 +196,7 @@ export interface ManagerSummary {
   lastLockedRound: number | null;
   points: number;
   starters: ManagerStarterClub[];
+  holdings: ManagerHolding[];
 }
 
 export interface PublicLeagueRow {

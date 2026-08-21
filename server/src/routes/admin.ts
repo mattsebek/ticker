@@ -15,7 +15,7 @@ import { renderAdminClubDetailPage } from "../admin/adminClubDetailPage";
 import { renderAdminLeaguesPage } from "../admin/adminLeaguesPage";
 import { renderAdminLeagueDetailPage, AdminLeagueStandingRow } from "../admin/adminLeagueDetailPage";
 import { DEFAULT_AUTO_JOIN_LEAGUE_IDS } from "../fantasy/leagueService";
-import { JWT_SECRET } from "../shared/auth";
+import { JWT_SECRET, parseCookies, isHttps } from "../shared/auth";
 import { computePricePressure, priceDirection, ppsDirection } from "../market/pricePressure";
 import { renderAdminSyntheticPage, AdminSyntheticUserRow } from "../admin/adminSyntheticPage";
 import { syntheticRepo } from "../synthetic/syntheticRepo";
@@ -50,23 +50,6 @@ function clubPricingDiagnostics(clubId: string, currentPrice: number) {
 
 const ADMIN_COOKIE = "ticker_admin";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function parseCookies(header: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!header) return out;
-  for (const part of header.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    if (key) out[key] = decodeURIComponent(part.slice(idx + 1).trim());
-  }
-  return out;
-}
-
-/** Railway terminates TLS at its edge and forwards over plain HTTP, so req.protocol alone would misreport "http" in production — check the forwarded-proto header too, so the cookie is Secure whenever the browser's connection actually was. */
-function isHttps(req: Request): boolean {
-  return req.protocol === "https" || req.headers["x-forwarded-proto"] === "https";
-}
 
 function safeNext(value: unknown): string {
   return typeof value === "string" && value.startsWith("/admin") ? value : "/admin";

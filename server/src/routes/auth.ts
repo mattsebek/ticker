@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { usersRepo, UserRow, isBriefCurrentlyDismissed } from "../shared/usersRepo";
-import { signToken, requireAuth, AuthedRequest } from "../shared/auth";
+import { signToken, requireAuth, setSessionCookie, clearSessionCookie, AuthedRequest } from "../shared/auth";
 import { marketRepo } from "../market/repo";
 import { leagueService } from "../fantasy/leagueService";
 import { otpRepo, OtpPurpose } from "../shared/otpRepo";
@@ -139,11 +139,18 @@ authRouter.post("/verify", (req, res) => {
   }
   if (!user) return res.status(404).json({ error: "No account found for that email." });
 
-  res.json({ token: signToken(user.id), user: publicUser(user) });
+  const token = signToken(user.id);
+  setSessionCookie(req, res, token);
+  res.json({ token, user: publicUser(user) });
 });
 
 authRouter.get("/me", requireAuth, (req: AuthedRequest, res) => {
   const user = usersRepo.getById(req.userId!);
   if (!user) return res.status(404).json({ error: "User not found" });
   res.json({ user: publicUser(user) });
+});
+
+authRouter.post("/logout", (req, res) => {
+  clearSessionCookie(res);
+  res.json({ ok: true });
 });
