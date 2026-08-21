@@ -63,7 +63,7 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
     <View>
       <View style={[tableStyles.row, { borderBottomColor: T.border, borderBottomWidth: 1 }]}>
         <Pressable onPress={() => handleSort("name")} style={{ flex: 1 }}>
-          <Text style={[headerStyle, tableStyles.center]}>Club{caret("name")}</Text>
+          <Text style={headerStyle}>Club{caret("name")}</Text>
         </Pressable>
         <Pressable onPress={() => handleSort("opening")} style={{ width: 60 }}>
           <Text style={[headerStyle, tableStyles.center]}>Open{caret("opening")}</Text>
@@ -80,7 +80,7 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
         const demandDir: "up" | "down" | "flat" = c.netDemand === "buying" ? "up" : c.netDemand === "selling" ? "down" : "flat";
         return (
           <Pressable key={c.id} onPress={() => onOpen(c.id)} style={[tableStyles.row, { borderBottomColor: T.borderLight, borderBottomWidth: 1 }]}>
-            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, minWidth: 0 }}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 }}>
               <ClubBadge code={c.code} color={c.color} size={26} />
               <Text style={{ fontSize: 14, fontWeight: "500", color: T.text, flexShrink: 1 }} numberOfLines={1} ellipsizeMode="tail">
                 {c.name}
