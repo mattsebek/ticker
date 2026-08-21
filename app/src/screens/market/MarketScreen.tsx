@@ -14,6 +14,7 @@ import { useClubOverlayStore } from "../../store/overlayStore";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
+import { PillRow, Pill } from "../../components/Pill";
 import { GREEN, RED } from "../../theme/theme";
 import type { ThemeTokens } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
@@ -33,9 +34,13 @@ function Arrow({ dir }: { dir: "up" | "down" | "flat" }) {
  * transparency complaint those couldn't answer ("why is my club's value
  * moving?"). Modeled on the admin Clubs page (server/src/admin/
  * adminClubsPage.ts) minus its Price Pressure column, which isn't public
- * yet. Web port: ticker-website/src/routes/MarketPage.tsx's ClubTable.
+ * yet. Web port: ticker-website/src/routes/MarketPage.tsx's ClubTable —
+ * that one keeps all 4 columns on desktop; the app is always the "mobile"
+ * layout, so Opening Value drops entirely and a toggle above the table
+ * switches Current Value <-> % Owned rather than showing both.
  */
 function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens; onOpen: (id: string) => void }) {
+  const [metric, setMetric] = useState<"current" | "owned">("current");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
 
@@ -61,19 +66,25 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
 
   return (
     <View>
+      <View style={{ marginBottom: 12 }}>
+        <PillRow>
+          <Pill label="Current Price" active={metric === "current"} onPress={() => setMetric("current")} />
+          <Pill label="% Owned" active={metric === "owned"} onPress={() => setMetric("owned")} />
+        </PillRow>
+      </View>
       <View style={[tableStyles.row, { borderBottomColor: T.border, borderBottomWidth: 1 }]}>
         <Pressable onPress={() => handleSort("name")} style={{ flex: 1 }}>
           <Text style={headerStyle}>Club{caret("name")}</Text>
         </Pressable>
-        <Pressable onPress={() => handleSort("opening")} style={{ width: 60 }}>
-          <Text style={[headerStyle, tableStyles.center]}>Open{caret("opening")}</Text>
-        </Pressable>
-        <Pressable onPress={() => handleSort("current")} style={{ width: 72 }}>
-          <Text style={[headerStyle, tableStyles.center]}>Value{caret("current")}</Text>
-        </Pressable>
-        <Pressable onPress={() => handleSort("owned")} style={{ width: 64 }}>
-          <Text style={[headerStyle, tableStyles.center]}>Owned{caret("owned")}</Text>
-        </Pressable>
+        {metric === "current" ? (
+          <Pressable onPress={() => handleSort("current")} style={{ width: 84 }}>
+            <Text style={[headerStyle, tableStyles.center]}>Current Value{caret("current")}</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => handleSort("owned")} style={{ width: 84 }}>
+            <Text style={[headerStyle, tableStyles.center]}>% Owned{caret("owned")}</Text>
+          </Pressable>
+        )}
       </View>
       {sorted.map((c) => {
         const changeDir: "up" | "down" | "flat" = c.seasonPct > 0 ? "up" : c.seasonPct < 0 ? "down" : "flat";
@@ -86,15 +97,17 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
                 {c.name}
               </Text>
             </View>
-            <Text style={[tableStyles.center, { width: 60, fontSize: 13, color: T.text }]}>{fmtMoney(c.openingPrice)}</Text>
-            <Text style={[tableStyles.center, { width: 72, fontSize: 13, color: T.text }]}>
-              {fmtMoney(c.price)}
-              <Arrow dir={changeDir} />
-            </Text>
-            <Text style={[tableStyles.center, { width: 64, fontSize: 13, color: T.text }]}>
-              {c.ownershipPct.toFixed(1)}%
-              <Arrow dir={demandDir} />
-            </Text>
+            {metric === "current" ? (
+              <Text style={[tableStyles.center, { width: 84, fontSize: 13, color: T.text }]}>
+                {fmtMoney(c.price)}
+                <Arrow dir={changeDir} />
+              </Text>
+            ) : (
+              <Text style={[tableStyles.center, { width: 84, fontSize: 13, color: T.text }]}>
+                {c.ownershipPct.toFixed(1)}%
+                <Arrow dir={demandDir} />
+              </Text>
+            )}
           </Pressable>
         );
       })}
