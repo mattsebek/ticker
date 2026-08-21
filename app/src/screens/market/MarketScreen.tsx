@@ -11,13 +11,12 @@ import { renderBoldSegments } from "../../utils/richText";
 import { useThemeStore } from "../../store/themeStore";
 import { useDataStore } from "../../store/dataStore";
 import { useClubOverlayStore } from "../../store/overlayStore";
-import { useTick } from "../../hooks/useTick";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
-import { colorForPct, GREEN, RED } from "../../theme/theme";
+import { GREEN, RED } from "../../theme/theme";
 import type { ThemeTokens } from "../../theme/theme";
-import { fmtMoney, fmtPct } from "../../utils/format";
+import { fmtMoney } from "../../utils/format";
 import { api } from "../../api/client";
 
 type SortKey = "name" | "opening" | "current" | "owned";
@@ -64,16 +63,16 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
     <View>
       <View style={[tableStyles.row, { borderBottomColor: T.border, borderBottomWidth: 1 }]}>
         <Pressable onPress={() => handleSort("name")} style={{ flex: 1 }}>
-          <Text style={headerStyle}>Club{caret("name")}</Text>
+          <Text style={[headerStyle, tableStyles.center]}>Club{caret("name")}</Text>
         </Pressable>
         <Pressable onPress={() => handleSort("opening")} style={{ width: 60 }}>
-          <Text style={[headerStyle, tableStyles.right]}>Open{caret("opening")}</Text>
+          <Text style={[headerStyle, tableStyles.center]}>Open{caret("opening")}</Text>
         </Pressable>
         <Pressable onPress={() => handleSort("current")} style={{ width: 72 }}>
-          <Text style={[headerStyle, tableStyles.right]}>Value{caret("current")}</Text>
+          <Text style={[headerStyle, tableStyles.center]}>Value{caret("current")}</Text>
         </Pressable>
         <Pressable onPress={() => handleSort("owned")} style={{ width: 64 }}>
-          <Text style={[headerStyle, tableStyles.right]}>Owned{caret("owned")}</Text>
+          <Text style={[headerStyle, tableStyles.center]}>Owned{caret("owned")}</Text>
         </Pressable>
       </View>
       {sorted.map((c) => {
@@ -81,46 +80,35 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
         const demandDir: "up" | "down" | "flat" = c.netDemand === "buying" ? "up" : c.netDemand === "selling" ? "down" : "flat";
         return (
           <Pressable key={c.id} onPress={() => onOpen(c.id)} style={[tableStyles.row, { borderBottomColor: T.borderLight, borderBottomWidth: 1 }]}>
-            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, minWidth: 0 }}>
               <ClubBadge code={c.code} color={c.color} size={26} />
               <Text style={{ fontSize: 14, fontWeight: "500", color: T.text, flexShrink: 1 }} numberOfLines={1} ellipsizeMode="tail">
                 {c.name}
               </Text>
             </View>
-            <Text style={[tableStyles.right, { width: 60, fontSize: 13, color: T.text }]}>{fmtMoney(c.openingPrice)}</Text>
-            <Text style={[tableStyles.right, { width: 72, fontSize: 13, color: T.text }]}>
+            <Text style={[tableStyles.center, { width: 60, fontSize: 13, color: T.text }]}>{fmtMoney(c.openingPrice)}</Text>
+            <Text style={[tableStyles.center, { width: 72, fontSize: 13, color: T.text }]}>
               {fmtMoney(c.price)}
               <Arrow dir={changeDir} />
             </Text>
-            <Text style={[tableStyles.right, { width: 64, fontSize: 13, color: T.text }]}>
+            <Text style={[tableStyles.center, { width: 64, fontSize: 13, color: T.text }]}>
               {c.ownershipPct.toFixed(1)}%
               <Arrow dir={demandDir} />
             </Text>
           </Pressable>
         );
       })}
+      {sorted.length === 0 && (
+        <Text style={{ textAlign: "center", color: T.textSecondary, fontSize: 14, paddingVertical: 32 }}>No clubs match your search.</Text>
+      )}
     </View>
   );
 }
 
 const tableStyles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
-  right: { textAlign: "right" },
+  center: { textAlign: "center" },
 });
-
-// Cosmetic-only wobble on top of the real price/pct — real movement (match
-// settlement, microPriceJitter) only touches a club every so often, and
-// this screen otherwise sits dead still between refreshes. A tiny
-// randomized tick reads as "the market is alive" without touching any real
-// data. Display-only: never sent to the server, never affects portfolio math.
-const JIT_PRICE_PCT = 0.003; // ±0.3% of price
-const JIT_PCT_POINTS = 0.3; // ±0.3 percentage points on the displayed daily %
-function jitPrice(price: number, tick: number, seed: number): number {
-  return price * (1 + Math.sin((tick + seed) * 0.7) * JIT_PRICE_PCT);
-}
-function jitPct(pct: number, tick: number, seed: number): number {
-  return pct + Math.sin((tick + seed) * 0.7 + 1) * JIT_PCT_POINTS;
-}
 
 export function MarketScreen() {
   const T = useThemeStore((s) => s.tokens);
@@ -128,7 +116,6 @@ export function MarketScreen() {
   const open = useClubOverlayStore((s) => s.open);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const gameweekPreview = useGameweekPreview();
-  const tick = useTick(500);
   const [search, setSearch] = useState("");
   const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; source: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
 
@@ -138,8 +125,8 @@ export function MarketScreen() {
 
   const q = search.trim().toLowerCase();
   const isSearching = q.length > 0;
-  const searchResults = useMemo(
-    () => (isSearching ? clubs.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : []),
+  const filteredClubs = useMemo(
+    () => (isSearching ? clubs.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : clubs),
     [clubs, q, isSearching]
   );
 
@@ -166,35 +153,11 @@ export function MarketScreen() {
           )}
         </View>
 
-        {isSearching ? (
-          <View>
-            {searchResults.map((c, i) => {
-              const price = jitPrice(c.price, tick, i);
-              const pct = jitPct(c.dailyPct, tick, i);
-              return (
-                <Pressable key={c.id} onPress={() => open(c.id)} style={styles.searchRow}>
-                  <ClubBadge code={c.code} color={c.color} size={36} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{c.name}</Text>
-                    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>{c.code}</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end", width: 60 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "500", color: T.text }}>{fmtMoney(price)}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "500", color: colorForPct(pct) }}>{fmtPct(pct)}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-            {searchResults.length === 0 && (
-              <Text style={{ textAlign: "center", color: T.textSecondary, fontSize: 14, paddingVertical: 32 }}>No clubs match "{search}"</Text>
-            )}
-          </View>
-        ) : (
-          <View>
-            <ClubTable clubs={clubs} T={T} onOpen={open} />
+        <View>
+          <ClubTable clubs={filteredClubs} T={T} onOpen={open} />
 
-            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10, marginTop: 24 }}>Market News</Text>
-            <View style={{ backgroundColor: T.card, borderRadius: 16, overflow: "hidden" }}>
+          <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10, marginTop: 24 }}>Market News</Text>
+          <View style={{ backgroundColor: T.card, borderRadius: 16, overflow: "hidden" }}>
               {gameweekPreview && (
                 <Pressable
                   onPress={() => navigation.navigate("GameweekPreview")}
@@ -226,12 +189,11 @@ export function MarketScreen() {
                   <ChevronRightIcon color={T.textSecondary} />
                 </Pressable>
               ))}
-              {news.length === 0 && (
-                <Text style={{ padding: 16, fontSize: 13, color: T.textSecondary, textAlign: "center" }}>No news available right now.</Text>
-              )}
-            </View>
+            {news.length === 0 && (
+              <Text style={{ padding: 16, fontSize: 13, color: T.textSecondary, textAlign: "center" }}>No news available right now.</Text>
+            )}
           </View>
-        )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -239,7 +201,6 @@ export function MarketScreen() {
 
 const styles = StyleSheet.create({
   search: { width: "100%", borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 38, fontSize: 15, letterSpacing: 0 },
-  searchRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
   newsRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   newsThumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "#0002" },
 });
