@@ -209,6 +209,12 @@ export const footballRepo = {
     return row.m ?? 0;
   },
 
+  /** Highest round with at least one finished fixture — genuine season progress, unlike maxRound() (the schedule's last round, pinned at the season length the moment the full fixture list is imported). */
+  maxFinishedRound(): number {
+    const row = db.prepare("SELECT MAX(round) as m FROM ticker_fixtures WHERE status = 'finished'").get() as { m: number | null };
+    return row.m ?? 0;
+  },
+
   /**
    * Ops-only: reverts EVERY fixture to unplayed (status back to
    * "scheduled", scores/clean-sheets cleared) and shifts every kickoff

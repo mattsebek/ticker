@@ -123,7 +123,15 @@ export const footballService = {
     const tickerSeasonId = footballRepo.getMapping(provider.name, "season", seasonProviderId);
     if (!tickerSeasonId) return { updated: 0 };
 
-    const sinceRound = Math.max(1, footballRepo.maxRound() - 1);
+    // maxFinishedRound() (not maxRound()) — the schedule's LAST round is
+    // pinned at the season length the instant importSeasonSchedule() bulk-
+    // imports all 38 rounds up front, so anchoring here to maxRound() meant
+    // this window permanently excluded early rounds (GW1 included) the
+    // moment the season was imported, no matter how long ago they actually
+    // finished in real life. Anchoring to genuine progress instead means
+    // an early round that's still stuck "scheduled" keeps getting rechecked
+    // every cycle until it actually syncs.
+    const sinceRound = Math.max(1, footballRepo.maxFinishedRound() - 1);
     const results = await provider.fetchResults(seasonProviderId, sinceRound);
     // Same one-request-per-fixture cost as importSeasonSchedule() — only
     // spend odds budget on fixtures that haven't kicked off yet.
