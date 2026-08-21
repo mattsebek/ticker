@@ -31,14 +31,17 @@ function pointsForMemberAtRound(memberId: string, round: number): number {
 /**
  * Locks ONE account's entire current holdings as their Gameweek lineup for
  * `round`, tagging up to MAX_STARTERS of them STARTER (from pending
- * starter_selections, falling back to their first holdings for a bot or a
- * manager who's never touched the selection screen) and the rest BENCH.
- * No-op (returns false) if already locked or the account holds nothing.
+ * starter_selections, falling back to their MAX_STARTERS highest-current-
+ * value holdings for a bot or a manager who's never touched the selection
+ * screen — never fewer than they actually hold) and the rest BENCH. No-op
+ * (returns false) if already locked or the account holds nothing.
  */
 function lockOneAccountForRound(userId: string, round: number, lockedAt: number): boolean {
   if (fantasyRepo.hasLockedLineup(userId, round)) return false;
   const holdings = marketRepo.getHoldings(userId);
   if (holdings.length === 0) return false;
+
+  const priceByClub = new Map(holdings.map((h) => [h.club_id, marketRepo.getPrice(h.club_id) ?? h.purchase_price]));
 
   const holdingIds = new Set(holdings.map((h) => h.club_id));
   let starterIds = fantasyRepo
@@ -47,7 +50,11 @@ function lockOneAccountForRound(userId: string, round: number, lockedAt: number)
     .slice(0, fantasyConfig.MAX_STARTERS);
 
   if (starterIds.length === 0 && (isBotId(userId) || !fantasyRepo.hasEverSetSelection(userId))) {
-    starterIds = holdings.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
+    starterIds = holdings
+      .slice()
+      .sort((a, b) => priceByClub.get(b.club_id)! - priceByClub.get(a.club_id)!)
+      .slice(0, fantasyConfig.MAX_STARTERS)
+      .map((h) => h.club_id);
   }
   const starterSet = new Set(starterIds);
 
@@ -57,7 +64,7 @@ function lockOneAccountForRound(userId: string, round: number, lockedAt: number)
     lockedAt,
     holdings.map((h) => ({
       clubId: h.club_id,
-      priceAtLock: marketRepo.getPrice(h.club_id) ?? h.purchase_price,
+      priceAtLock: priceByClub.get(h.club_id)!,
       status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
     }))
   );
