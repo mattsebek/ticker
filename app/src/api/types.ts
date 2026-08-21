@@ -24,6 +24,8 @@ export interface ClubSummary {
   /** Final points from the club's last top-flight campaign — a stable proxy for preseason title expectations. Null for newly-promoted clubs or when unavailable. */
   priorSeasonPoints: number | null;
   price: number;
+  /** The club's real, never-changes opening price for the season — the Market table's "Opening Value" column. */
+  openingPrice: number;
   dailyPct: number;
   weeklyPct: number;
   /** False until the club has a recorded price at least 24 hours old — distinguishes "genuinely flat today" from "no day-old data yet" (Top Movers). */

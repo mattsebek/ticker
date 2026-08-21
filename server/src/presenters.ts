@@ -142,6 +142,11 @@ export function clubSummary(club: Club, currentRound: number) {
     color: club.color,
     priorSeasonPoints: club.priorSeasonPoints,
     price,
+    // Real, never-changes-after-the-fact opening price — the public Market
+    // table's "Opening Value" column. Was only ever used internally to
+    // derive seasonPct below; exposing the raw number too rather than
+    // making the client re-derive it from a truncated/downsampled sparkline.
+    openingPrice: openPrice,
     dailyPct,
     weeklyPct,
     // Same idea as hasWeeklyHistory, one window down — Top Movers (Market

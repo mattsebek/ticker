@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
+import type { ClubSummary } from "../../api/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
 import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import { renderBoldSegments } from "../../utils/richText";
@@ -14,10 +15,98 @@ import { useTick } from "../../hooks/useTick";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
-import { PillRow, Pill } from "../../components/Pill";
-import { colorForPct } from "../../theme/theme";
+import { colorForPct, GREEN, RED } from "../../theme/theme";
+import type { ThemeTokens } from "../../theme/theme";
 import { fmtMoney, fmtPct } from "../../utils/format";
 import { api } from "../../api/client";
+
+type SortKey = "name" | "opening" | "current" | "owned";
+
+/** Arrow next to a value, or nothing when there's no real direction to report — same convention as the admin Clubs page this table mirrors. */
+function Arrow({ dir }: { dir: "up" | "down" | "flat" }) {
+  if (dir === "flat") return null;
+  return <Text style={{ color: dir === "up" ? GREEN : RED }}>{dir === "up" ? " ▲" : " ▼"}</Text>;
+}
+
+/**
+ * All 20 clubs, sortable by tapping any column header — replaces the old
+ * Top Movers / Top Point Earners / Most Owned curated subsets, per the
+ * transparency complaint those couldn't answer ("why is my club's value
+ * moving?"). Modeled on the admin Clubs page (server/src/admin/
+ * adminClubsPage.ts) minus its Price Pressure column, which isn't public
+ * yet. Web port: ticker-website/src/routes/MarketPage.tsx's ClubTable.
+ */
+function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens; onOpen: (id: string) => void }) {
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+
+  function handleSort(key: SortKey) {
+    setSortDir((d) => (sortKey === key ? ((-d) as 1 | -1) : 1));
+    setSortKey(key);
+  }
+
+  const sorted = useMemo(() => {
+    const list = clubs.slice();
+    list.sort((a, b) => {
+      if (sortKey === "name") return sortDir * a.name.localeCompare(b.name);
+      if (sortKey === "opening") return sortDir * (a.openingPrice - b.openingPrice);
+      if (sortKey === "current") return sortDir * (a.price - b.price);
+      return sortDir * (a.ownershipPct - b.ownershipPct);
+    });
+    return list;
+  }, [clubs, sortKey, sortDir]);
+
+  const caret = (key: SortKey) => (sortKey === key ? (sortDir === 1 ? " ▲" : " ▼") : "");
+
+  const headerStyle = { fontSize: 11, fontWeight: "600" as const, color: T.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.3 };
+
+  return (
+    <View>
+      <View style={[tableStyles.row, { borderBottomColor: T.border, borderBottomWidth: 1 }]}>
+        <Pressable onPress={() => handleSort("name")} style={{ flex: 1 }}>
+          <Text style={headerStyle}>Club{caret("name")}</Text>
+        </Pressable>
+        <Pressable onPress={() => handleSort("opening")} style={{ width: 60 }}>
+          <Text style={[headerStyle, tableStyles.right]}>Open{caret("opening")}</Text>
+        </Pressable>
+        <Pressable onPress={() => handleSort("current")} style={{ width: 72 }}>
+          <Text style={[headerStyle, tableStyles.right]}>Value{caret("current")}</Text>
+        </Pressable>
+        <Pressable onPress={() => handleSort("owned")} style={{ width: 64 }}>
+          <Text style={[headerStyle, tableStyles.right]}>Owned{caret("owned")}</Text>
+        </Pressable>
+      </View>
+      {sorted.map((c) => {
+        const changeDir: "up" | "down" | "flat" = c.seasonPct > 0 ? "up" : c.seasonPct < 0 ? "down" : "flat";
+        const demandDir: "up" | "down" | "flat" = c.netDemand === "buying" ? "up" : c.netDemand === "selling" ? "down" : "flat";
+        return (
+          <Pressable key={c.id} onPress={() => onOpen(c.id)} style={[tableStyles.row, { borderBottomColor: T.borderLight, borderBottomWidth: 1 }]}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <ClubBadge code={c.code} color={c.color} size={26} />
+              <Text style={{ fontSize: 14, fontWeight: "500", color: T.text, flexShrink: 1 }} numberOfLines={1} ellipsizeMode="tail">
+                {c.name}
+              </Text>
+            </View>
+            <Text style={[tableStyles.right, { width: 60, fontSize: 13, color: T.text }]}>{fmtMoney(c.openingPrice)}</Text>
+            <Text style={[tableStyles.right, { width: 72, fontSize: 13, color: T.text }]}>
+              {fmtMoney(c.price)}
+              <Arrow dir={changeDir} />
+            </Text>
+            <Text style={[tableStyles.right, { width: 64, fontSize: 13, color: T.text }]}>
+              {c.ownershipPct.toFixed(1)}%
+              <Arrow dir={demandDir} />
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const tableStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
+  right: { textAlign: "right" },
+});
 
 // Cosmetic-only wobble on top of the real price/pct — real movement (match
 // settlement, microPriceJitter) only touches a club every so often, and
@@ -33,8 +122,6 @@ function jitPct(pct: number, tick: number, seed: number): number {
   return pct + Math.sin((tick + seed) * 0.7 + 1) * JIT_PCT_POINTS;
 }
 
-const TOP_MOVERS_COUNT = 6;
-
 export function MarketScreen() {
   const T = useThemeStore((s) => s.tokens);
   const clubs = useDataStore((s) => s.clubs);
@@ -43,7 +130,6 @@ export function MarketScreen() {
   const gameweekPreview = useGameweekPreview();
   const tick = useTick(500);
   const [search, setSearch] = useState("");
-  const [earnersRange, setEarnersRange] = useState<"gw" | "ytd">("gw");
   const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; source: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
 
   useEffect(() => {
@@ -55,29 +141,6 @@ export function MarketScreen() {
   const searchResults = useMemo(
     () => (isSearching ? clubs.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : []),
     [clubs, q, isSearching]
-  );
-
-  // Real movers only, never fabricated — but always something to show. Real
-  // 24h movement is preferred when it exists; right after a reset (or in
-  // the first 24h of a fresh season) no club has a day-old price yet, so
-  // this falls back to real since-opening movement (seasonPct) instead of
-  // an empty "come back later" panel. No cosmetic jitter here: unlike the
-  // wobble elsewhere on this screen (jitPrice/jitPct above), a list that's
-  // ostensibly ranking real movers needs to actually be real — including
-  // in what it falls back to.
-  const movers = useMemo(() => {
-    const withDailyHistory = clubs.filter((c) => c.hasDailyHistory);
-    const usingDaily = withDailyHistory.length > 0;
-    const source = usingDaily ? withDailyHistory : clubs;
-    return source
-      .map((c) => ({ club: c, pct: usingDaily ? c.dailyPct : c.seasonPct }))
-      .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
-      .slice(0, TOP_MOVERS_COUNT);
-  }, [clubs]);
-
-  const topEarners = useMemo(
-    () => clubs.slice().sort((a, b) => (earnersRange === "ytd" ? b.seasonPts - a.seasonPts : b.gwPts - a.gwPts)).slice(0, 6),
-    [clubs, earnersRange]
   );
 
   return (
@@ -128,35 +191,9 @@ export function MarketScreen() {
           </View>
         ) : (
           <View>
-            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Top Movers</Text>
-            <View style={styles.grid}>
-              {movers.map(({ club: c, pct }) => (
-                <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(pct) }}>
-                    {pct >= 0 ? "▲" : "▼"} {fmtPct(pct)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <ClubTable clubs={clubs} T={T} onOpen={open} />
 
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <Text style={{ fontSize: 19, fontWeight: "600", color: T.text }}>Top Point Earners</Text>
-              <PillRow>
-                <Pill label="GW" active={earnersRange === "gw"} onPress={() => setEarnersRange("gw")} />
-                <Pill label="YTD" active={earnersRange === "ytd"} onPress={() => setEarnersRange("ytd")} />
-              </PillRow>
-            </View>
-            <View style={styles.grid}>
-              {topEarners.map((c) => (
-                <Pressable key={c.id} onPress={() => open(c.id)} style={[styles.moverPill, { borderColor: T.border }]}>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: T.text }}>{c.code}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: T.textSecondary }}>{earnersRange === "ytd" ? c.seasonPts : c.gwPts} pts</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10 }}>Market News</Text>
+            <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10, marginTop: 24 }}>Market News</Text>
             <View style={{ backgroundColor: T.card, borderRadius: 16, overflow: "hidden" }}>
               {gameweekPreview && (
                 <Pressable
@@ -203,8 +240,6 @@ export function MarketScreen() {
 const styles = StyleSheet.create({
   search: { width: "100%", borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 38, fontSize: 15, letterSpacing: 0 },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 4 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
-  moverPill: { width: "47%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 100, paddingVertical: 11, paddingHorizontal: 14 },
   newsRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   newsThumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "#0002" },
 });
