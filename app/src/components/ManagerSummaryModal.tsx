@@ -12,8 +12,8 @@ import { fmtPct, fmtMoney } from "../utils/format";
 
 /**
  * Shows a manager's current portfolio value + trend/YTD% (aggregate only)
- * and their last LOCKED Gameweek's starters plus bench (immutable snapshot —
- * who they held but didn't start that week). See routes/leagues.ts's
+ * and their last LOCKED Gameweek's starters plus Holdings (immutable
+ * snapshot — clubs they held that week but didn't start). See routes/leagues.ts's
  * :id/members/:memberId.
  */
 export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId: string; memberId: string | null; onClose: () => void }) {
@@ -92,7 +92,7 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
 
                   {summary.bench.length > 0 && (
                     <>
-                      <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Bench</Text>
+                      <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Holdings</Text>
                       {summary.bench.map((c) => (
                         <ClubRow key={c.clubId} T={T} code={c.code} color={c.color} name={c.name} purchasePrice={c.purchasePrice} currentPrice={c.currentPrice} trailing={`${c.points} pts`} trailingColor={T.textSecondary} />
                       ))}
