@@ -11,10 +11,9 @@ import { colorForPct, FONT_SERIF, ThemeTokens } from "../theme/theme";
 import { fmtPct, fmtMoney } from "../utils/format";
 
 /**
- * Shows a manager's current portfolio value + trend/YTD% (aggregate only),
- * the clubs that earned points in their last LOCKED Gameweek (immutable
- * snapshot; plus who they benched that week), and — once that same lock has
- * passed — their itemized current holdings. See routes/leagues.ts's
+ * Shows a manager's current portfolio value + trend/YTD% (aggregate only)
+ * and their last LOCKED Gameweek's starters plus bench (immutable snapshot —
+ * who they held but didn't start that week). See routes/leagues.ts's
  * :id/members/:memberId.
  */
 export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId: string; memberId: string | null; onClose: () => void }) {
@@ -99,15 +98,6 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
                       ))}
                     </>
                   )}
-
-                  <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Holdings</Text>
-                  {summary.holdings.length === 0 ? (
-                    <Text style={{ fontSize: 13, color: T.textSecondary }}>No clubs currently held.</Text>
-                  ) : (
-                    summary.holdings.map((h) => (
-                      <ClubRow key={h.clubId} T={T} code={h.code} color={h.color} name={h.name} purchasePrice={h.purchasePrice} currentPrice={h.currentPrice} trailing={fmtMoney(h.currentPrice)} trailingColor={T.text} />
-                    ))
-                  )}
                 </>
               )}
             </ScrollView>
@@ -118,7 +108,7 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
   );
 }
 
-/** "Purchase price: $50.00 (0.3%▲)" — omitted entirely when purchasePrice/currentPrice aren't known (e.g. a locked round's starter/bench club the manager has since sold). */
+/** "Purchase: $50.00 (0.3%▲)" — omitted entirely when purchasePrice/currentPrice aren't known (e.g. a locked round's starter/bench club the manager has since sold). */
 function ClubRow({
   T,
   code,
@@ -155,7 +145,7 @@ function PurchasePriceLine({ T, purchasePrice, currentPrice }: { T: ThemeTokens;
   const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
   return (
     <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
-      Purchase price: {fmtMoney(purchasePrice)} (<Text style={{ color: colorForPct(pct) }}>{Math.abs(pct).toFixed(1)}%{arrow}</Text>)
+      Purchase: {fmtMoney(purchasePrice)} (<Text style={{ color: colorForPct(pct) }}>{Math.abs(pct).toFixed(1)}%{arrow}</Text>)
     </Text>
   );
 }

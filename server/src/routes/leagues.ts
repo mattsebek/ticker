@@ -6,7 +6,6 @@ import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
 import { portfolioService } from "../market/portfolioService";
-import { footballService } from "../football/service";
 import { gameweekDetail } from "../presenters";
 import { round2 } from "../shared/rng";
 
@@ -94,11 +93,10 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
 
   // A locked round's starters/bench snapshot can include a club the manager
   // has since sold (see gameweekDetail's doc comment — it's still what
-  // earned the points), so purchase/current price for those two sections
+  // earned the points), so purchase/current price for these two sections
   // comes from a live-holdings lookup and is simply omitted (null) for a
   // club no longer held, rather than showing stale/misleading numbers.
-  const currentHoldings = hasLockedRound ? portfolioService.getHoldings(member.member_id) : [];
-  const holdingByClub = new Map(currentHoldings.map((h) => [h.clubId, h]));
+  const holdingByClub = new Map((hasLockedRound ? portfolioService.getHoldings(member.member_id) : []).map((h) => [h.clubId, h]));
   const toClubRow = (c: (typeof starters)[number]) => {
     const h = holdingByClub.get(c.clubId);
     return {
@@ -112,19 +110,6 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     };
   };
 
-  // Holdings only needs to cover clubs NOT already shown above as a
-  // starter — those already got their own row (with points earned) in
-  // "Last Game Week", so repeating them here would just be noise.
-  const starterIds = new Set(starters.map((c) => c.clubId));
-  const holdings = currentHoldings
-    .filter((h) => !starterIds.has(h.clubId))
-    .map((h) => {
-      const club = footballService.getClub(h.clubId);
-      if (!club) return null;
-      return { clubId: h.clubId, name: club.name, code: club.code, color: club.color, currentPrice: h.currentPrice, purchasePrice: h.purchasePrice };
-    })
-    .filter((h): h is NonNullable<typeof h> => h != null);
-
   res.json({
     name: member.member_name,
     currentValue,
@@ -135,7 +120,6 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     points,
     starters: starters.map(toClubRow),
     bench: bench.map(toClubRow),
-    holdings,
   });
 });
 

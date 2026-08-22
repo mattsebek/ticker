@@ -180,15 +180,6 @@ export interface ManagerStarterClub {
   currentPrice: number | null;
 }
 
-export interface ManagerHolding {
-  clubId: string;
-  name: string;
-  code: string;
-  color: string;
-  currentPrice: number;
-  purchasePrice: number;
-}
-
 export interface ManagerSummary {
   name: string;
   currentValue: number;
@@ -200,7 +191,6 @@ export interface ManagerSummary {
   points: number;
   starters: ManagerStarterClub[];
   bench: ManagerStarterClub[];
-  holdings: ManagerHolding[];
 }
 
 export interface PublicLeagueRow {
