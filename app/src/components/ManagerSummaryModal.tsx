@@ -7,15 +7,15 @@ import type { ManagerSummary } from "../api/types";
 import { ClubBadge } from "./ClubBadge";
 import { PortfolioChart } from "./PortfolioChart";
 import { CloseIcon } from "./icons";
-import { colorForPct, FONT_SERIF } from "../theme/theme";
+import { colorForPct, FONT_SERIF, ThemeTokens } from "../theme/theme";
 import { fmtPct, fmtMoney } from "../utils/format";
 
 /**
  * Shows a manager's current portfolio value + trend/YTD% (aggregate only),
  * the clubs that earned points in their last LOCKED Gameweek (immutable
- * snapshot; never bench, never their mutable pending selection), and — once
- * that same lock has passed — their itemized current holdings. See
- * routes/leagues.ts's :id/members/:memberId.
+ * snapshot; plus who they benched that week), and — once that same lock has
+ * passed — their itemized current holdings. See routes/leagues.ts's
+ * :id/members/:memberId.
  */
 export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId: string; memberId: string | null; onClose: () => void }) {
   const T = useThemeStore((s) => s.tokens);
@@ -87,12 +87,17 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
                     <Text style={{ fontSize: 13, color: T.textSecondary }}>No clubs were active that week.</Text>
                   ) : (
                     summary.starters.map((c) => (
-                      <View key={c.clubId} style={[styles.clubRow, { borderBottomColor: T.borderLight }]}>
-                        <ClubBadge code={c.code} color={c.color} size={32} />
-                        <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: T.text, marginLeft: 10 }}>{c.name}</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: T.accent }}>{c.points} pts</Text>
-                      </View>
+                      <ClubRow key={c.clubId} T={T} code={c.code} color={c.color} name={c.name} purchasePrice={c.purchasePrice} currentPrice={c.currentPrice} trailing={`${c.points} pts`} trailingColor={T.accent} />
                     ))
+                  )}
+
+                  {summary.bench.length > 0 && (
+                    <>
+                      <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Bench</Text>
+                      {summary.bench.map((c) => (
+                        <ClubRow key={c.clubId} T={T} code={c.code} color={c.color} name={c.name} purchasePrice={c.purchasePrice} currentPrice={c.currentPrice} trailing={`${c.points} pts`} trailingColor={T.textSecondary} />
+                      ))}
+                    </>
                   )}
 
                   <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Holdings</Text>
@@ -100,11 +105,7 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
                     <Text style={{ fontSize: 13, color: T.textSecondary }}>No clubs currently held.</Text>
                   ) : (
                     summary.holdings.map((h) => (
-                      <View key={h.clubId} style={[styles.clubRow, { borderBottomColor: T.borderLight }]}>
-                        <ClubBadge code={h.code} color={h.color} size={32} />
-                        <Text style={{ flex: 1, fontSize: 14, fontWeight: "500", color: T.text, marginLeft: 10 }}>{h.name}</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: T.text }}>{fmtMoney(h.currentPrice)}</Text>
-                      </View>
+                      <ClubRow key={h.clubId} T={T} code={h.code} color={h.color} name={h.name} purchasePrice={h.purchasePrice} currentPrice={h.currentPrice} trailing={fmtMoney(h.currentPrice)} trailingColor={T.text} />
                     ))
                   )}
                 </>
@@ -114,6 +115,48 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
         </Pressable>
       </View>
     </Modal>
+  );
+}
+
+/** "Purchase price: $50.00 (0.3%▲)" — omitted entirely when purchasePrice/currentPrice aren't known (e.g. a locked round's starter/bench club the manager has since sold). */
+function ClubRow({
+  T,
+  code,
+  color,
+  name,
+  purchasePrice,
+  currentPrice,
+  trailing,
+  trailingColor,
+}: {
+  T: ThemeTokens;
+  code: string;
+  color: string;
+  name: string;
+  purchasePrice: number | null;
+  currentPrice: number | null;
+  trailing: string;
+  trailingColor: string;
+}) {
+  return (
+    <View style={[styles.clubRow, { borderBottomColor: T.borderLight }]}>
+      <ClubBadge code={code} color={color} size={32} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={{ fontSize: 14, fontWeight: "500", color: T.text }}>{name}</Text>
+        {purchasePrice != null && currentPrice != null && <PurchasePriceLine T={T} purchasePrice={purchasePrice} currentPrice={currentPrice} />}
+      </View>
+      <Text style={{ fontSize: 14, fontWeight: "600", color: trailingColor }}>{trailing}</Text>
+    </View>
+  );
+}
+
+function PurchasePriceLine({ T, purchasePrice, currentPrice }: { T: ThemeTokens; purchasePrice: number; currentPrice: number }) {
+  const pct = purchasePrice ? ((currentPrice - purchasePrice) / purchasePrice) * 100 : 0;
+  const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
+  return (
+    <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
+      Purchase price: {fmtMoney(purchasePrice)} (<Text style={{ color: colorForPct(pct) }}>{Math.abs(pct).toFixed(1)}%{arrow}</Text>)
+    </Text>
   );
 }
 

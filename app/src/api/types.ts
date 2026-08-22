@@ -175,6 +175,9 @@ export interface ManagerStarterClub {
   code: string;
   color: string;
   points: number;
+  /** Null if this club is no longer held (sold since this round locked). */
+  purchasePrice: number | null;
+  currentPrice: number | null;
 }
 
 export interface ManagerHolding {
@@ -196,6 +199,7 @@ export interface ManagerSummary {
   lastLockedRound: number | null;
   points: number;
   starters: ManagerStarterClub[];
+  bench: ManagerStarterClub[];
   holdings: ManagerHolding[];
 }
 
