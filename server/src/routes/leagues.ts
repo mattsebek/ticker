@@ -112,7 +112,12 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     };
   };
 
+  // Holdings only needs to cover clubs NOT already shown above as a
+  // starter — those already got their own row (with points earned) in
+  // "Last Game Week", so repeating them here would just be noise.
+  const starterIds = new Set(starters.map((c) => c.clubId));
   const holdings = currentHoldings
+    .filter((h) => !starterIds.has(h.clubId))
     .map((h) => {
       const club = footballService.getClub(h.clubId);
       if (!club) return null;
