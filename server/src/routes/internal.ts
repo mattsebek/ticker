@@ -687,3 +687,38 @@ internalRouter.post("/trigger-deadline-reminder", async (req, res) => {
     res.status(502).json({ ok: false, error: err?.message || String(err) });
   }
 });
+
+const addAllHumansToLeagueSchema = z.object({ leagueId: z.string().trim().min(1).optional(), code: z.string().trim().min(1).optional() });
+
+/**
+ * Ops-only, one-off backfill: joins every human account (account_type='human',
+ * synthetic/admin/system excluded) to a given league, idempotently — addMember
+ * is INSERT OR IGNORE, so re-running this is always safe and only adds
+ * whoever's missing. Accepts either the league's real id or its join code
+ * (private leagues are usually only known by their code), exactly one of
+ * which must be supplied.
+ */
+internalRouter.post("/add-all-humans-to-league", (req, res) => {
+  const parsed = addAllHumansToLeagueSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "leagueId or code required" });
+  const { leagueId, code } = parsed.data;
+  if (!leagueId && !code) return res.status(400).json({ error: "leagueId or code required" });
+
+  const league = leagueId ? leagueService.getLeague(leagueId) : leagueService.getLeagueByCode(code!);
+  if (!league) return res.status(404).json({ error: "League not found" });
+
+  const humanIds = usersRepo.listIds("human");
+  let joined = 0;
+  let alreadyMember = 0;
+  for (const userId of humanIds) {
+    if (leagueService.isMember(league.id, userId)) {
+      alreadyMember++;
+      continue;
+    }
+    const user = usersRepo.getById(userId);
+    if (!user) continue;
+    leagueService.join(league.id, userId, user.name);
+    joined++;
+  }
+  res.json({ ok: true, league: { id: league.id, name: league.name }, humanUsers: humanIds.length, joined, alreadyMember });
+});

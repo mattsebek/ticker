@@ -37,20 +37,28 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   const cash = marketRepo.getCash(user.id);
   const heroValue = round2(holdings.reduce((a, c) => a + c.price, 0) + cash);
 
-  // Dollar-weighted, not an average of each club's own %: an unweighted
-  // average of weeklyPct treats a $5 club's move the same as a $50 club's,
-  // which doesn't answer "how much did MY portfolio move." Reconstructing
-  // each holding's pre-settlement value from its own (already-correct,
-  // real-settlement) weeklyPct and summing the dollar deltas gives the
-  // portfolio's actual blended return, with cash implicitly diluting it
-  // (present in both heroValue and priorHeroValue, unchanged).
-  const weekDollarChange = holdings.reduce((a, c) => {
-    if (c.weeklyPct === 0) return a;
-    const priorPrice = c.price / (1 + c.weeklyPct / 100);
-    return a + (c.price - priorPrice);
-  }, 0);
-  const priorHeroValue = heroValue - weekDollarChange;
-  const weekPct = priorHeroValue > 0 ? round2((weekDollarChange / priorHeroValue) * 100) : 0;
+  // Reads the REAL total-portfolio-value series (portfolioService.getPortfolioSeries
+  // — cash + every held club's price replayed chronologically, the same data
+  // backing the portfolio chart) rather than reconstructing from each club's
+  // own weeklyPct. The previous approach silently treated "no 7-day-old price
+  // point yet" (clubSummary()'s weeklyPct defaults to 0 when hasWeeklyHistory
+  // is false — true for nearly every club this early in a season) as "flat,"
+  // which understated real movement toward a fake 0% the newer an account's
+  // data is. Falls back to the EARLIEST known point when the account's own
+  // history doesn't yet reach back 7 real days — the closest real comparison
+  // available, not a fabricated flat 0% (same "never show a fake flat"
+  // precedent as ClubRow's own hasWeeklyHistory→hasDailyHistory→season
+  // fallback chain).
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const weekAgo = Date.now() - WEEK_MS;
+  const series = portfolioService.getPortfolioSeries(user.id);
+  let priorHeroValue: number | null = null;
+  for (const p of series) {
+    if (p.t <= weekAgo) priorHeroValue = p.v;
+    else break;
+  }
+  if (priorHeroValue == null) priorHeroValue = series.length > 0 ? series[0].v : heroValue;
+  const weekPct = priorHeroValue > 0 ? round2(((heroValue - priorHeroValue) / priorHeroValue) * 100) : 0;
 
   // Every account starts with exactly $100 cash (see ClubPickerModal /
   // ClubSelect's STARTING_CASH) and never adds/withdraws real money, so

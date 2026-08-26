@@ -13,7 +13,10 @@ export function ClubRow({ club, isYear }: { club: HoldingView; isYear: boolean }
   const T = useThemeStore((s) => s.tokens);
   const open = useClubOverlayStore((s) => s.open);
 
-  const priceNow = isYear ? club.purchasePrice : club.price;
+  // Current market value never changes with the GW/YTD toggle — only which
+  // points/% figure is shown does (below). It used to read club.purchasePrice
+  // in YTD mode, which showed what was PAID, not what the club is worth now.
+  const priceNow = club.price;
   // weeklyPct reads 0 (not just "small") until the club has a real price
   // point 7 days old — before that, showing it verbatim next to a club
   // that just scored real points and moved real price (see priceBreakdown)
