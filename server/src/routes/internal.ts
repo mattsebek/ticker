@@ -11,6 +11,7 @@ import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
+import { gameweekDetail } from "../presenters";
 import { reseedAllOpeningPrices, resetAllUsers, resetToPreGameweek1, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
 import { runMarketTick } from "../market/marketDemandService";
@@ -750,4 +751,26 @@ internalRouter.post("/lock-rounds-for-user", (req, res) => {
     return { round, alreadyLocked, locked };
   });
   res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, holdingsCount: holdings.length, results });
+});
+
+/**
+ * Ops-only, read-only diagnostic: shows exactly what got locked in for one
+ * user's round — starters vs bench, and each club's real recorded points
+ * (or null if that fixture hasn't settled yet) — the same data
+ * /gameweek/detail computes for the user's own app view, but queryable by
+ * an admin without needing that user's own session token.
+ */
+internalRouter.get("/user-gameweek-detail", (req, res) => {
+  const email = String(req.query.email || "");
+  const round = Number(req.query.round);
+  if (!email || !Number.isInteger(round) || round < 1) return res.status(400).json({ error: "email and round (integer) query params required" });
+
+  const user = usersRepo.getByEmail(email);
+  if (!user) return res.status(404).json({ error: "No account found for that email" });
+
+  const locked = fantasyRepo.hasLockedLineup(user.id, round);
+  if (!locked) return res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, round, locked: false });
+
+  const detail = gameweekDetail(user.id, round, false);
+  res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, round, locked: true, ...detail });
 });
