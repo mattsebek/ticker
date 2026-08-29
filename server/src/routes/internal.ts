@@ -722,3 +722,32 @@ internalRouter.post("/add-all-humans-to-league", (req, res) => {
   }
   res.json({ ok: true, league: { id: league.id, name: league.name }, humanUsers: humanIds.length, joined, alreadyMember });
 });
+
+const lockRoundsForUserSchema = z.object({ email: z.string().trim().email(), rounds: z.array(z.number().int().min(1)).min(1) });
+
+/**
+ * Ops-only, single-account repair: for a user whose lineup should have
+ * locked automatically for one or more past rounds (deadline passed, they
+ * held clubs) but didn't, force-locks each round for JUST this account —
+ * never touches anyone else, unlike forceLockRound()/relock-round which
+ * apply to every account. Uses whatever they currently hold as the
+ * snapshot: if they've traded since a given round's real deadline, this
+ * reflects today's holdings, not necessarily what they held back then.
+ * Idempotent per round (a no-op if already locked).
+ */
+internalRouter.post("/lock-rounds-for-user", (req, res) => {
+  const parsed = lockRoundsForUserSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "email and rounds (number[]) required" });
+  const { email, rounds } = parsed.data;
+
+  const user = usersRepo.getByEmail(email);
+  if (!user) return res.status(404).json({ error: "No account found for that email" });
+
+  const holdings = marketRepo.getHoldings(user.id);
+  const results = rounds.map((round) => {
+    const alreadyLocked = fantasyRepo.hasLockedLineup(user.id, round);
+    const locked = gameweekService.forceLockRoundForUser(user.id, round);
+    return { round, alreadyLocked, locked };
+  });
+  res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, holdingsCount: holdings.length, results });
+});

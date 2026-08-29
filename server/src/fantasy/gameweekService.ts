@@ -204,4 +204,19 @@ export const gameweekService = {
   forceLockRound(round: number): number {
     return lockRoundForAllAccounts(round);
   },
+
+  /**
+   * Ops-only, single-account repair: force-locks `round` for exactly ONE
+   * account right now, for a user whose lineup should have locked
+   * automatically (e.g. they joined/held clubs before the deadline but
+   * something kept the regular job from ever locking them) but didn't. Uses
+   * whatever they currently hold as the snapshot — there's no historical
+   * record of exactly what a user held at a past moment, so if they've
+   * traded since that round's real deadline, this reflects today's holdings,
+   * not necessarily what they held back then. Idempotent (a no-op if the
+   * round is already locked for this user).
+   */
+  forceLockRoundForUser(userId: string, round: number): boolean {
+    return lockOneAccountForRound(userId, round, Date.now());
+  },
 };

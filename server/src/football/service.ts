@@ -143,6 +143,24 @@ export const footballService = {
   },
 
   /**
+   * Real in-progress score/status, right now — separate from refreshFixtures()
+   * (which only ever asks the provider for status:"FT", so a fixture's status
+   * here never actually reached "live" before this existed). No odds fetch:
+   * a live fixture is never "NS" (not-yet-played), so there's nothing for
+   * ODDS_IMPORT_CAP's not-yet-played budget to cover.
+   */
+  async refreshLiveFixtures(): Promise<{ updated: number }> {
+    if (footballRepo.countFixtures() === 0) return { updated: 0 };
+    const seasonProviderId = await this.currentSeasonProviderId();
+    const tickerSeasonId = footballRepo.getMapping(provider.name, "season", seasonProviderId);
+    if (!tickerSeasonId) return { updated: 0 };
+
+    const results = await provider.fetchLiveFixtures(seasonProviderId);
+    for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId);
+    return { updated: results.length };
+  },
+
+  /**
    * Ops-only repair tool: re-fetches every fixture's TRUE kickoff straight
    * from the provider and overwrites the stored value, leaving
    * status/scores/odds untouched. Ground truth for

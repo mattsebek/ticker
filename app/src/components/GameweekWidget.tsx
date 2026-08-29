@@ -10,8 +10,8 @@ import { CheckIcon } from "./icons";
 import { GREEN, FONT_SERIF } from "../theme/theme";
 import { fmtCountdown } from "../utils/format";
 
-/** Solid dot with an expanding, fading ring behind it — a looping "live" radar-ping. */
-function LiveDot() {
+/** Solid dot with an expanding, fading ring behind it — a looping "live" radar-ping. Also reused by GameweekDetailScreen for a live club's name. */
+export function LiveDot() {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

@@ -127,6 +127,11 @@ export class MockFootballProvider implements FootballDataProvider {
     return sinceRound != null ? played.filter((f) => f.round >= sinceRound) : played;
   }
 
+  /** Mock fixtures only ever hold "NS"/"FT" (see mockKickoff/settlement above) — never a genuine in-progress status, so there's honestly nothing to return here. */
+  async fetchLiveFixtures(_seasonProviderId: string): Promise<RawFixtureDTO[]> {
+    return [];
+  }
+
   async fetchStandings(_seasonProviderId: string): Promise<RawStandingsRowDTO[]> {
     const table = new Map<string, RawStandingsRowDTO>();
     for (const c of MOCK_CLUB_ROSTER) {

@@ -83,6 +83,19 @@ export class ApiFootballProvider implements FootballDataProvider {
     return sinceRound != null ? fixtures.filter((f) => f.round >= sinceRound) : fixtures;
   }
 
+  /**
+   * API-Football's `live=all` returns every in-progress fixture across every
+   * competition it tracks, globally — not just ours — and its docs note
+   * `live` can't reliably be combined with a `league` filter server-side, so
+   * this filters by league id client-side against each row's own `league.id`
+   * rather than trusting an unconfirmed parameter combination.
+   */
+  async fetchLiveFixtures(seasonProviderId: string): Promise<RawFixtureDTO[]> {
+    const [leagueId] = seasonProviderId.split(":");
+    const rows = await this.get<any[]>("/fixtures", { live: "all" });
+    return rows.filter((r) => String(r.league?.id) === leagueId).map((r) => this.mapFixture(r, seasonProviderId));
+  }
+
   async fetchStandings(seasonProviderId: string): Promise<RawStandingsRowDTO[]> {
     const [leagueId, year] = seasonProviderId.split(":");
     const rows = await this.get<any[]>("/standings", { league: leagueId, season: year });

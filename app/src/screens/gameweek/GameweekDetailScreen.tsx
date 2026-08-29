@@ -7,6 +7,7 @@ import { useDataStore } from "../../store/dataStore";
 import { CloseIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
 import { Button } from "../../components/Button";
+import { LiveDot } from "../../components/GameweekWidget";
 import { FONT_SERIF, GREEN, RED } from "../../theme/theme";
 import { api } from "../../api/client";
 import type { GameweekDetailResponse, GameweekClubDetail } from "../../api/types";
@@ -46,6 +47,11 @@ function pctColor(pct: number, T: Tokens): string {
   return RED;
 }
 
+/** Clubs whose match is live right now float to the top — that's the score most likely to still be changing. Stable otherwise (everything else keeps its existing order). */
+function sortLiveFirst(clubs: GameweekClubDetail[]): GameweekClubDetail[] {
+  return [...clubs].sort((a, b) => Number(b.status === "live") - Number(a.status === "live"));
+}
+
 function ResultRow({ label, points, T }: { label: string; points: number; T: Tokens }) {
   return (
     <View style={styles.resultRow}>
@@ -57,13 +63,17 @@ function ResultRow({ label, points, T }: { label: string; points: number; T: Tok
 
 function ClubCard({ club, isStarter, T }: { club: GameweekClubDetail; isStarter: boolean; T: Tokens }) {
   const finished = club.status === "finished" && club.breakdown;
+  const live = club.status === "live";
 
   return (
     <View style={[styles.card, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <ClubBadge code={club.code} color={club.color} size={40} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{club.name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            {live && <LiveDot />}
+            <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{club.name}</Text>
+          </View>
           <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
             {club.isHome ? "vs" : "@"} {club.opponent}
             {club.scoreStr ? `  ·  ${club.scoreStr}` : ""}
@@ -344,7 +354,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
                 You didn't start any clubs this Gameweek — one or more scoring spots sat empty.
               </Text>
             )}
-            {data.starters.map((club) => (
+            {sortLiveFirst(data.starters).map((club) => (
               <ClubCard key={club.clubId} club={club} isStarter T={T} />
             ))}
 
@@ -354,7 +364,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
                 <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 14 }}>
                   Holdings still in your portfolio, but these points don't count towards your game week score.
                 </Text>
-                {data.bench.map((club) => (
+                {sortLiveFirst(data.bench).map((club) => (
                   <ClubCard key={club.clubId} club={club} isStarter={false} T={T} />
                 ))}
               </>
