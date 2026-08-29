@@ -219,4 +219,43 @@ export const gameweekService = {
   forceLockRoundForUser(userId: string, round: number): boolean {
     return lockOneAccountForRound(userId, round, Date.now());
   },
+
+  /**
+   * Ops-only, single-account repair for the case forceLockRoundForUser()
+   * can't fix: a round that's already locked but with ZERO starters,
+   * because the user had at some point touched the Starting Four screen
+   * and left it empty — the regular lock job deliberately respects an
+   * intentionally-emptied selection for everyone (see lockOneAccountForRound's
+   * own comment), which is correct behavior in general but leaves a manager
+   * stuck scoring 0 for a round no matter how well their held clubs did.
+   * This is an explicit admin override: wipes the existing lock for
+   * (userId, round) and re-locks using their MAX_STARTERS highest-current-
+   * value holdings as starters, unconditionally — same ranking
+   * lockOneAccountForRound already uses for a bot/never-touched-it account,
+   * just applied here regardless of selection history. Returns null if the
+   * account holds nothing at all.
+   */
+  forceLockRoundWithTopHoldings(userId: string, round: number): { starterIds: string[]; benchIds: string[] } | null {
+    const holdings = marketRepo.getHoldings(userId);
+    if (holdings.length === 0) return null;
+
+    const priceByClub = new Map(holdings.map((h) => [h.club_id, marketRepo.getPrice(h.club_id) ?? h.purchase_price]));
+    const ranked = holdings.slice().sort((a, b) => priceByClub.get(b.club_id)! - priceByClub.get(a.club_id)!);
+    const starterIds = ranked.slice(0, fantasyConfig.MAX_STARTERS).map((h) => h.club_id);
+    const starterSet = new Set(starterIds);
+    const benchIds = ranked.filter((h) => !starterSet.has(h.club_id)).map((h) => h.club_id);
+
+    fantasyRepo.deleteLockedLineup(userId, round);
+    fantasyRepo.lockLineup(
+      userId,
+      round,
+      Date.now(),
+      holdings.map((h) => ({
+        clubId: h.club_id,
+        priceAtLock: priceByClub.get(h.club_id)!,
+        status: starterSet.has(h.club_id) ? "STARTER" : "BENCH",
+      }))
+    );
+    return { starterIds, benchIds };
+  },
 };

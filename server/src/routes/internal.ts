@@ -774,3 +774,27 @@ internalRouter.get("/user-gameweek-detail", (req, res) => {
   const detail = gameweekDetail(user.id, round, false);
   res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, round, locked: true, ...detail });
 });
+
+const relockWithTopHoldingsSchema = z.object({ email: z.string().trim().email(), rounds: z.array(z.number().int().min(1)).min(1) });
+
+/**
+ * Ops-only, single-account repair for a round that's ALREADY locked but
+ * with zero starters (the manager touched the Starting Four screen and
+ * left it empty before the deadline, so the regular lock job correctly
+ * respected that as intentional) — an admin override, not something the
+ * automatic job would ever do on its own. Wipes and re-locks (userId,
+ * round) using their current top-N-by-price holdings as starters. Uses
+ * TODAY's holdings, not necessarily what they held at that round's real
+ * deadline, if they've traded since.
+ */
+internalRouter.post("/relock-round-with-top-holdings-for-user", (req, res) => {
+  const parsed = relockWithTopHoldingsSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "email and rounds (number[]) required" });
+  const { email, rounds } = parsed.data;
+
+  const user = usersRepo.getByEmail(email);
+  if (!user) return res.status(404).json({ error: "No account found for that email" });
+
+  const results = rounds.map((round) => ({ round, result: gameweekService.forceLockRoundWithTopHoldings(user.id, round) }));
+  res.json({ ok: true, user: { id: user.id, name: user.name, email: user.email }, results });
+});
