@@ -7,7 +7,7 @@ import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
 import { portfolioService } from "../market/portfolioService";
 import { gameweekDetail } from "../presenters";
-import { round2 } from "../shared/rng";
+import { round2, clamp } from "../shared/rng";
 
 export const leaguesRouter = Router();
 
@@ -72,9 +72,11 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
 // a manager's starters/bench + itemized holdings only become visible for/
 // after the last LOCKED round (never their pending/mutable selection, which
 // could still change), and portfolio value/trend/YTD% stays aggregate-only
-// until that same lock gate opens. Scoped under the league so a requester
-// can only look up managers they actually share a league with, not any
-// user id.
+// until that same lock gate opens. An optional ?round= lets the caller page
+// through any already-locked round, clamped to [1, lastLockedRound] so a
+// request can never reach into the still-mutable pending round. Scoped
+// under the league so a requester can only look up managers they actually
+// share a league with, not any user id.
 leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, res) => {
   const lg = leagueService.getLeague(req.params.id);
   if (!lg) return res.status(404).json({ error: "League not found" });
@@ -88,7 +90,9 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
 
   const lastLockedRound = gameweekService.firstUnlockedRound(member.member_id) - 1;
   const hasLockedRound = lastLockedRound >= 1;
-  const { starters, bench } = hasLockedRound ? gameweekDetail(member.member_id, lastLockedRound, false) : { starters: [], bench: [] };
+  const requestedRound = Number(req.query.round);
+  const round = hasLockedRound ? clamp(Number.isInteger(requestedRound) ? requestedRound : lastLockedRound, 1, lastLockedRound) : null;
+  const { starters, bench } = round != null ? gameweekDetail(member.member_id, round, false) : { starters: [], bench: [] };
   const points = starters.reduce((a, c) => a + (c.actualPoints ?? 0), 0);
 
   // A locked round's starters/bench snapshot can include a club the manager
@@ -96,7 +100,7 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
   // earned the points), so purchase/current price for these two sections
   // comes from a live-holdings lookup and is simply omitted (null) for a
   // club no longer held, rather than showing stale/misleading numbers.
-  const holdingByClub = new Map((hasLockedRound ? portfolioService.getHoldings(member.member_id) : []).map((h) => [h.clubId, h]));
+  const holdingByClub = new Map((round != null ? portfolioService.getHoldings(member.member_id) : []).map((h) => [h.clubId, h]));
   const toClubRow = (c: (typeof starters)[number]) => {
     const h = holdingByClub.get(c.clubId);
     return {
@@ -117,6 +121,9 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     portfolioSeries: portfolioSeries.map((p) => ({ t: p.t, v: p.v })),
     ytdPct,
     lastLockedRound: hasLockedRound ? lastLockedRound : null,
+    round,
+    canPrev: round != null && round > 1,
+    canNext: round != null && round < lastLockedRound,
     points,
     starters: starters.map(toClubRow),
     bench: bench.map(toClubRow),

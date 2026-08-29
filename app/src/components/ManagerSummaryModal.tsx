@@ -20,6 +20,14 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
   const T = useThemeStore((s) => s.tokens);
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // undefined = "let the server pick its default (lastLockedRound)" — only
+  // ever set explicitly by the prev/next buttons below, never derived back
+  // from the response, so paging can't trigger a redundant second fetch.
+  const [requestedRound, setRequestedRound] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    setRequestedRound(undefined);
+  }, [leagueId, memberId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,7 +35,7 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
     setError(null);
     if (!memberId) return;
     api.leagues
-      .member(leagueId, memberId)
+      .member(leagueId, memberId, requestedRound)
       .then((r) => {
         if (!cancelled) setSummary(r);
       })
@@ -37,7 +45,7 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
     return () => {
       cancelled = true;
     };
-  }, [leagueId, memberId]);
+  }, [leagueId, memberId, requestedRound]);
 
   return (
     <Modal visible={!!memberId} transparent animationType="slide" onRequestClose={onClose}>
@@ -74,13 +82,36 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
                 <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 18 }}>Not enough history yet for a trend line.</Text>
               )}
 
-              <Text style={{ fontSize: 16, fontWeight: "600", color: T.text, marginTop: 30, marginBottom: 8 }}>Last Game Week</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 8 }}>
+                <Text style={{ fontSize: 16, fontWeight: "600", color: T.text }}>Game Week</Text>
+                {summary.round != null && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Pressable
+                      disabled={!summary.canPrev}
+                      onPress={() => setRequestedRound(summary.round! - 1)}
+                      style={styles.roundArrow}
+                      accessibilityLabel="Previous Game Week"
+                    >
+                      <Text style={{ fontSize: 18, fontWeight: "600", color: summary.canPrev ? T.accent : T.border }}>‹</Text>
+                    </Pressable>
+                    <Text style={{ fontSize: 13, color: T.textSecondary, minWidth: 16, textAlign: "center" }}>{summary.round}</Text>
+                    <Pressable
+                      disabled={!summary.canNext}
+                      onPress={() => setRequestedRound(summary.round! + 1)}
+                      style={styles.roundArrow}
+                      accessibilityLabel="Next Game Week"
+                    >
+                      <Text style={{ fontSize: 18, fontWeight: "600", color: summary.canNext ? T.accent : T.border }}>›</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
               {summary.lastLockedRound == null ? (
                 <Text style={{ fontSize: 13, color: T.textSecondary }}>No completed Gameweek yet.</Text>
               ) : (
                 <>
                   <Text style={{ fontSize: 13, color: T.textSecondary, marginBottom: 14 }}>
-                    Game Week {summary.lastLockedRound} · <Text style={{ color: T.accent, fontWeight: "600" }}>{summary.points} pts</Text>
+                    <Text style={{ color: T.accent, fontWeight: "600" }}>{summary.points} pts</Text>
                   </Text>
                   {summary.starters.length === 0 ? (
                     <Text style={{ fontSize: 13, color: T.textSecondary }}>No clubs were active that week.</Text>
@@ -156,4 +187,5 @@ const styles = StyleSheet.create({
   handle: { alignSelf: "center", width: 36, height: 5, borderRadius: 3, marginBottom: 14 },
   closeBtn: { position: "absolute", top: 10, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 1 },
   clubRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1 },
+  roundArrow: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
 });

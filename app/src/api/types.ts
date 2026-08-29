@@ -188,6 +188,10 @@ export interface ManagerSummary {
   ytdPct: number;
   /** Null if this manager has never had a round lock yet. */
   lastLockedRound: number | null;
+  /** The round this response's starters/bench/points are actually for — defaults to lastLockedRound, but can be any earlier round via the `round` param. Null alongside lastLockedRound when nothing's locked yet. */
+  round: number | null;
+  canPrev: boolean;
+  canNext: boolean;
   points: number;
   starters: ManagerStarterClub[];
   bench: ManagerStarterClub[];
