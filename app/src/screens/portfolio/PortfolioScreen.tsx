@@ -19,6 +19,7 @@ import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
 import { ClubBadge } from "../../components/ClubBadge";
+import { FormChip } from "../../components/FormChip";
 import { FixturePill } from "../../components/FixturePill";
 import { useBriefing } from "../../hooks/useBriefing";
 import { useClubOverlayStore } from "../../store/overlayStore";
@@ -360,9 +361,18 @@ export function PortfolioScreen() {
                   {/* Fixed ~43% of the row's width (was ~33%) — the extra 10% comes out of the pills' share. */}
                   <View style={{ flexBasis: "43%", flexGrow: 0, flexShrink: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <ClubBadge code={h.code} color={h.color} size={40} />
-                    <Text style={{ flex: 1, fontSize: 12, fontWeight: "500", color: T.text }} numberOfLines={2}>
-                      {h.name}
-                    </Text>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "500", color: T.text }} numberOfLines={2}>
+                        {h.name}
+                      </Text>
+                      {h.form.length > 0 && (
+                        <View style={{ flexDirection: "row", gap: 4 }}>
+                          {h.form.slice(0, 3).reverse().map((f, i) => (
+                            <FormChip key={i} result={f} size={16} />
+                          ))}
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <View style={{ flexDirection: "row", gap: 5, flex: 1 }}>
                     {[0, 1, 2].map((i) => (

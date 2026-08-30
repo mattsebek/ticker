@@ -64,6 +64,7 @@ export interface ClubPastFixture {
   matchText: string;
   actualPts: number;
   projPts: number | null;
+  result: "W" | "D" | "L";
 }
 
 export interface ClubDetail extends ClubSummary {

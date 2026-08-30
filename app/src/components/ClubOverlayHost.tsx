@@ -182,17 +182,6 @@ export function ClubOverlayHost() {
             }}
             scrollEventThrottle={16}
           >
-            {detail.form.length > 0 && (
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 18 }}>
-                {detail.form
-                  .slice()
-                  .reverse()
-                  .map((f, i) => (
-                    <FormChip key={i} result={f} />
-                  ))}
-              </View>
-            )}
-
             {detail.pastFixtures.length > 0 && (
               <>
                 <Text style={{ color: T.text, fontSize: 16, fontWeight: "600", marginTop: 18, marginBottom: 6 }}>Past Fixtures</Text>
@@ -200,10 +189,13 @@ export function ClubOverlayHost() {
                   const { opponent, date } = splitMatchText(fx.matchText);
                   return (
                     <View key={i} style={[styles.plainRow, i === detail.pastFixtures.length - 1 && { paddingBottom: 0 }]}>
-                      <Text style={{ fontSize: 13 }}>
-                        <Text style={{ color: T.textSecondary }}>{opponent}</Text>
-                        {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
-                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <FormChip result={fx.result} size={24} />
+                        <Text style={{ fontSize: 13 }}>
+                          <Text style={{ color: T.textSecondary }}>{opponent}</Text>
+                          {date && <Text style={{ color: T.textSecondary }}> · {date}</Text>}
+                        </Text>
+                      </View>
                       <Text style={{ fontSize: 13, fontWeight: "600" }}>
                         <Text style={{ color: fx.projPts != null ? colorForPct(fx.actualPts - fx.projPts) : T.text }}>{fx.actualPts} pts</Text>
                         <Text style={{ color: T.textSecondary, fontWeight: "400" }}> vs {fx.projPts != null ? fx.projPts : "—"} proj</Text>

@@ -234,7 +234,11 @@ export function clubDetail(club: Club, currentRound: number) {
     const winProb = winProbFor(f, club.id);
     const projPts = bestProjectedPoints(f.id, isHome ? "home" : "away", winProb, f.drawProb ?? null);
     const actualPts = scoreClubInFixture(f, isHome ? "home" : "away");
-    return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchTextNoTime(f, club.id, opponent), actualPts, projPts };
+    // Same W/D/L formula as formLettersForClub — real goals, not fantasy points, which include clean-sheet/result bonuses that don't map 1:1 back to the actual scoreline.
+    const gf = (isHome ? f.homeGoals : f.awayGoals) ?? 0;
+    const ga = (isHome ? f.awayGoals : f.homeGoals) ?? 0;
+    const result: "W" | "D" | "L" = gf > ga ? "W" : gf < ga ? "L" : "D";
+    return { opp: opponent?.name ?? "TBD", matchText: fixtureMatchTextNoTime(f, club.id, opponent), actualPts, projPts, result };
   });
   const now = Date.now();
   const monthSeries = marketRepo
