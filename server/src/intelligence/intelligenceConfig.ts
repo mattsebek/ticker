@@ -58,6 +58,9 @@ export const intelligenceConfig = {
   /** A CANDIDATE nobody reviewed within this long of being generated is auto-dismissed rather than left to pile up indefinitely — same 48h window as the DAILY_MARKET_SIGNAL expiration class in expiration.ts, just applied to unreviewed candidates instead of a published nugget's own visible lifetime. */
   CANDIDATE_MAX_AGE_MS: floatFromEnv("INTELLIGENCE_CANDIDATE_MAX_AGE_HOURS", 48) * 60 * 60 * 1000,
 
+  /** How long a nugget stays visible (public widget/API + admin's non-"Expired" filters) once PUBLISHED, measured from the moment it was published — not from when it was generated. Overrides whatever expires_at a signal's own expiration CLASS (expiration.ts) set at generation time; that value only matters while the nugget is still an unreviewed CANDIDATE. */
+  PUBLISHED_LIFETIME_MS: floatFromEnv("INTELLIGENCE_PUBLISHED_LIFETIME_HOURS", 48) * 60 * 60 * 1000,
+
   /** Full-scale references for normalizing "market magnitude" in the interest score (section 16) — each signal's raw magnitude divided by its own reference, capped at 1. */
   MAGNITUDE_SCALE: {
     volumeRatio: 4, // e.g. a 4x-average spike reads as "maximum" magnitude

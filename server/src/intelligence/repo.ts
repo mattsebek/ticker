@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "../db";
+import { intelligenceConfig } from "./intelligenceConfig";
 
 // This domain's one deliberate JSON-blob column (source_data_json) is a
 // first for this codebase — every other table this session (Projection
@@ -299,9 +300,11 @@ export const intelligenceRepo = {
     return rows.map(rowToNugget);
   },
 
+  /** expires_at is reset here to 48h from THIS moment, overriding whatever a signal's own expiration class computed at generation time — that value only governed the candidate's unreviewed lifetime, not how long it stays visible once actually published. */
   publish(id: string, adminId: string) {
     const now = Date.now();
-    db.prepare("UPDATE market_nuggets SET status = 'PUBLISHED', published_at = ?, published_by = ?, updated_at = ? WHERE id = ?").run(now, adminId, now, id);
+    const expiresAt = now + intelligenceConfig.PUBLISHED_LIFETIME_MS;
+    db.prepare("UPDATE market_nuggets SET status = 'PUBLISHED', published_at = ?, published_by = ?, expires_at = ?, updated_at = ? WHERE id = ?").run(now, adminId, expiresAt, now, id);
   },
 
   dismiss(id: string, adminId: string) {
