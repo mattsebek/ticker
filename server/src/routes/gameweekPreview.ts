@@ -36,3 +36,11 @@ gameweekPreviewRouter.get("/by-slug/:slug", (req, res) => {
 gameweekPreviewRouter.get("/published", (req, res) => {
   res.json({ previews: editorialRepo.listPublishedSlugs() });
 });
+
+/** Public, read-only — recent published articles (excluding the one currently being read) for an article page's "Past Columns" footer. */
+gameweekPreviewRouter.get("/past", (req, res) => {
+  const excludeSlug = typeof req.query.excludeSlug === "string" ? req.query.excludeSlug : null;
+  const limit = Math.max(1, Math.min(20, Number(req.query.limit) || 5));
+  const columns = editorialRepo.listPublishedExcluding(excludeSlug, limit).map((c) => ({ ...c, publishedAt: new Date(c.publishedAt).toISOString() }));
+  res.json({ columns });
+});

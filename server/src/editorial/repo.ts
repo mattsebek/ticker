@@ -172,6 +172,15 @@ export const editorialRepo = {
       .all(limit) as { slug: string; publishedAt: number }[];
   },
 
+  /** Recent published articles for the "Past Columns" footer on an article page — everything but the body, and never the one currently being read. */
+  listPublishedExcluding(excludeSlug: string | null, limit = 5): { slug: string; round: number; headline: string; publishedAt: number }[] {
+    return db
+      .prepare(
+        "SELECT slug, round, headline, published_at as publishedAt FROM gameweek_previews WHERE status = 'PUBLISHED' AND slug IS NOT NULL AND slug != ? ORDER BY published_at DESC LIMIT ?"
+      )
+      .all(excludeSlug ?? "", limit) as { slug: string; round: number; headline: string; publishedAt: number }[];
+  },
+
   insertDraft(input: { round: number; headline: string; body: string; facts: unknown }): GameweekPreviewRow {
     const id = randomUUID();
     const now = Date.now();
