@@ -20,6 +20,7 @@ export interface SweepResult {
   belowThreshold: number;
   onCooldown: number;
   categoryCapped: number;
+  expired: number;
 }
 
 function runAllDetectors(): CandidateSignal[] {
@@ -127,6 +128,7 @@ export function runIntelligenceSweep(): SweepResult {
   }
 
   const { dismissed: categoryCapped } = intelligenceRepo.capCandidatesByCategory(intelligenceConfig.MAX_CANDIDATES_PER_CATEGORY, "system:category-cap");
+  const expired = intelligenceRepo.expireStaleCandidates(intelligenceConfig.CANDIDATE_MAX_AGE_MS);
 
-  return { candidatesEvaluated: signals.length, created, updated, belowThreshold, onCooldown, categoryCapped };
+  return { candidatesEvaluated: signals.length, created, updated, belowThreshold, onCooldown, categoryCapped, expired };
 }

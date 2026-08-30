@@ -166,7 +166,10 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
   const body = `
     <h1>Intelligence</h1>
     <p style="color:${T.textSecondary};font-size:13px;margin:-12px 0 20px;">Market Nuggets — deterministic signal detection over real marketplace data, templated copy, admin review before anything goes live.</p>
-    <div style="margin-bottom:16px;">${pills}</div>
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div>${pills}</div>
+      <button id="refresh-btn" style="padding:6px 16px;border-radius:100px;border:1px solid ${T.border};background:${T.elevated};color:${T.text};font-size:13px;font-weight:600;cursor:pointer;">↻ Refresh</button>
+    </div>
     ${manualForm}
     ${cards || `<div style="color:${T.textSecondary};font-size:13px;padding:24px;text-align:center;background:${T.card};border:1px solid ${T.border};border-radius:12px;">Nothing here yet.</div>`}
 
@@ -220,6 +223,21 @@ export function renderAdminIntelligencePage(d: AdminIntelligenceData): string {
               .catch(function () { btn.disabled = false; alert("Request failed."); });
           });
         });
+        var refreshBtn = document.getElementById("refresh-btn");
+        if (refreshBtn) {
+          refreshBtn.addEventListener("click", function () {
+            refreshBtn.disabled = true;
+            var originalText = refreshBtn.textContent;
+            refreshBtn.textContent = "Refreshing…";
+            fetch("/admin/intelligence/refresh", { method: "POST" })
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                if (!d.ok) { refreshBtn.disabled = false; refreshBtn.textContent = originalText; alert("Failed: " + (d.error || "unknown")); return; }
+                location.reload();
+              })
+              .catch(function () { refreshBtn.disabled = false; refreshBtn.textContent = originalText; alert("Request failed."); });
+          });
+        }
         var manualForm = document.getElementById("manual-form");
         if (manualForm) {
           manualForm.addEventListener("submit", function (e) {

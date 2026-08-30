@@ -55,6 +55,9 @@ export const intelligenceConfig = {
   /** Admin review queue cap: at most this many still-open CANDIDATE nuggets per category label (HEATING_UP, MILESTONE, SMART_MONEY, etc.) at once — the weakest excess are auto-dismissed so the queue never re-floods with many different clubs all wearing the same category. */
   MAX_CANDIDATES_PER_CATEGORY: floatFromEnv("INTELLIGENCE_MAX_CANDIDATES_PER_CATEGORY", 2),
 
+  /** A CANDIDATE nobody reviewed within this long of being generated is auto-dismissed rather than left to pile up indefinitely — same 48h window as the DAILY_MARKET_SIGNAL expiration class in expiration.ts, just applied to unreviewed candidates instead of a published nugget's own visible lifetime. */
+  CANDIDATE_MAX_AGE_MS: floatFromEnv("INTELLIGENCE_CANDIDATE_MAX_AGE_HOURS", 48) * 60 * 60 * 1000,
+
   /** Full-scale references for normalizing "market magnitude" in the interest score (section 16) — each signal's raw magnitude divided by its own reference, capped at 1. */
   MAGNITUDE_SCALE: {
     volumeRatio: 4, // e.g. a 4x-average spike reads as "maximum" magnitude

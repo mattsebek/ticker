@@ -262,7 +262,7 @@ export const intelligenceRepo = {
   },
 
   listByStatus(status: NuggetStatus, limit = 200): MarketNuggetRow[] {
-    const rows = db.prepare("SELECT * FROM market_nuggets WHERE status = ? ORDER BY interest_score DESC, generated_at DESC LIMIT ?").all(status, limit);
+    const rows = db.prepare("SELECT * FROM market_nuggets WHERE status = ? ORDER BY generated_at DESC LIMIT ?").all(status, limit);
     return rows.map(rowToNugget);
   },
 
@@ -311,6 +311,16 @@ export const intelligenceRepo = {
 
   setPinned(id: string, pinned: boolean) {
     db.prepare("UPDATE market_nuggets SET is_pinned = ?, updated_at = ? WHERE id = ?").run(pinned ? 1 : 0, Date.now(), id);
+  },
+
+  /** An admin never got to a candidate within maxAgeMs of it being generated — auto-dismissed rather than left to pile up forever. Only ever touches still-open CANDIDATE rows; a candidate an admin already published/dismissed is untouched regardless of age. Returns how many were expired, for the sweep's own result summary. */
+  expireStaleCandidates(maxAgeMs: number): number {
+    const now = Date.now();
+    const cutoff = now - maxAgeMs;
+    const result = db
+      .prepare("UPDATE market_nuggets SET status = 'DISMISSED', dismissed_at = ?, dismissed_by = 'system:expiration', updated_at = ? WHERE status = 'CANDIDATE' AND generated_at <= ?")
+      .run(now, now, cutoff);
+    return result.changes;
   },
 
   /**

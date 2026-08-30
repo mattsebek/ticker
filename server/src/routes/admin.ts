@@ -28,6 +28,7 @@ import { buildScoreMatrix } from "../projection/scoreDistribution";
 import { renderAdminIntelligencePage, AdminNuggetRow, IntelligenceFilter } from "../admin/adminIntelligencePage";
 import { intelligenceRepo } from "../intelligence/repo";
 import { generateCopy } from "../intelligence/copyTemplates";
+import { runIntelligenceSweep } from "../intelligence/nuggetService";
 import { renderAdminGameweekPreviewPage, AdminPreviewRow } from "../admin/adminGameweekPreviewPage";
 import { editorialRepo, ICON_OPTIONS, BADGE_OPTIONS, BACKGROUND_OPTIONS, COLOR_OPTIONS } from "../editorial/repo";
 import { editorialConfig } from "../editorial/editorialConfig";
@@ -568,6 +569,16 @@ adminRouter.get("/intelligence", (req, res) => {
       clubs,
     })
   );
+});
+
+/** Admin-session-protected on-demand sweep — same runIntelligenceSweep() the scheduled job and /internal/run-intelligence-sweep call, just reachable from the admin page's own auth (a session cookie) instead of requiring INTERNAL_TOKEN, which browser JS on this page could never present. */
+adminRouter.post("/intelligence/refresh", (req, res) => {
+  try {
+    const result = runIntelligenceSweep();
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, error: err?.message || String(err) });
+  }
 });
 
 // The set of non-club places a manually-created nugget can link to.
