@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
-import { clubSummary, clubDetail, upcomingFixturesForClub } from "../presenters";
+import { clubSummary, clubDetail, upcomingFixturesForClub, activeGameweekPoints } from "../presenters";
 import { newsService } from "../briefing/newsService";
 
 export const clubsRouter = Router();
@@ -13,7 +13,7 @@ clubsRouter.get("/", (req, res) => {
   // worth paying for on the onboarding club picker, which asks explicitly.
   const withFixtures = req.query.fixtures === "1";
   const clubs = footballService.listClubs().map((c) => {
-    const summary = clubSummary(c, round);
+    const summary = { ...clubSummary(c, round), ...activeGameweekPoints(c.id, round) };
     return withFixtures ? { ...summary, upcomingFixtures: upcomingFixturesForClub(c, 3) } : summary;
   });
   res.json({ clubs });

@@ -273,6 +273,29 @@ export function clubDetail(club: Club, currentRound: number) {
   };
 }
 
+/**
+ * A club's projected/actual points for one specific round, without the
+ * rest of gameweekClubDetail()'s match-text/opponent overhead — backs the
+ * Market table's "Proj. Pts" column, which only ever needs these two
+ * numbers for the active round. Deliberately NOT folded into clubSummary()
+ * itself: that function runs on every screen's hot path (dataStore polls
+ * it constantly), and only the Market table needs this per-club fixture
+ * lookup + projection, so it's computed once in the /clubs route instead.
+ * actualPts stays null (not 0) until the fixture is actually finished —
+ * breakdownClubInFixture's own guard — so a club that hasn't played yet is
+ * never confused with one that played and scored zero.
+ */
+export function activeGameweekPoints(clubId: string, round: number): { activeGwProjPts: number | null; activeGwActualPts: number | null } {
+  const fixture = footballRepo.listFixturesForClub(clubId).find((f) => f.round === round);
+  if (!fixture) return { activeGwProjPts: null, activeGwActualPts: null };
+  const isHome = fixture.homeClubId === clubId;
+  const side = isHome ? "home" : "away";
+  const winProb = winProbFor(fixture, clubId);
+  const activeGwProjPts = bestProjectedPoints(fixture.id, side, winProb, fixture.drawProb ?? null);
+  const breakdown = breakdownClubInFixture(fixture, side);
+  return { activeGwProjPts, activeGwActualPts: breakdown?.total ?? null };
+}
+
 function gameweekClubDetail(clubId: string, round: number) {
   const club = footballService.getClub(clubId);
   if (!club) return null;

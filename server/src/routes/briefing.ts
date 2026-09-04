@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, AuthedRequest } from "../shared/auth";
 import { marketRepo } from "../market/repo";
+import { portfolioService } from "../market/portfolioService";
+import { tradingService } from "../market/tradingService";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
@@ -144,13 +146,17 @@ briefingRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     recommendation: `Hold ${best.name}. No reason to sell into strength.`,
   };
 
-  const cash = marketRepo.getCash(userId);
-  const holdingsValue = round2(holdingSummaries.reduce((a, c) => a + c.price, 0));
-  const portfolioValue = round2(holdingsValue + cash);
-  const cashPct = portfolioValue > 0 ? round2((cash / portfolioValue) * 100) : 0;
+  // Shorting V1: buyingPower (not raw cash) is what's actually "uninvested
+  // and ready for your next move" once any short's collateral is reserved;
+  // portfolioValue goes through the same portfolioService helper the rest
+  // of the app uses so it includes short unrealized P&L, not just cash +
+  // long holdings.
+  const buyingPowerAmount = tradingService.buyingPower(userId);
+  const portfolioValue = portfolioService.getPortfolioValue(userId);
+  const cashPct = portfolioValue > 0 ? round2((buyingPowerAmount / portfolioValue) * 100) : 0;
   const buyingPower: Segment[] = [
     seg("You're holding "),
-    seg(fmtMoney(cash)),
+    seg(fmtMoney(buyingPowerAmount)),
     seg(` in buying power — that's ${cashPct.toFixed(1)}% of your ${fmtMoney(portfolioValue)} portfolio sitting uninvested and ready for your next move.`),
   ];
 
