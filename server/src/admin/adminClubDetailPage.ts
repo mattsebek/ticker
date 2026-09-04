@@ -19,6 +19,15 @@ export interface AdminClubDetail {
   timeline: any[]; // raw price_history rows, newest first — see market/repo.ts getPriceHistoryTimeline
   /** From the shadow-mode Projection Engine (projection/) — not wired into pricing yet, shown here for visibility only. Null if no forward projection has been computed for this club. */
   forwardProjection: { points: number; delta: number | null; gameweeks: number; fixtureCount: number } | null;
+  /** Shorting V1 (Section 37) — long/short diagnostics, distinct from the Price Pressure Score's own Market component above. */
+  shorting: {
+    longHolders: number;
+    shortHolders: number;
+    longOpens24h: number;
+    longSells24h: number;
+    shortOpens24h: number;
+    shortCovers24h: number;
+  };
 }
 
 function fmt(n: number): string {
@@ -83,6 +92,7 @@ function renderTimelineEvent(row: any): string {
     detail = `
       <div>Net buyers: <b>${row.net_buyers ?? "—"}</b> · Net sellers: <b>${row.net_sellers ?? "—"}</b></div>
       <div>Ownership: <b>${row.starting_owner_count ?? "—"} → ${row.ending_owner_count ?? "—"}</b></div>
+      <div>Short interest: <b>${row.starting_short_count ?? "—"} → ${row.ending_short_count ?? "—"}</b> (opens: <b>${row.short_openers ?? "—"}</b>, covers: <b>${row.short_closers ?? "—"}</b>)</div>
       <div>Demand signal: <b>${row.demand_signal != null ? row.demand_signal.toFixed(3) : "—"}</b></div>
       <div>Requested impact: <b>${requested != null ? pct(requested * 100) : "—"}</b></div>
       <div>Applied impact (after 24h guardrail): <b>${impact}</b></div>`;
@@ -175,6 +185,14 @@ export function renderAdminClubDetailPage(d: AdminClubDetail): string {
       ${statCard("Expectation (40%)", d.pressure.expectation != null ? Math.round(d.pressure.expectation).toString() : "—", scoreColor(d.pressure.expectation))}
       ${pressureBreakdown("Market (30%) — All Users", d.pressure.market, Math.round(d.pressure.market.score))}
       ${pressureBreakdown("Market (30%) — Human Only", d.pressure.humanOnlyMarket, Math.round(d.pressure.humanOnlyMarket.score))}
+    </div>
+
+    <h1 style="font-size:16px;">Shorting</h1>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:24px;">
+      ${statCard("Long Holders", d.shorting.longHolders.toString())}
+      ${statCard("Short Holders", d.shorting.shortHolders.toString())}
+      ${statCard("24H Long Opens / Sells", `${d.shorting.longOpens24h} / ${d.shorting.longSells24h}`)}
+      ${statCard("24H Short Opens / Covers", `${d.shorting.shortOpens24h} / ${d.shorting.shortCovers24h}`)}
     </div>
 
     <h1 style="font-size:16px;">Price History</h1>

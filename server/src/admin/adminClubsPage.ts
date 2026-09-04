@@ -10,6 +10,7 @@ export interface AdminClubRow {
   currentPrice: number;
   pctChange: number;
   ownershipPct: number;
+  shortPct: number;
   netDemand: "buying" | "selling" | "flat";
   form: ("W" | "D" | "L")[];
   pricePressure: number | null; // -100..100, or null when not yet eligible
@@ -65,12 +66,13 @@ export function renderAdminClubsPage(clubs: AdminClubRow[], health: { aligned: n
             ? ` <span title="Price direction matches Price Pressure" style="color:${T.accent};font-size:11px;">✓</span>`
             : "";
       return `
-        <tr data-name="${esc(c.name)}" data-starting="${c.startingPrice}" data-current="${c.currentPrice}" data-change="${c.pctChange}" data-owned="${c.ownershipPct}" data-pressure="${c.pricePressure ?? ""}">
+        <tr data-name="${esc(c.name)}" data-starting="${c.startingPrice}" data-current="${c.currentPrice}" data-change="${c.pctChange}" data-owned="${c.ownershipPct}" data-short="${c.shortPct}" data-pressure="${c.pricePressure ?? ""}">
           <td><a href="${detailHref}" style="color:${T.text};text-decoration:none;">${esc(c.name)}</a> <span style="color:${T.textSecondary};">(${esc(c.code)})</span>${formBadges(c.form)}</td>
           <td>${fmt(c.startingPrice)}</td>
           <td>${fmt(c.currentPrice)}</td>
           <td class="${changeCls}">${changeSign}${c.pctChange.toFixed(1)}%${arrow(changeDir)}</td>
           <td>${c.ownershipPct.toFixed(1)}%${arrow(demandDir)}</td>
+          <td>${c.shortPct > 0 ? c.shortPct.toFixed(1) + "%" : `<span style="color:${T.textSecondary};">—</span>`}</td>
           <td><a href="${detailHref}" style="text-decoration:none;">${ppsGlyph(c.pricePressure)}</a>${divergenceBadge}</td>
         </tr>`;
     })
@@ -82,6 +84,7 @@ export function renderAdminClubsPage(clubs: AdminClubRow[], health: { aligned: n
     { key: "current", label: "Current Value" },
     { key: "change", label: "% Change" },
     { key: "owned", label: "% Owned" },
+    { key: "short", label: "% Short" },
     { key: "pressure", label: "Price Pressure" },
   ];
   const headers = cols.map((c) => `<th data-sort-key="${c.key}" style="text-align:center;cursor:pointer;user-select:none;">${esc(c.label)} <span class="sort-caret"></span></th>`).join("");
@@ -103,7 +106,7 @@ export function renderAdminClubsPage(clubs: AdminClubRow[], health: { aligned: n
     <div class="table-wrap">
       <table id="clubs-table">
         <thead><tr>${headers}</tr></thead>
-        <tbody>${rows || `<tr><td colspan="6" class="empty">No clubs yet.</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="7" class="empty">No clubs yet.</td></tr>`}</tbody>
       </table>
     </div>
 

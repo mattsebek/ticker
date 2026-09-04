@@ -3,6 +3,7 @@ import { requireAuth, AuthedRequest } from "../shared/auth";
 import { usersRepo, isBriefCurrentlyDismissed } from "../shared/usersRepo";
 import { marketRepo } from "../market/repo";
 import { portfolioService } from "../market/portfolioService";
+import { tradingService } from "../market/tradingService";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
 import { fantasyRepo } from "../fantasy/repo";
@@ -34,8 +35,36 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     })
     .filter(Boolean) as any[];
 
+  const shortRows = marketRepo.getShortPositions(user.id);
+  const shorts = shortRows
+    .map((s) => {
+      const club = footballService.getClub(s.club_id);
+      if (!club) return null;
+      const currentPrice = marketRepo.getPrice(s.club_id) ?? s.entry_price;
+      const unrealizedPnl = round2(s.entry_price - currentPrice);
+      return {
+        clubId: s.club_id,
+        name: club.name,
+        code: club.code,
+        color: club.color,
+        entryPrice: s.entry_price,
+        currentPrice,
+        unrealizedPnl,
+        unrealizedPnlPct: s.entry_price ? round2((unrealizedPnl / s.entry_price) * 100) : 0,
+        openedRound: s.opened_round,
+      };
+    })
+    .filter(Boolean) as any[];
+
   const cash = marketRepo.getCash(user.id);
-  const heroValue = round2(holdings.reduce((a, c) => a + c.price, 0) + cash);
+  // Shorting V1 BR-17: distinct from raw cash once any short is open — the
+  // "Buying power" label shown on this page must reflect what's actually
+  // spendable (cash minus collateral reserved by open shorts), not the
+  // full cash balance, or a BUY can be rejected as "insufficient funds"
+  // right after this same number told the user they had it.
+  const buyingPower = tradingService.buyingPower(user.id);
+  // Shorting V1 BR-16: portfolio equity is cash + long market value + short unrealized P&L.
+  const heroValue = round2(holdings.reduce((a, c) => a + c.price, 0) + shorts.reduce((a, s) => a + s.unrealizedPnl, 0) + cash);
 
   // Reads the REAL total-portfolio-value series (portfolioService.getPortfolioSeries
   // — cash + every held club's price replayed chronologically, the same data
@@ -69,12 +98,14 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
 
   res.json({
     cash,
+    buyingPower,
     onboarded: !!user.onboarded,
     heroValue,
     weekPct,
     seasonPct,
     briefDismissed: isBriefCurrentlyDismissed(user),
     holdings,
+    shorts,
   });
 });
 

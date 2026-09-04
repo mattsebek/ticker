@@ -34,6 +34,15 @@ export interface HoldingView {
   currentPrice: number;
 }
 
+export interface ShortView {
+  clubId: string;
+  entryPrice: number;
+  openedRound: number;
+  currentPrice: number;
+  /** entryPrice - currentPrice: positive when the price has fallen since the short was opened. */
+  unrealizedPnl: number;
+}
+
 export const portfolioService = {
   getCash(userId: string): number {
     return marketRepo.getCash(userId);
@@ -48,10 +57,25 @@ export const portfolioService = {
     }));
   },
 
+  getShorts(userId: string): ShortView[] {
+    return marketRepo.getShortPositions(userId).map((s) => {
+      const currentPrice = marketRepo.getPrice(s.club_id) ?? s.entry_price;
+      return {
+        clubId: s.club_id,
+        entryPrice: s.entry_price,
+        openedRound: s.opened_round,
+        currentPrice,
+        unrealizedPnl: round2(s.entry_price - currentPrice),
+      };
+    });
+  },
+
+  /** Cash + long holdings' current value + short positions' unrealized P&L (Shorting V1 BR-16). */
   getPortfolioValue(userId: string): number {
     const cash = marketRepo.getCash(userId);
     const holdings = portfolioService.getHoldings(userId);
-    return round2(holdings.reduce((a, h) => a + h.currentPrice, 0) + cash);
+    const shorts = portfolioService.getShorts(userId);
+    return round2(holdings.reduce((a, h) => a + h.currentPrice, 0) + shorts.reduce((a, s) => a + s.unrealizedPnl, 0) + cash);
   },
 
   isHeld(userId: string, clubId: string): boolean {
@@ -77,23 +101,38 @@ export const portfolioService = {
    */
   getPortfolioSeries(userId: string): { t: number; v: number }[] {
     const holdings = marketRepo.getHoldings(userId);
-    if (holdings.length === 0) return [];
+    const shorts = marketRepo.getShortPositions(userId);
+    if (holdings.length === 0 && shorts.length === 0) return [];
     const cash = marketRepo.getCash(userId);
 
-    const latestPrice = new Map<string, number>();
+    // Each position's CONTRIBUTION to total value, not its raw price — a
+    // long contributes +currentPrice (unchanged), a short contributes
+    // +(entryPrice - currentPrice) (Shorting V1 BR-16), so the merged event
+    // replay below produces a correct hero-value history even with a mix
+    // of both position types.
+    const contribution = new Map<string, number>();
+    const shortEntryPrice = new Map<string, number>();
     const events: { t: number; clubId: string; price: number }[] = [];
     for (const h of holdings) {
-      latestPrice.set(h.club_id, h.purchase_price);
+      contribution.set(h.club_id, h.purchase_price);
       for (const p of marketRepo.getPriceSeriesWithTime(h.club_id)) {
         events.push({ t: p.createdAt, clubId: h.club_id, price: p.price });
+      }
+    }
+    for (const s of shorts) {
+      contribution.set(s.club_id, 0); // entryPrice - entryPrice, at the moment it was opened
+      shortEntryPrice.set(s.club_id, s.entry_price);
+      for (const p of marketRepo.getPriceSeriesWithTime(s.club_id)) {
+        events.push({ t: p.createdAt, clubId: s.club_id, price: p.price });
       }
     }
     events.sort((a, b) => a.t - b.t);
 
     const points: { t: number; v: number }[] = [];
     for (const e of events) {
-      latestPrice.set(e.clubId, e.price);
-      const total = cash + [...latestPrice.values()].reduce((a, b) => a + b, 0);
+      const entryPrice = shortEntryPrice.get(e.clubId);
+      contribution.set(e.clubId, entryPrice != null ? entryPrice - e.price : e.price);
+      const total = cash + [...contribution.values()].reduce((a, b) => a + b, 0);
       points.push({ t: e.t, v: round2(total) });
     }
 

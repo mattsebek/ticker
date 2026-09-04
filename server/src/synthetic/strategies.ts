@@ -12,6 +12,8 @@ export interface StrategyDef {
   actionProbability: number;
   /** Never sells a holding, regardless of score (diamond hands, casual) — a real behavioral trait, not just a low action probability. */
   neverSells?: boolean;
+  /** Never opens a short, regardless of score — Shorting V1: a manager who never sells conviction longs shouldn't casually take bearish bets either. Defaults from the same trait as neverSells for diamond_hands/casual. */
+  neverShorts?: boolean;
 }
 
 export const STRATEGY_DEFS: Record<StrategyType, StrategyDef> = {
@@ -19,9 +21,9 @@ export const STRATEGY_DEFS: Record<StrategyType, StrategyDef> = {
   value: { type: "value", label: "Value Investor", populationWeight: 20, activityLevel: "medium", tradeFrequencyLabel: "1-2/week", evalIntervalHoursRange: [10, 20], actionProbability: 0.11 },
   favorites: { type: "favorites", label: "Favorites Buyer", populationWeight: 15, activityLevel: "low", tradeFrequencyLabel: "0-2/week", evalIntervalHoursRange: [16, 36], actionProbability: 0.16 },
   contrarian: { type: "contrarian", label: "Contrarian", populationWeight: 10, activityLevel: "medium", tradeFrequencyLabel: "1-2/week", evalIntervalHoursRange: [10, 20], actionProbability: 0.11 },
-  diamond_hands: { type: "diamond_hands", label: "Diamond Hands", populationWeight: 15, activityLevel: "low", tradeFrequencyLabel: "0-1/week", evalIntervalHoursRange: [24, 48], actionProbability: 0.07, neverSells: true },
+  diamond_hands: { type: "diamond_hands", label: "Diamond Hands", populationWeight: 15, activityLevel: "low", tradeFrequencyLabel: "0-1/week", evalIntervalHoursRange: [24, 48], actionProbability: 0.07, neverSells: true, neverShorts: true },
   active_trader: { type: "active_trader", label: "Active Trader", populationWeight: 10, activityLevel: "high", tradeFrequencyLabel: "2-4/week", evalIntervalHoursRange: [2, 6], actionProbability: 0.08 },
-  casual: { type: "casual", label: "Casual Manager", populationWeight: 8, activityLevel: "low", tradeFrequencyLabel: "0-1/week", evalIntervalHoursRange: [24, 48], actionProbability: 0.06, neverSells: true },
+  casual: { type: "casual", label: "Casual Manager", populationWeight: 8, activityLevel: "low", tradeFrequencyLabel: "0-1/week", evalIntervalHoursRange: [24, 48], actionProbability: 0.06, neverSells: true, neverShorts: true },
   chaos: { type: "chaos", label: "Chaos Manager", populationWeight: 2, activityLevel: "medium", tradeFrequencyLabel: "0-3/week", evalIntervalHoursRange: [8, 24], actionProbability: 0.13 },
 };
 

@@ -86,6 +86,14 @@ function applyDemandTickToClub(clubId: string, tickId: number, windowStart: numb
     const relativeOwnershipChange = (endingOwners - startingOwners) / Math.max(startingOwners, pricingConfig.OWNERSHIP_BASE_FLOOR);
     const ownershipSignal = clamp(relativeOwnershipChange / pricingConfig.OWNERSHIP_FULL_SCALE_CHANGE, -1, 1);
 
+    // Short-interest history, chained the same way as ownership above —
+    // diagnostic only (feeds a future Short Interest chart, Shorting V1
+    // section 13), never part of the price-moving demand signal itself.
+    const shortCounts = marketRepo.getShortTransactionCounts(clubId, windowStart, windowEnd);
+    const endingShorts = marketRepo.getShortHoldersCount(clubId);
+    const previousEndingShorts = marketRepo.getPreviousTickEndingShorts(clubId);
+    const startingShorts = previousEndingShorts ?? endingShorts;
+
     const demandSignal = pricingConfig.DEMAND_PARTICIPANT_WEIGHT * adjustedParticipantSignal + pricingConfig.DEMAND_OWNERSHIP_WEIGHT * ownershipSignal;
 
     const alreadyUsed24h = marketRepo.getRolling24hDemandImpactPct(clubId);
@@ -110,6 +118,10 @@ function applyDemandTickToClub(clubId: string, tickId: number, windowStart: numb
       endingOwnerCount: endingOwners,
       windowStart,
       windowEnd,
+      shortOpeners: shortCounts.opens,
+      shortClosers: shortCounts.closes,
+      startingShortCount: startingShorts,
+      endingShortCount: endingShorts,
     });
 
     return newPrice !== currentPrice;

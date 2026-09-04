@@ -18,6 +18,7 @@ import { RollingNumber } from "../../components/RollingNumber";
 import { GameweekWidget } from "../../components/GameweekWidget";
 import { CardStack } from "../../components/CardStack";
 import { ClubRow } from "../../components/ClubRow";
+import { ShortRow } from "../../components/ShortRow";
 import { ClubBadge } from "../../components/ClubBadge";
 import { FormChip } from "../../components/FormChip";
 import { FixturePill } from "../../components/FixturePill";
@@ -298,7 +299,7 @@ export function PortfolioScreen() {
           <PctChange value={portfolio.seasonPct} label="season" />
         </View>
         <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 10 }}>
-          Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.cash)}</Text>
+          Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.buyingPower)}</Text>
         </Text>
 
         {hasMovement && (
@@ -349,6 +350,15 @@ export function PortfolioScreen() {
         {portfolio.holdings.map((h) => (
           <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
         ))}
+
+        {portfolio.shorts.length > 0 && (
+          <>
+            <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 14 }}>My Shorts</Text>
+            {portfolio.shorts.map((s) => (
+              <ShortRow key={s.clubId} short={s} />
+            ))}
+          </>
+        )}
 
         {portfolio.holdings.some((h) => h.upcomingFixtures?.length) && (
           <>

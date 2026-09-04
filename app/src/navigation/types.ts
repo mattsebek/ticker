@@ -1,6 +1,6 @@
 export type AppStackParamList = {
   Main: undefined;
-  Trade: { mode: "buy" | "sell"; clubId: string };
+  Trade: { mode: "buy" | "sell" | "short" | "cover"; clubId: string };
   LeagueDetail: { leagueId: string; name: string };
   JoinLeague: { code?: string } | undefined;
   Rules: undefined;

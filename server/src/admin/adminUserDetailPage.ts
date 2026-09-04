@@ -1,13 +1,13 @@
 import { renderAdminShell, esc, T } from "./adminShell";
 
 export interface AdminUserLedgerRow {
-  entryType: "BUY" | "SELL" | "SEED";
+  entryType: "BUY" | "SELL" | "SHORT" | "COVER" | "SEED";
   clubName: string | null;
   amount: number;
   cashDelta: number;
   balanceAfter: number;
   createdAt: number;
-  /** Realized profit/loss for this sale (sell price minus what they paid to buy that same club) — null for BUY/SEED rows, and for a SELL with no matching BUY in the ledger (e.g. a pre-ledger seeded holding). */
+  /** Realized profit/loss for this sale/cover (sell/cover proceeds minus the matching entry price) — null for BUY/SHORT/SEED rows, and for a SELL/COVER with no matching entry in the ledger (e.g. a pre-ledger seeded holding). */
   pnl: number | null;
 }
 
@@ -20,7 +20,7 @@ export interface AdminUserDetail {
   createdAt: number;
   cash: number;
   holdingsCount: number;
-  /** Sum of every SELL's realized P&L — unrealized gains on still-held clubs aren't included. */
+  /** Sum of every SELL's and COVER's realized P&L — unrealized gains/losses on still-open positions aren't included. */
   realizedPnl: number;
   ledger: AdminUserLedgerRow[]; // newest first
 }
@@ -42,8 +42,10 @@ function statCard(label: string, value: string, color?: string): string {
   </div>`;
 }
 
+// Opening a position (BUY, SHORT) reads red; closing one (SELL, COVER) reads
+// green — the same convention regardless of which direction the position was.
 function typeBadge(entryType: AdminUserLedgerRow["entryType"]): string {
-  const color = entryType === "BUY" ? T.red : entryType === "SELL" ? T.accent : T.textSecondary;
+  const color = entryType === "BUY" || entryType === "SHORT" ? T.red : entryType === "SELL" || entryType === "COVER" ? T.accent : T.textSecondary;
   return `<span style="color:${color};font-weight:600;">${entryType}</span>`;
 }
 

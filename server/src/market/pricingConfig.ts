@@ -27,7 +27,16 @@ export const pricingConfig = {
    */
   PERFORMANCE_WEIGHT: floatFromEnv("PRICING_PERFORMANCE_WEIGHT", 0.035),
   MIN_PRICE: floatFromEnv("PRICING_MIN_PRICE", 5),
-  MAX_PRICE: floatFromEnv("PRICING_MAX_PRICE", 50),
+  /**
+   * Shorting V1: raised from the original $50 season-opening ceiling to an
+   * effectively-unbounded technical limit. A short must retain real,
+   * uncapped upside risk (a club pinned at a hard ceiling makes shorting it
+   * artificially safe) — this is still a real ceiling, not Infinity, per
+   * the spec's own wording, it's just far outside any price this game's
+   * %-based volatility caps (PERFORMANCE_CAP_PCT, DEMAND_TICK_CAP_PCT,
+   * DEMAND_24H_CAP_PCT — all unchanged) could plausibly reach.
+   */
+  MAX_PRICE: floatFromEnv("PRICING_MAX_PRICE", 10000),
 
   // --- Market Pricing V2: demand, decoupled from fixture settlement ---
 

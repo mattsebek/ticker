@@ -15,6 +15,8 @@ import type {
   MorningBrief,
   BuyPreviewResponse,
   SellPreviewResponse,
+  ShortPreviewResponse,
+  CoverPreviewResponse,
   User,
   GameweekPreview,
 } from "./types";
@@ -90,8 +92,12 @@ export const api = {
   trades: {
     buyPreview: (clubId: string) => request<BuyPreviewResponse>(`/trades/buy-preview?clubId=${clubId}`),
     sellPreview: (clubId: string) => request<SellPreviewResponse>(`/trades/sell-preview?clubId=${clubId}`),
+    shortPreview: (clubId: string) => request<ShortPreviewResponse>(`/trades/short-preview?clubId=${clubId}`),
+    coverPreview: (clubId: string) => request<CoverPreviewResponse>(`/trades/cover-preview?clubId=${clubId}`),
     buy: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/buy", { method: "POST", body: JSON.stringify({ clubId }) }),
     sell: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/sell", { method: "POST", body: JSON.stringify({ clubId }) }),
+    short: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/short", { method: "POST", body: JSON.stringify({ clubId }) }),
+    cover: (clubId: string) => request<{ ok: true; successText: string; cash: number }>("/trades/cover", { method: "POST", body: JSON.stringify({ clubId }) }),
   },
   notifications: {
     status: () => request<{ enabled: boolean }>("/notifications/status"),

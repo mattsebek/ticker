@@ -118,7 +118,8 @@ export function ClubOverlayHost() {
   if (!clubId || !detail) return null;
 
   const holding = portfolio?.holdings.find((h) => h.id === clubId);
-  const isOwned = !!holding;
+  const shortPosition = portfolio?.shorts.find((s) => s.clubId === clubId);
+  const position: "NONE" | "LONG" | "SHORT" = holding ? "LONG" : shortPosition ? "SHORT" : "NONE";
   // Same fallback chain as ClubRow's My Clubs list, so this card's weekly
   // change always matches what the portfolio list already shows for this
   // club — never the fabricated-flat "—" a brand-new club used to show,
@@ -139,6 +140,14 @@ export function ClubOverlayHost() {
   function sell() {
     close();
     navigation.navigate("Trade", { mode: "sell", clubId: clubId! });
+  }
+  function short() {
+    close();
+    navigation.navigate("Trade", { mode: "short", clubId: clubId! });
+  }
+  function cover() {
+    close();
+    navigation.navigate("Trade", { mode: "cover", clubId: clubId! });
   }
 
   return (
@@ -236,6 +245,33 @@ export function ClubOverlayHost() {
                 </View>
               </>
             )}
+
+            {shortPosition && (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 20, marginBottom: 6 }}>
+                  <Text style={{ color: T.text, fontSize: 16, fontWeight: "600" }}>Your Position</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: RED, backgroundColor: T.redTint, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden" }}>SHORT</Text>
+                </View>
+                <View style={styles.plainRow}>
+                  <Text style={{ color: T.textSecondary, fontSize: 13 }}>Entry price</Text>
+                  <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{fmtMoney(shortPosition.entryPrice)}</Text>
+                </View>
+                <View style={styles.plainRow}>
+                  <Text style={{ color: T.textSecondary, fontSize: 13 }}>Current price</Text>
+                  <Text style={{ color: T.text, fontSize: 14, fontWeight: "600" }}>{fmtMoney(shortPosition.currentPrice)}</Text>
+                </View>
+                <View style={[styles.plainRow, { paddingBottom: 0 }]}>
+                  <Text style={{ color: T.textSecondary, fontSize: 13 }}>Gain / loss</Text>
+                  <Text style={{ color: colorForPct(shortPosition.unrealizedPnl), fontSize: 14, fontWeight: "600" }}>
+                    {shortPosition.unrealizedPnl >= 0 ? "+" : "-"}
+                    {fmtMoney(Math.abs(shortPosition.unrealizedPnl))}
+                    {" ("}
+                    {fmtPct(shortPosition.unrealizedPnlPct)}
+                    {")"}
+                  </Text>
+                </View>
+              </>
+            )}
           </ScrollView>
 
           <View style={[styles.footer, { borderTopColor: T.border }]}>
@@ -247,13 +283,17 @@ export function ClubOverlayHost() {
                   <Text style={{ color: detail.netDemand === "buying" ? GREEN : RED, fontSize: 16, fontWeight: "700" }}>{detail.netDemand === "buying" ? "▲" : "▼"}</Text>
                 )}
               </View>
+              {detail.shortPct > 0 && <Text style={{ color: T.textSecondary, fontSize: 12, marginTop: 4 }}>{detail.shortPct.toFixed(2)}% short</Text>}
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              {isOwned ? (
-                <Button label="Sell" onPress={sell} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />
-              ) : (
-                <Button label="Buy" onPress={buy} fullWidth={false} style={{ paddingHorizontal: 44, paddingVertical: 18 }} />
+              {position === "NONE" && (
+                <>
+                  <Button label="Short" onPress={short} variant="danger" fullWidth={false} style={{ paddingHorizontal: 24, paddingVertical: 18 }} />
+                  <Button label="Buy" onPress={buy} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />
+                </>
               )}
+              {position === "LONG" && <Button label="Sell" onPress={sell} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />}
+              {position === "SHORT" && <Button label="Cover" onPress={cover} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />}
             </View>
           </View>
         </Animated.View>

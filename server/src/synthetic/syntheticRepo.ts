@@ -4,7 +4,7 @@ export type StrategyType = "momentum" | "value" | "favorites" | "contrarian" | "
 export type ActivityLevel = "low" | "medium" | "high";
 export type IdentityRegion = "US" | "UK" | "IRELAND" | "EUROPE" | "CANADA" | "OTHER";
 export type SyntheticStatus = "active" | "paused" | "retired";
-export type SyntheticActionType = "CREATE_USER" | "BUY" | "SELL" | "SET_LINEUP" | "JOIN_LEAGUE" | "LEAVE_LEAGUE" | "HOLD" | "PAUSE" | "RESUME" | "RETIRE";
+export type SyntheticActionType = "CREATE_USER" | "BUY" | "SELL" | "SHORT" | "COVER" | "SET_LINEUP" | "JOIN_LEAGUE" | "LEAVE_LEAGUE" | "HOLD" | "PAUSE" | "RESUME" | "RETIRE";
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS synthetic_profiles (

@@ -163,8 +163,12 @@ adminRouter.get("/users/:id", (req, res) => {
   // sold, never partial — so each SELL closes exactly one still-open BUY of
   // that same club. Walking the ledger oldest-first and tracking the most
   // recent unmatched BUY price per club_id pairs them correctly even across
-  // multiple buy/sell cycles of the same club over the season.
+  // multiple buy/sell cycles of the same club over the season. SHORT/COVER
+  // mirror this exactly in a separate map — a club can never have both an
+  // open BUY and an open SHORT simultaneously (mutual exclusion is enforced
+  // at the trading layer), so the two maps never collide.
   const openBuyPriceByClub = new Map<string, number>();
+  const openShortPriceByClub = new Map<string, number>();
   let realizedPnl = 0;
   const chronological = marketRepo.getLedger(user.id);
   const pnlByEntryId = new Map<number, number | null>();
@@ -177,6 +181,14 @@ adminRouter.get("/users/:id", (req, res) => {
       pnlByEntryId.set(e.id, pnl);
       if (pnl != null) realizedPnl += pnl;
       openBuyPriceByClub.delete(e.clubId);
+    } else if (e.entryType === "SHORT" && e.clubId) {
+      openShortPriceByClub.set(e.clubId, e.amount);
+    } else if (e.entryType === "COVER" && e.clubId) {
+      const shortPrice = openShortPriceByClub.get(e.clubId);
+      const pnl = shortPrice != null ? shortPrice - e.amount : null;
+      pnlByEntryId.set(e.id, pnl);
+      if (pnl != null) realizedPnl += pnl;
+      openShortPriceByClub.delete(e.clubId);
     }
   }
 
@@ -190,7 +202,7 @@ adminRouter.get("/users/:id", (req, res) => {
       cashDelta: e.cashDelta,
       balanceAfter: e.balanceAfter,
       createdAt: e.createdAt,
-      pnl: e.entryType === "SELL" ? pnlByEntryId.get(e.id) ?? null : null,
+      pnl: e.entryType === "SELL" || e.entryType === "COVER" ? pnlByEntryId.get(e.id) ?? null : null,
     }));
 
   res.type("html").send(
@@ -280,6 +292,7 @@ adminRouter.get("/clubs", (req, res) => {
       currentPrice,
       pctChange,
       ownershipPct: marketRepo.getOwnershipPct(c.id),
+      shortPct: marketRepo.getShortPct(c.id),
       netDemand,
       form: formLettersForClub(c.id, 3),
       pricePressure: diag.pressure.score,
@@ -308,6 +321,10 @@ adminRouter.get("/clubs/:id", (req, res) => {
     ? { points: storedForward.forwardProjectedPoints, delta: storedForward.forwardProjectionDelta, gameweeks: forwardGameweeks, fixtureCount: storedForward.fixtureCount }
     : null;
 
+  const since24h = Date.now() - DAY_MS;
+  const longCounts = marketRepo.getTransactionCounts(club.id, since24h, Date.now());
+  const shortCounts = marketRepo.getShortTransactionCounts(club.id, since24h, Date.now());
+
   res.type("html").send(
     renderAdminClubDetailPage({
       id: club.id,
@@ -323,6 +340,14 @@ adminRouter.get("/clubs/:id", (req, res) => {
       divergence: diag.divergence,
       timeline,
       forwardProjection,
+      shorting: {
+        longHolders: marketRepo.getOwnershipCount(club.id),
+        shortHolders: marketRepo.getShortHoldersCount(club.id),
+        longOpens24h: longCounts.buys,
+        longSells24h: longCounts.sells,
+        shortOpens24h: shortCounts.opens,
+        shortCovers24h: shortCounts.closes,
+      },
     })
   );
 });

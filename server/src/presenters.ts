@@ -107,6 +107,18 @@ export function formLettersForClub(clubId: string, n = 5): ("W" | "D" | "L")[] {
   });
 }
 
+export type MarketSentiment = "Very Bullish" | "Bullish" | "Neutral" | "Bearish" | "Very Bearish";
+
+/** BR-18: derived from current directional market behavior (the same demand_signal the pricing engine itself computed for the latest tick), not from sporting projections. Null (rendered as "Neutral" by callers) before a club's first ever tick. */
+function marketSentimentFromSignal(signal: number | null): MarketSentiment {
+  if (signal == null) return "Neutral";
+  if (signal > 0.5) return "Very Bullish";
+  if (signal > 0.15) return "Bullish";
+  if (signal < -0.5) return "Very Bearish";
+  if (signal < -0.15) return "Bearish";
+  return "Neutral";
+}
+
 export function clubSummary(club: Club, currentRound: number) {
   const price = marketRepo.getPrice(club.id) ?? 0;
   const series = marketRepo.getPriceSeries(club.id).map((s) => s.price);
@@ -157,7 +169,12 @@ export function clubSummary(club: Club, currentRound: number) {
     hasWeeklyHistory: price7dAgo != null,
     seasonPct: openPrice ? round2(((price - openPrice) / openPrice) * 100) : 0,
     ownershipPct: marketRepo.getOwnershipPct(club.id),
+    // Shorting V1 (BR-10/11): a separate metric from ownershipPct, never
+    // derived from it — a short user never counts as an owner, and the two
+    // may coexist (e.g. 30% long, 8% short, 62% flat).
+    shortPct: marketRepo.getShortPct(club.id),
     netDemand,
+    marketSentiment: marketSentimentFromSignal(marketRepo.getLatestDemandSignal(club.id)),
     priceBreakdown: marketRepo.getLatestPriceBreakdown(club.id),
     gwPts: fantasyRepo.pointsAtRound(club.id, currentRound),
     seasonPts: fantasyRepo.seasonPointsThroughRound(club.id, currentRound),

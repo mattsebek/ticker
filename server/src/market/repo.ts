@@ -92,6 +92,19 @@ try {
 } catch {
   // already applied
 }
+
+// Shorting V1: short-interest history, recorded on the same DEMAND row as
+// the ownership-velocity fields above — same "chain against the previous
+// tick's ending count" pattern as starting/ending_owner_count, so a Short
+// Interest chart (mirroring price/ownership charts) needs no new table.
+try {
+  db.exec("ALTER TABLE price_history ADD COLUMN short_openers INTEGER");
+  db.exec("ALTER TABLE price_history ADD COLUMN short_closers INTEGER");
+  db.exec("ALTER TABLE price_history ADD COLUMN starting_short_count INTEGER");
+  db.exec("ALTER TABLE price_history ADD COLUMN ending_short_count INTEGER");
+} catch {
+  // already applied
+}
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_price_history_tick_club ON price_history(market_tick_id, club_id)");
 
 // One-time-per-row backfill for rows that predate event_type — safe to
@@ -111,11 +124,38 @@ CREATE TABLE IF NOT EXISTS market_ticks (
 );
 `);
 
+// Shorting V1 — deliberately a separate table from `holdings`, not a
+// position_type column on it, so every existing holdings-reading call site
+// (fantasy scoring, getOwnershipPct, portfolioService, ClubRow, admin)
+// keeps meaning exactly "long position" with no filtering to add or forget.
+// Same fixed-1-unit-per-club shape as holdings (PK, no quantity column) —
+// Ticker has no variable-quantity trading anywhere, and shorting isn't the
+// feature that introduces it.
+db.exec(`
+CREATE TABLE IF NOT EXISTS short_positions (
+  user_id TEXT NOT NULL,
+  club_id TEXT NOT NULL,
+  entry_price REAL NOT NULL,
+  opened_round INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, club_id)
+);
+CREATE INDEX IF NOT EXISTS idx_short_positions_club ON short_positions(club_id);
+`);
+
 export interface HoldingRow {
   user_id: string;
   club_id: string;
   purchase_price: number;
   purchased_round: number;
+}
+
+export interface ShortPositionRow {
+  user_id: string;
+  club_id: string;
+  entry_price: number;
+  opened_round: number;
+  created_at: number;
 }
 
 export type PriceHistoryEventType = "OPENING" | "PERFORMANCE" | "DEMAND" | "ADMIN";
@@ -140,6 +180,10 @@ export interface PriceHistoryEventInput {
   endingOwnerCount?: number | null;
   windowStart?: number | null;
   windowEnd?: number | null;
+  shortOpeners?: number | null;
+  shortClosers?: number | null;
+  startingShortCount?: number | null;
+  endingShortCount?: number | null;
 }
 
 export interface MarketTick {
@@ -156,7 +200,7 @@ export interface LedgerEntry {
   id: number;
   transactionId: string;
   userId: string;
-  entryType: "BUY" | "SELL" | "SEED";
+  entryType: "BUY" | "SELL" | "SHORT" | "COVER" | "SEED";
   clubId: string | null;
   amount: number;
   cashDelta: number;
@@ -215,8 +259,9 @@ export const marketRepo = {
       `INSERT OR IGNORE INTO price_history (
         club_id, round, price, impact_pct, fixture_id, event_type, previous_price, market_tick_id,
         performance_pct, demand_pct, expected_ticker_points, actual_ticker_points, demand_signal,
-        net_buyers, net_sellers, starting_owner_count, ending_owner_count, window_start, window_end, created_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        net_buyers, net_sellers, starting_owner_count, ending_owner_count, window_start, window_end,
+        short_openers, short_closers, starting_short_count, ending_short_count, created_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(
       e.clubId,
       e.round,
@@ -237,6 +282,10 @@ export const marketRepo = {
       e.endingOwnerCount ?? null,
       e.windowStart ?? null,
       e.windowEnd ?? null,
+      e.shortOpeners ?? null,
+      e.shortClosers ?? null,
+      e.startingShortCount ?? null,
+      e.endingShortCount ?? null,
       Date.now()
     );
   },
@@ -295,11 +344,20 @@ export const marketRepo = {
    * and a seller. `untilMs` is exclusive-of-start/inclusive-of-end
    * (created_at > sinceMs AND <= untilMs) so a transaction only ever
    * belongs to exactly one tick window.
+   *
+   * Shorting V1: BUY/COVER are bullish (+1), SELL/SHORT are bearish (-1) —
+   * covering a short is economically the same directional bet as buying
+   * long (both bet the price rises from here), and opening a short is the
+   * same directional bet as selling (both bet it falls). This is the ONE
+   * query both the live demand-tick pricing job (marketDemandService.ts)
+   * and the admin-only Price Pressure Score (pricePressure.ts) read from,
+   * so this single change is the entire pricing/PPS shorting integration —
+   * see Shorting V1's plan for why no second pricing system is needed.
    */
   getNetTraderCounts(clubId: string, sinceMs: number, untilMs: number): { userId: string; net: number }[] {
     const rows = db
       .prepare(
-        `SELECT user_id as userId, SUM(CASE WHEN entry_type='BUY' THEN 1 WHEN entry_type='SELL' THEN -1 ELSE 0 END) as net
+        `SELECT user_id as userId, SUM(CASE WHEN entry_type IN ('BUY','COVER') THEN 1 WHEN entry_type IN ('SELL','SHORT') THEN -1 ELSE 0 END) as net
          FROM ledger_entries WHERE club_id = ? AND created_at > ? AND created_at <= ? GROUP BY user_id`
       )
       .all(clubId, sinceMs, untilMs) as { userId: string; net: number }[];
@@ -316,6 +374,25 @@ export const marketRepo = {
       .prepare("SELECT ending_owner_count FROM price_history WHERE club_id = ? AND event_type = 'DEMAND' AND ending_owner_count IS NOT NULL ORDER BY id DESC LIMIT 1")
       .get(clubId) as { ending_owner_count: number } | undefined;
     return row?.ending_owner_count ?? null;
+  },
+  /** Same idea as getPreviousTickEndingOwners, for short interest — the "starting" half of each tick's short-interest chain. */
+  getPreviousTickEndingShorts(clubId: string): number | null {
+    const row = db
+      .prepare("SELECT ending_short_count FROM price_history WHERE club_id = ? AND event_type = 'DEMAND' AND ending_short_count IS NOT NULL ORDER BY id DESC LIMIT 1")
+      .get(clubId) as { ending_short_count: number } | undefined;
+    return row?.ending_short_count ?? null;
+  },
+  /** Raw SHORT/COVER counts for a club in a window — the short-interest chart's per-tick opener/closer counts, distinct from getNetTraderCounts' netted signal. */
+  getShortTransactionCounts(clubId: string, sinceMs: number, untilMs: number): { opens: number; closes: number } {
+    const rows = db
+      .prepare("SELECT entry_type, COUNT(*) as n FROM ledger_entries WHERE club_id = ? AND created_at > ? AND created_at <= ? AND entry_type IN ('SHORT','COVER') GROUP BY entry_type")
+      .all(clubId, sinceMs, untilMs) as { entry_type: "SHORT" | "COVER"; n: number }[];
+    const out = { opens: 0, closes: 0 };
+    for (const r of rows) {
+      if (r.entry_type === "SHORT") out.opens = r.n;
+      else out.closes = r.n;
+    }
+    return out;
   },
   /** Sum of DEMAND-event impact over the trailing 24h — what's already been "spent" against the DEMAND_24H_CAP_PCT guardrail. */
   getRolling24hDemandImpactPct(clubId: string): number {
@@ -374,6 +451,19 @@ export const marketRepo = {
     const buyers = row.net_buyers ?? 0;
     const sellers = row.net_sellers ?? 0;
     return buyers > sellers ? "buying" : buyers < sellers ? "selling" : "flat";
+  },
+  /**
+   * The most recent market tick's raw demand_signal (-1..1) — richer than
+   * getLatestDemandDirection's 3-bucket buying/selling/flat, this backs the
+   * public Market Sentiment label (Shorting V1 BR-18). Already short-aware
+   * for free, since demand_signal is derived from getNetTraderCounts, whose
+   * CASE expression now includes SHORT/COVER.
+   */
+  getLatestDemandSignal(clubId: string): number | null {
+    const row = db.prepare("SELECT demand_signal FROM price_history WHERE club_id = ? AND event_type = 'DEMAND' ORDER BY id DESC LIMIT 1").get(clubId) as
+      | { demand_signal: number | null }
+      | undefined;
+    return row?.demand_signal ?? null;
   },
   /**
    * Sets a club's IPO/opening price. Unlike recordPriceHistory(), this
@@ -467,6 +557,25 @@ export const marketRepo = {
     const total = (db.prepare("SELECT COUNT(DISTINCT user_id) as n FROM holdings").get() as { n: number }).n;
     return total > 0 ? Math.round((holders / total) * 1000) / 10 : 0;
   },
+  /** Current distinct short-holder count for a club — mirrors getOwnershipCount for the long side. */
+  getShortHoldersCount(clubId: string): number {
+    const row = db.prepare("SELECT COUNT(*) as n FROM short_positions WHERE club_id = ?").get(clubId) as { n: number };
+    return row.n;
+  },
+  /**
+   * % Short — mirrors getOwnershipPct's exact shape (BR-11: these are
+   * separate metrics that may coexist, never derived from each other).
+   * Denominator matches getOwnershipPct's own convention: everyone with ANY
+   * position (long or short) in anything, so "% Owned" + "% Short" read on
+   * the same scale.
+   */
+  getShortPct(clubId: string): number {
+    const shorters = (db.prepare("SELECT COUNT(DISTINCT user_id) as n FROM short_positions WHERE club_id = ?").get(clubId) as { n: number }).n;
+    const total = (
+      db.prepare("SELECT COUNT(DISTINCT user_id) as n FROM (SELECT user_id FROM holdings UNION SELECT user_id FROM short_positions)").get() as { n: number }
+    ).n;
+    return total > 0 ? Math.round((shorters / total) * 1000) / 10 : 0;
+  },
 
   // --- holdings ---
   getHoldings(userId: string): HoldingRow[] {
@@ -479,8 +588,32 @@ export const marketRepo = {
     db.prepare("DELETE FROM holdings WHERE user_id = ? AND club_id = ?").run(userId, clubId);
   },
 
+  // --- short positions ---
+  getShortPositions(userId: string): ShortPositionRow[] {
+    return db.prepare("SELECT * FROM short_positions WHERE user_id = ?").all(userId) as ShortPositionRow[];
+  },
+  getShortPosition(userId: string, clubId: string): ShortPositionRow | undefined {
+    return db.prepare("SELECT * FROM short_positions WHERE user_id = ? AND club_id = ?").get(userId, clubId) as ShortPositionRow | undefined;
+  },
+  addShortPosition(userId: string, clubId: string, entryPrice: number, round: number) {
+    db.prepare("INSERT INTO short_positions (user_id, club_id, entry_price, opened_round, created_at) VALUES (?,?,?,?,?)").run(userId, clubId, entryPrice, round, Date.now());
+  },
+  removeShortPosition(userId: string, clubId: string) {
+    db.prepare("DELETE FROM short_positions WHERE user_id = ? AND club_id = ?").run(userId, clubId);
+  },
+  /** Every open short's entry price for a user — the collateral reserved against their buying power. */
+  getTotalShortCollateral(userId: string): number {
+    const row = db.prepare("SELECT COALESCE(SUM(entry_price), 0) as total FROM short_positions WHERE user_id = ?").get(userId) as { total: number };
+    return row.total;
+  },
+  /** A user's total short exposure at CURRENT prices (not entry prices) — what BR-7's exposure cap is measured against. */
+  getTotalShortMarketValue(userId: string): number {
+    const rows = db.prepare("SELECT club_id FROM short_positions WHERE user_id = ?").all(userId) as { club_id: string }[];
+    return rows.reduce((sum, r) => sum + (marketRepo.getPrice(r.club_id) ?? 0), 0);
+  },
+
   // --- transactions / ledger ---
-  createTransaction(userId: string, kind: "BUY" | "SELL"): string {
+  createTransaction(userId: string, kind: "BUY" | "SELL" | "SHORT" | "COVER"): string {
     const id = randomUUID();
     db.prepare("INSERT INTO transactions (id, user_id, kind, created_at) VALUES (?,?,?,?)").run(id, userId, kind, Date.now());
     return id;

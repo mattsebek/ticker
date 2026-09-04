@@ -34,8 +34,12 @@ export interface ClubSummary {
   hasWeeklyHistory: boolean;
   seasonPct: number;
   ownershipPct: number;
+  /** % of users with an open short position in this club — a separate metric from ownershipPct, never derived from it (a short user is never counted as an owner). */
+  shortPct: number;
   /** Unique buyers vs. sellers since this club's last settlement — the same signal driving its price's demand component, live rather than frozen at the last settlement. */
   netDemand: "buying" | "selling" | "flat";
+  /** A richer 5-level read of the same underlying demand signal as netDemand — includes shorting/covering (Shorting V1 BR-18). */
+  marketSentiment: "Very Bullish" | "Bullish" | "Neutral" | "Bearish" | "Very Bearish";
   /** performancePct is a raw fraction (0.0893 = +8.93%), unlike dailyPct/weeklyPct/seasonPct which are already ×100 — from the most recent real fixture settlement, null until the club's first one. */
   priceBreakdown: { performancePct: number; demandPct: number | null } | null;
   gwPts: number;
@@ -85,6 +89,20 @@ export interface HoldingView extends ClubSummary {
   upcomingFixtures: ClubFixture[];
 }
 
+/** A held short position — deliberately NOT a ClubSummary/HoldingView variant (Shorting V1 BR-20: don't present it like a traditional owned asset). */
+export interface ShortPositionView {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  entryPrice: number;
+  currentPrice: number;
+  /** entryPrice - currentPrice: positive when the price has fallen since the short was opened. */
+  unrealizedPnl: number;
+  unrealizedPnlPct: number;
+  openedRound: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -101,12 +119,15 @@ export interface User {
 
 export interface PortfolioResponse {
   cash: number;
+  /** Cash minus collateral reserved by open shorts — what's actually spendable (Shorting V1 BR-17). Equal to cash when nothing is shorted. */
+  buyingPower: number;
   onboarded: boolean;
   heroValue: number;
   weekPct: number;
   seasonPct: number;
   briefDismissed: boolean;
   holdings: HoldingView[];
+  shorts: ShortPositionView[];
 }
 
 export interface GameweekResponse {
@@ -271,6 +292,34 @@ export interface SellPreviewResponse {
   cashAfter: number;
   cashAfterStr: string;
   owned: boolean;
+  confirmLabel: string;
+}
+
+export interface ShortPreviewResponse {
+  clubName: string;
+  price: number;
+  priceStr: string;
+  buyingPower: number;
+  buyingPowerStr: string;
+  buyingPowerAfter: number;
+  buyingPowerAfterStr: string;
+  alreadyOwned: boolean;
+  alreadyShorted: boolean;
+  canShort: boolean;
+  confirmLabel: string;
+}
+
+export interface CoverPreviewResponse {
+  clubName: string;
+  currentPrice: number;
+  currentPriceStr: string;
+  entryPrice: number;
+  entryPriceStr: string;
+  gain: number;
+  gainStr: string;
+  gainPct: number;
+  gainPctStr: string;
+  shorted: boolean;
   confirmLabel: string;
 }
 
