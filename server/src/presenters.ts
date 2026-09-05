@@ -379,3 +379,72 @@ export function gameweekDetail(userId: string, round: number, isPending: boolean
 
   return { starters, bench, benchPoints };
 }
+
+export interface MarketMatchupSide {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  projPts: number | null;
+  actualPts: number | null;
+}
+
+export interface MarketMatchup {
+  fixtureId: string;
+  round: number;
+  status: Fixture["status"];
+  kickoff: string;
+  scoreStr: string | null;
+  home: MarketMatchupSide;
+  away: MarketMatchupSide;
+}
+
+/**
+ * Which round's fixtures the Market page's live scoreboard should show.
+ * Deliberately NOT gameweekService.currentRound() (= max(1, maxScoredRound()))
+ * — that only advances once a fixture in the NEXT round has actually
+ * FINISHED, so if this round's fixtures have gone live but none has
+ * finished yet, currentRound() would still point at the previous, fully-
+ * finished round and miss exactly the live action a scoreboard exists to
+ * surface. Prefers any round with a live fixture; else the nearest round
+ * with a still-scheduled fixture; else falls back to the schedule's last
+ * round (season over, nothing upcoming).
+ */
+export function activeMatchupRound(): number {
+  const live = footballRepo.listFixturesByStatus("live");
+  if (live.length > 0) return Math.min(...live.map((f) => f.round));
+  const scheduled = footballRepo.listFixturesByStatus("scheduled");
+  if (scheduled.length > 0) return Math.min(...scheduled.map((f) => f.round));
+  return footballRepo.maxRound();
+}
+
+function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMatchupSide {
+  const club = footballService.getClub(clubId);
+  const winProb = winProbFor(fixture, clubId);
+  const isHome = fixture.homeClubId === clubId;
+  const projPts = bestProjectedPoints(fixture.id, isHome ? "home" : "away", winProb, fixture.drawProb ?? null);
+  const finished = fixture.status === "finished";
+  return {
+    clubId,
+    name: club?.name ?? "TBD",
+    code: club?.code ?? "?",
+    color: club?.color ?? "#888",
+    projPts,
+    actualPts: finished ? fantasyRepo.pointsAtRound(clubId, round) : null,
+  };
+}
+
+/** Live fixtures first (the score most likely to still be changing), otherwise the fixture list's own order. */
+export function marketMatchups(round: number): MarketMatchup[] {
+  const fixtures = footballRepo.listFixturesByRound(round);
+  const rows: MarketMatchup[] = fixtures.map((f) => ({
+    fixtureId: f.id,
+    round: f.round,
+    status: f.status,
+    kickoff: f.kickoff,
+    scoreStr: f.homeGoals != null && f.awayGoals != null ? `${f.homeGoals}-${f.awayGoals}` : null,
+    home: matchupSide(f, f.homeClubId, round),
+    away: matchupSide(f, f.awayClubId, round),
+  }));
+  return rows.sort((a, b) => Number(b.status === "live") - Number(a.status === "live"));
+}

@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../navigation/types";
-import type { ClubSummary } from "../../api/types";
+import type { ClubSummary, MarketMatchup, MarketMatchupSide } from "../../api/types";
 import { useGameweekPreview } from "../../hooks/useGameweekPreview";
 import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import { renderBoldSegments } from "../../utils/richText";
@@ -15,12 +15,68 @@ import { ScreenTitle } from "../../components/ScreenTitle";
 import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons";
 import { ClubBadge } from "../../components/ClubBadge";
 import { PillRow, Pill } from "../../components/Pill";
-import { GREEN, RED } from "../../theme/theme";
+import { LiveDot } from "../../components/GameweekWidget";
+import { GREEN, RED, colorForPct } from "../../theme/theme";
 import type { ThemeTokens } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { api } from "../../api/client";
 
-type SortKey = "name" | "opening" | "current" | "owned";
+function matchupKickoffLabel(kickoff: string): string {
+  const d = new Date(kickoff);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
+}
+
+function MatchupSideView({ side, T, align }: { side: MarketMatchupSide; T: ThemeTokens; align: "left" | "right" }) {
+  return (
+    <View style={{ flexDirection: align === "right" ? "row-reverse" : "row", alignItems: "center", gap: 8 }}>
+      <ClubBadge code={side.code} color={side.color} size={26} />
+      <View style={{ alignItems: align === "right" ? "flex-end" : "flex-start" }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: T.text }}>{side.code}</Text>
+        {side.projPts != null && (
+          <Text style={{ fontSize: 11, color: T.textSecondary }}>
+            {side.actualPts ?? side.projPts} {side.actualPts != null ? "pts" : "proj"}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** ESPN/FPL-style scoreboard strip — live fixtures float to the front, then the rest of the active round in schedule order. Web port: ticker-website/src/routes/MarketPage.tsx's MatchupsStrip. */
+function MatchupsStrip({ matchups, T }: { matchups: MarketMatchup[]; T: ThemeTokens }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 12 }}>
+      {matchups.map((m) => (
+        <View key={m.fixtureId} style={[matchupStyles.card, { backgroundColor: T.card, borderColor: T.border }]}>
+          <MatchupSideView side={m.home} T={T} align="left" />
+          <View style={{ alignItems: "center", minWidth: 44 }}>
+            {m.status === "live" ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <LiveDot />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: T.accent }}>{m.scoreStr ?? "LIVE"}</Text>
+              </View>
+            ) : m.status === "finished" ? (
+              <>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: T.text }}>{m.scoreStr}</Text>
+                <Text style={{ fontSize: 10, color: T.textSecondary, textTransform: "uppercase" }}>Final</Text>
+              </>
+            ) : (
+              <Text style={{ fontSize: 11, color: T.textSecondary }}>{matchupKickoffLabel(m.kickoff)}</Text>
+            )}
+          </View>
+          <MatchupSideView side={m.away} T={T} align="right" />
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+const matchupStyles = StyleSheet.create({
+  card: { flexDirection: "row", alignItems: "center", gap: 14, borderWidth: 1, borderRadius: 14, padding: 14 },
+});
+
+type SortKey = "name" | "opening" | "current" | "owned" | "projPts";
 
 /** Arrow next to a value, or nothing when there's no real direction to report — same convention as the admin Clubs page this table mirrors. */
 function Arrow({ dir }: { dir: "up" | "down" | "flat" }) {
@@ -39,8 +95,8 @@ function Arrow({ dir }: { dir: "up" | "down" | "flat" }) {
  * layout, so Opening Value drops entirely and a toggle above the table
  * switches Current Value <-> % Owned rather than showing both.
  */
-function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens; onOpen: (id: string) => void }) {
-  const [metric, setMetric] = useState<"current" | "owned">("current");
+function ClubTable({ clubs, heldClubIds, T, onOpen }: { clubs: ClubSummary[]; heldClubIds: Set<string>; T: ThemeTokens; onOpen: (id: string) => void }) {
+  const [metric, setMetric] = useState<"current" | "owned" | "projPts">("current");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
 
@@ -49,11 +105,19 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
     setSortKey(key);
   }
 
+  /** Tapping a metric pill both switches which column is shown AND sorts the table by it, highest first — a filter that doesn't also sort left the table showing an unsorted list under the metric you just asked to see. */
+  function selectMetric(next: "current" | "owned" | "projPts") {
+    setMetric(next);
+    setSortKey(next);
+    setSortDir(-1);
+  }
+
   const sorted = useMemo(() => {
     const list = clubs.slice();
     list.sort((a, b) => {
       if (sortKey === "name") return sortDir * a.name.localeCompare(b.name);
       if (sortKey === "opening") return sortDir * (a.openingPrice - b.openingPrice);
+      if (sortKey === "projPts") return sortDir * ((a.activeGwProjPts ?? -Infinity) - (b.activeGwProjPts ?? -Infinity));
       if (sortKey === "current") return sortDir * (a.price - b.price);
       return sortDir * (a.ownershipPct - b.ownershipPct);
     });
@@ -68,8 +132,9 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
     <View>
       <View style={{ marginBottom: 12 }}>
         <PillRow>
-          <Pill label="Current Price" active={metric === "current"} onPress={() => setMetric("current")} />
-          <Pill label="% Owned" active={metric === "owned"} onPress={() => setMetric("owned")} />
+          <Pill label="Current Price" active={metric === "current"} onPress={() => selectMetric("current")} />
+          <Pill label="% Owned" active={metric === "owned"} onPress={() => selectMetric("owned")} />
+          <Pill label="GW Pts." active={metric === "projPts"} onPress={() => selectMetric("projPts")} />
         </PillRow>
       </View>
       <View style={[tableStyles.row, { borderBottomColor: T.border, borderBottomWidth: 1 }]}>
@@ -80,9 +145,13 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
           <Pressable onPress={() => handleSort("current")} style={{ width: 84 }}>
             <Text style={[headerStyle, tableStyles.center]}>Current Value{caret("current")}</Text>
           </Pressable>
-        ) : (
+        ) : metric === "owned" ? (
           <Pressable onPress={() => handleSort("owned")} style={{ width: 84 }}>
             <Text style={[headerStyle, tableStyles.center]}>% Owned{caret("owned")}</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => handleSort("projPts")} style={{ width: 84 }}>
+            <Text style={[headerStyle, tableStyles.center]}>GW Pts.{caret("projPts")}</Text>
           </Pressable>
         )}
       </View>
@@ -90,7 +159,11 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
         const changeDir: "up" | "down" | "flat" = c.seasonPct > 0 ? "up" : c.seasonPct < 0 ? "down" : "flat";
         const demandDir: "up" | "down" | "flat" = c.netDemand === "buying" ? "up" : c.netDemand === "selling" ? "down" : "flat";
         return (
-          <Pressable key={c.id} onPress={() => onOpen(c.id)} style={[tableStyles.row, { borderBottomColor: T.borderLight, borderBottomWidth: 1 }]}>
+          <Pressable
+            key={c.id}
+            onPress={() => onOpen(c.id)}
+            style={[tableStyles.row, { borderBottomColor: T.borderLight, borderBottomWidth: 1, backgroundColor: heldClubIds.has(c.id) ? T.accentTint : "transparent" }]}
+          >
             <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 }}>
               <ClubBadge code={c.code} color={c.color} size={26} />
               <Text style={{ fontSize: 14, fontWeight: "500", color: T.text, flexShrink: 1 }} numberOfLines={1} ellipsizeMode="tail">
@@ -102,11 +175,18 @@ function ClubTable({ clubs, T, onOpen }: { clubs: ClubSummary[]; T: ThemeTokens;
                 {fmtMoney(c.price)}
                 <Arrow dir={changeDir} />
               </Text>
-            ) : (
+            ) : metric === "owned" ? (
               <Text style={[tableStyles.center, { width: 84, fontSize: 13, color: T.text }]}>
                 {c.ownershipPct.toFixed(1)}%
                 <Arrow dir={demandDir} />
               </Text>
+            ) : c.activeGwActualPts != null ? (
+              <View style={{ width: 84, alignItems: "center" }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: colorForPct(c.activeGwActualPts - (c.activeGwProjPts ?? 0)) }}>{c.activeGwActualPts}</Text>
+                <Text style={{ fontSize: 11, color: T.textSecondary }}>{c.activeGwProjPts ?? "—"} proj</Text>
+              </View>
+            ) : (
+              <Text style={[tableStyles.center, { width: 84, fontSize: 13, color: T.text }]}>{c.activeGwProjPts ?? "—"}</Text>
             )}
           </Pressable>
         );
@@ -126,14 +206,18 @@ const tableStyles = StyleSheet.create({
 export function MarketScreen() {
   const T = useThemeStore((s) => s.tokens);
   const clubs = useDataStore((s) => s.clubs);
+  const portfolio = useDataStore((s) => s.portfolio);
+  const heldClubIds = useMemo(() => new Set((portfolio?.holdings ?? []).map((h) => h.id)), [portfolio]);
   const open = useClubOverlayStore((s) => s.open);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const gameweekPreview = useGameweekPreview();
   const [search, setSearch] = useState("");
   const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; source: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
+  const [matchups, setMatchups] = useState<MarketMatchup[]>([]);
 
   useEffect(() => {
     api.clubs.news().then((r) => setNews(r.news));
+    api.clubs.matchups().then((r) => setMatchups(r.matchups));
   }, []);
 
   const q = search.trim().toLowerCase();
@@ -147,6 +231,8 @@ export function MarketScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <ScreenTitle style={{ marginBottom: 18 }}>Market</ScreenTitle>
+
+        {matchups.length > 0 && <MatchupsStrip matchups={matchups} T={T} />}
 
         <View style={{ position: "relative", marginBottom: 24 }}>
           <View style={{ position: "absolute", left: 13, top: 0, bottom: 0, justifyContent: "center", zIndex: 1 }}>
@@ -167,7 +253,7 @@ export function MarketScreen() {
         </View>
 
         <View>
-          <ClubTable clubs={filteredClubs} T={T} onOpen={open} />
+          <ClubTable clubs={filteredClubs} heldClubIds={heldClubIds} T={T} onOpen={open} />
 
           <Text style={{ fontSize: 19, fontWeight: "600", color: T.text, marginBottom: 10, marginTop: 24 }}>Market News</Text>
           <View style={{ backgroundColor: T.card, borderRadius: 16, overflow: "hidden" }}>

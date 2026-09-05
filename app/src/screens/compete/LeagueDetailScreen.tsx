@@ -82,8 +82,8 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
             {name}
           </Text>
           <PillRow>
-            <Pill label="Value" active={sort === "portfolio"} onPress={() => setSort("portfolio")} />
-            <Pill label="Points" active={sort === "points"} onPress={() => setSort("points")} />
+            <Pill label="Value 🚀" active={sort === "portfolio"} onPress={() => setSort("portfolio")} />
+            <Pill label="Points 🏆" active={sort === "points"} onPress={() => setSort("points")} />
           </PillRow>
         </View>
         <View style={{ backgroundColor: T.card, borderRadius: 20, overflow: "hidden", marginBottom: 16 }}>

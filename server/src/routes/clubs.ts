@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
-import { clubSummary, clubDetail, upcomingFixturesForClub, activeGameweekPoints } from "../presenters";
+import { clubSummary, clubDetail, upcomingFixturesForClub, activeGameweekPoints, activeMatchupRound, marketMatchups } from "../presenters";
 import { newsService } from "../briefing/newsService";
 
 export const clubsRouter = Router();
@@ -40,6 +40,11 @@ clubsRouter.get("/top-earners", (req, res) => {
   const summaries = footballService.listClubs().map((c) => clubSummary(c, round));
   const sorted = summaries.slice().sort((a, b) => (range === "ytd" ? b.seasonPts - a.seasonPts : b.gwPts - a.gwPts));
   res.json({ clubs: sorted.slice(0, 6) });
+});
+
+clubsRouter.get("/matchups", (req, res) => {
+  const round = activeMatchupRound();
+  res.json({ round, matchups: marketMatchups(round) });
 });
 
 clubsRouter.get("/news", async (req, res) => {

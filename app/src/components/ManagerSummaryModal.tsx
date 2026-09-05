@@ -70,12 +70,10 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
             </View>
           ) : (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 6, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                <Text style={{ fontFamily: FONT_SERIF, fontSize: 20, fontWeight: "600", color: T.text }}>{summary.name}</Text>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: T.textSecondary }}>
-                  Top {fmtTopPct(summary.topPct)}%{summary.isTopFivePct ? " 🚀" : ""}
-                </Text>
-              </View>
+              <Text style={{ textAlign: "right", fontSize: 13, fontWeight: "600", color: T.textSecondary, marginBottom: 10 }}>
+                Top {fmtTopPct(summary.topPct)}%{summary.isTopFivePct ? " 🚀" : ""}
+              </Text>
+              <Text style={{ fontFamily: FONT_SERIF, fontSize: 20, fontWeight: "600", color: T.text, marginBottom: 6 }}>{summary.name}</Text>
               <Text style={{ fontFamily: FONT_SERIF, fontSize: 32, fontWeight: "500", color: T.text, letterSpacing: -0.3 }}>{summary.currentValueStr}</Text>
               <Text style={{ fontSize: 14, fontWeight: "600", color: colorForPct(summary.ytdPct), marginTop: 4 }}>{fmtPct(summary.ytdPct)} YTD</Text>
 

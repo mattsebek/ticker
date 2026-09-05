@@ -20,6 +20,7 @@ import type {
   User,
   GameweekPreview,
   PastColumn,
+  MarketMatchup,
 } from "./types";
 
 export class ApiError extends Error {
@@ -62,6 +63,7 @@ export const api = {
         "/clubs/news"
       ),
     detail: (id: string) => request<{ club: ClubDetail }>(`/clubs/${id}`),
+    matchups: () => request<{ round: number; matchups: MarketMatchup[] }>("/clubs/matchups"),
   },
   portfolio: {
     get: () => request<PortfolioResponse>("/portfolio"),

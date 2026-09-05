@@ -53,6 +53,9 @@ export interface ClubSummary {
   nextFixture: NextFixture | null;
   /** Only present when requested via GET /clubs?fixtures=1 (the onboarding club picker) — omitted everywhere else clubSummary() is used. */
   upcomingFixtures?: ClubFixture[];
+  /** Only present on GET /clubs (the Market table) — the active gameweek's projected points, and actual points once that fixture is finished (null, not 0, until then). */
+  activeGwProjPts?: number | null;
+  activeGwActualPts?: number | null;
 }
 
 export interface ClubFixture {
@@ -71,6 +74,25 @@ export interface ClubPastFixture {
   actualPts: number;
   projPts: number | null;
   result: "W" | "D" | "L";
+}
+
+export interface MarketMatchupSide {
+  clubId: string;
+  name: string;
+  code: string;
+  color: string;
+  projPts: number | null;
+  actualPts: number | null;
+}
+
+export interface MarketMatchup {
+  fixtureId: string;
+  round: number;
+  status: "scheduled" | "live" | "finished" | "postponed";
+  kickoff: string;
+  scoreStr: string | null;
+  home: MarketMatchupSide;
+  away: MarketMatchupSide;
 }
 
 export interface ClubDetail extends ClubSummary {
