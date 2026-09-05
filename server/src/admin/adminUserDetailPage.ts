@@ -19,6 +19,8 @@ export interface AdminUserDetail {
   birthday: string;
   createdAt: number;
   cash: number;
+  /** Live portfolio value — cash + long holdings + short unrealized P&L, same figure the app itself shows as the manager's portfolio value. */
+  currentValue: number;
   holdingsCount: number;
   /** Sum of every SELL's and COVER's realized P&L — unrealized gains/losses on still-open positions aren't included. Don't read this in isolation as "overall performance" — pair it with unrealizedPnl, which is usually the larger of the two for an active account. */
   realizedPnl: number;
@@ -86,10 +88,10 @@ export function renderAdminUserDetailPage(d: AdminUserDetail): string {
       ${esc(d.email)} &middot; ${esc(d.accountType)} &middot; Joined ${fmtTime(d.createdAt)}
     </p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+      ${statCard("Current Value", fmt(d.currentValue))}
       ${statCard("Cash", fmt(d.cash))}
       ${statCard("Holdings", String(d.holdingsCount))}
-      ${statCard("Buys", String(buyCount))}
-      ${statCard("Sells", String(sellCount))}
+      ${statCard("Buys / Sells", `${buyCount} / ${sellCount}`)}
       ${statCard("Realized P&L", `${d.realizedPnl >= 0 ? "+" : ""}${fmt(d.realizedPnl)}`, d.realizedPnl > 0 ? T.accent : d.realizedPnl < 0 ? T.red : T.textSecondary)}
       ${statCard("Unrealized P&L", `${d.unrealizedPnl >= 0 ? "+" : ""}${fmt(d.unrealizedPnl)}`, d.unrealizedPnl > 0 ? T.accent : d.unrealizedPnl < 0 ? T.red : T.textSecondary)}
       ${d.marginCall ? statCard("Margin Call", `Active — short ${fmt(d.marginCall.shortfall)}`, T.red) : statCard("Margin Call", "None", T.textSecondary)}

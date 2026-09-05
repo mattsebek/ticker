@@ -5,6 +5,7 @@ import { usersRepo, AccountType } from "../shared/usersRepo";
 import { round2 } from "../shared/rng";
 import { fantasyRepo } from "../fantasy/repo";
 import { marketRepo } from "../market/repo";
+import { portfolioService } from "../market/portfolioService";
 import { footballRepo } from "../football/repo";
 import { formLettersForClub } from "../presenters";
 import { deleteUser } from "../bootstrap";
@@ -224,6 +225,7 @@ adminRouter.get("/users/:id", (req, res) => {
       birthday: user.birthday,
       createdAt: user.created_at,
       cash: marketRepo.getCash(user.id),
+      currentValue: portfolioService.getPortfolioValue(user.id),
       holdingsCount: marketRepo.getHoldings(user.id).length,
       realizedPnl,
       unrealizedPnl,
