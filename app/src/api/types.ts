@@ -40,6 +40,8 @@ export interface ClubSummary {
   netDemand: "buying" | "selling" | "flat";
   /** A richer 5-level read of the same underlying demand signal as netDemand — includes shorting/covering (Shorting V1 BR-18). */
   marketSentiment: "Very Bullish" | "Bullish" | "Neutral" | "Bearish" | "Very Bearish";
+  /** Raw -1..1 signal behind marketSentiment — null before the club's first ever market tick. */
+  marketSentimentScore: number | null;
   /** performancePct is a raw fraction (0.0893 = +8.93%), unlike dailyPct/weeklyPct/seasonPct which are already ×100 — from the most recent real fixture settlement, null until the club's first one. */
   priceBreakdown: { performancePct: number; demandPct: number | null } | null;
   gwPts: number;

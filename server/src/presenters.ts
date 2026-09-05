@@ -146,6 +146,7 @@ export function clubSummary(club: Club, currentRound: number) {
   // replaced the old "since last fixture settlement" query, which starved
   // for a signal on any club that hadn't played recently.
   const netDemand = marketRepo.getLatestDemandDirection(club.id);
+  const demandSignal = marketRepo.getLatestDemandSignal(club.id);
 
   return {
     id: club.id,
@@ -174,7 +175,12 @@ export function clubSummary(club: Club, currentRound: number) {
     // may coexist (e.g. 30% long, 8% short, 62% flat).
     shortPct: marketRepo.getShortPct(club.id),
     netDemand,
-    marketSentiment: marketSentimentFromSignal(marketRepo.getLatestDemandSignal(club.id)),
+    marketSentiment: marketSentimentFromSignal(demandSignal),
+    // Raw -1..1 signal behind marketSentiment above — lets the client render
+    // a proportional bearish/bullish bar instead of just the 5-level label.
+    // Null (not 0) before the club's first ever market tick, same "don't
+    // fabricate a real number" convention as the rest of this function.
+    marketSentimentScore: demandSignal,
     priceBreakdown: marketRepo.getLatestPriceBreakdown(club.id),
     gwPts: fantasyRepo.pointsAtRound(club.id, currentRound),
     seasonPts: fantasyRepo.seasonPointsThroughRound(club.id, currentRound),
