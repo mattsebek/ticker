@@ -20,8 +20,10 @@ export interface AdminUserDetail {
   createdAt: number;
   cash: number;
   holdingsCount: number;
-  /** Sum of every SELL's and COVER's realized P&L — unrealized gains/losses on still-open positions aren't included. */
+  /** Sum of every SELL's and COVER's realized P&L — unrealized gains/losses on still-open positions aren't included. Don't read this in isolation as "overall performance" — pair it with unrealizedPnl, which is usually the larger of the two for an active account. */
   realizedPnl: number;
+  /** Gain/loss still sitting in currently-open long holdings and short positions, marked to current price. Sums with realizedPnl to the account's real total return. */
+  unrealizedPnl: number;
   ledger: AdminUserLedgerRow[]; // newest first
   /** Null when the account isn't currently in margin call. */
   marginCall: { since: number; shortfall: number } | null;
@@ -75,6 +77,7 @@ export function renderAdminUserDetailPage(d: AdminUserDetail): string {
   const rows = d.ledger.map(ledgerRow).join("");
   const buyCount = d.ledger.filter((r) => r.entryType === "BUY").length;
   const sellCount = d.ledger.filter((r) => r.entryType === "SELL").length;
+  const totalReturn = d.realizedPnl + d.unrealizedPnl;
 
   const body = `
     <p style="margin: 0 0 16px;"><a href="/admin/users">&larr; Users</a></p>
@@ -88,8 +91,12 @@ export function renderAdminUserDetailPage(d: AdminUserDetail): string {
       ${statCard("Buys", String(buyCount))}
       ${statCard("Sells", String(sellCount))}
       ${statCard("Realized P&L", `${d.realizedPnl >= 0 ? "+" : ""}${fmt(d.realizedPnl)}`, d.realizedPnl > 0 ? T.accent : d.realizedPnl < 0 ? T.red : T.textSecondary)}
+      ${statCard("Unrealized P&L", `${d.unrealizedPnl >= 0 ? "+" : ""}${fmt(d.unrealizedPnl)}`, d.unrealizedPnl > 0 ? T.accent : d.unrealizedPnl < 0 ? T.red : T.textSecondary)}
       ${d.marginCall ? statCard("Margin Call", `Active — short ${fmt(d.marginCall.shortfall)}`, T.red) : statCard("Margin Call", "None", T.textSecondary)}
     </div>
+    <p style="color:${T.textSecondary};font-size:12px;margin:-16px 0 20px;">
+      Realized + Unrealized = ${totalReturn >= 0 ? "+" : ""}${fmt(totalReturn)} total return — Realized alone only reflects closed trades, not gains still sitting in current holdings.
+    </p>
 
     <h1 style="font-size:16px;">Transaction Activity</h1>
     <div class="table-wrap">

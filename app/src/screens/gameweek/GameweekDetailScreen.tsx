@@ -80,8 +80,9 @@ function ClubCard({ club, isStarter, T }: { club: GameweekClubDetail; isStarter:
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 20, fontWeight: "700", color: isStarter ? GREEN : T.text }}>{finished ? club.actualPoints : club.projectedPoints}</Text>
-          <Text style={{ fontSize: 11, color: isStarter ? GREEN : T.textSecondary, marginTop: 2 }}>{finished ? "points" : "projected"}</Text>
+          {/* Green only once a starter's points are actually committed — a live or not-yet-played match still shows its number in light gray, never green, since it can still change. */}
+          <Text style={{ fontSize: 20, fontWeight: "700", color: isStarter ? (finished ? GREEN : T.textSecondary) : T.text }}>{finished ? club.actualPoints : club.projectedPoints}</Text>
+          <Text style={{ fontSize: 11, color: isStarter ? (finished ? GREEN : T.textSecondary) : T.textSecondary, marginTop: 2 }}>{finished ? "points" : "projected"}</Text>
         </View>
       </View>
 

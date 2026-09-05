@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import express from "express";
 import jwt from "jsonwebtoken";
 import { usersRepo, AccountType } from "../shared/usersRepo";
+import { round2 } from "../shared/rng";
 import { fantasyRepo } from "../fantasy/repo";
 import { marketRepo } from "../market/repo";
 import { footballRepo } from "../football/repo";
@@ -206,6 +207,14 @@ adminRouter.get("/users/:id", (req, res) => {
       pnl: e.entryType === "SELL" || e.entryType === "COVER" ? pnlByEntryId.get(e.id) ?? null : null,
     }));
 
+  // Unrealized: gain/loss still sitting in open positions — the other half
+  // of the picture Realized P&L deliberately excludes. Together the two
+  // reconcile with the manager's actual portfolio return (confirmed against
+  // a real account where Realized alone looked wrong in isolation).
+  const unrealizedLongPnl = marketRepo.getHoldings(user.id).reduce((a, h) => a + ((marketRepo.getPrice(h.club_id) ?? h.purchase_price) - h.purchase_price), 0);
+  const unrealizedShortPnl = marketRepo.getShortPositions(user.id).reduce((a, s) => a + (s.entry_price - (marketRepo.getPrice(s.club_id) ?? s.entry_price)), 0);
+  const unrealizedPnl = round2(unrealizedLongPnl + unrealizedShortPnl);
+
   res.type("html").send(
     renderAdminUserDetailPage({
       id: user.id,
@@ -217,6 +226,7 @@ adminRouter.get("/users/:id", (req, res) => {
       cash: marketRepo.getCash(user.id),
       holdingsCount: marketRepo.getHoldings(user.id).length,
       realizedPnl,
+      unrealizedPnl,
       ledger,
       marginCall: marketRepo.getMarginCallInfo(user.id),
     })
