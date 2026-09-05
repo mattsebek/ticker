@@ -27,30 +27,37 @@ function matchupKickoffLabel(kickoff: string): string {
   return new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
 }
 
+/** Once a fixture's finished, the badge's own code text is redundant (the circle already shows it) — so that space instead reports whether the club beat its projection: a colored arrow, then "actual / proj". Before finish, there's nothing to compare yet, so it just shows the projection. */
 function MatchupSideView({ side, T, align }: { side: MarketMatchupSide; T: ThemeTokens; align: "left" | "right" }) {
+  const finished = side.actualPts != null;
+  const beat = finished && side.actualPts! >= (side.projPts ?? 0);
   return (
     <View style={{ flexDirection: align === "right" ? "row-reverse" : "row", alignItems: "center", gap: 8 }}>
-      <ClubBadge code={side.code} color={side.color} size={26} />
+      <ClubBadge code={side.code} color={side.color} size={32} />
       <View style={{ alignItems: align === "right" ? "flex-end" : "flex-start" }}>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: T.text }}>{side.code}</Text>
-        {side.projPts != null && (
-          <Text style={{ fontSize: 11, color: T.textSecondary }}>
-            {side.actualPts ?? side.projPts} {side.actualPts != null ? "pts" : "proj"}
-          </Text>
+        {finished ? (
+          <>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: beat ? GREEN : RED }}>{beat ? "▲" : "▼"}</Text>
+            <Text style={{ fontSize: 11, color: T.textSecondary }}>
+              {side.actualPts!.toFixed(1)} / {(side.projPts ?? 0).toFixed(1)}
+            </Text>
+          </>
+        ) : (
+          side.projPts != null && <Text style={{ fontSize: 11, color: T.textSecondary }}>{side.projPts.toFixed(1)} proj</Text>
         )}
       </View>
     </View>
   );
 }
 
-/** ESPN/FPL-style scoreboard strip — live fixtures float to the front, then the rest of the active round in schedule order. Web port: ticker-website/src/routes/MarketPage.tsx's MatchupsStrip. */
+/** ESPN/FPL-style scoreboard grid, two per row — every fixture in the active round, live ones first. Web port: ticker-website/src/routes/MarketPage.tsx's MatchupsStrip. */
 function MatchupsStrip({ matchups, T }: { matchups: MarketMatchup[]; T: ThemeTokens }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 12 }}>
+    <View style={matchupStyles.grid}>
       {matchups.map((m) => (
         <View key={m.fixtureId} style={[matchupStyles.card, { backgroundColor: T.card, borderColor: T.border }]}>
           <MatchupSideView side={m.home} T={T} align="left" />
-          <View style={{ alignItems: "center", minWidth: 44 }}>
+          <View style={{ alignItems: "center", minWidth: 36 }}>
             {m.status === "live" ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <LiveDot />
@@ -68,12 +75,13 @@ function MatchupsStrip({ matchups, T }: { matchups: MarketMatchup[]; T: ThemeTok
           <MatchupSideView side={m.away} T={T} align="right" />
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 const matchupStyles = StyleSheet.create({
-  card: { flexDirection: "row", alignItems: "center", gap: 14, borderWidth: 1, borderRadius: 14, padding: 14 },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 20 },
+  card: { width: "48.5%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6, borderWidth: 1, borderRadius: 14, padding: 12 },
 });
 
 type SortKey = "name" | "opening" | "current" | "owned" | "projPts";
