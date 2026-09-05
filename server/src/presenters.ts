@@ -388,6 +388,7 @@ export interface MarketMatchupSide {
   projPts: number | null;
   actualPts: number | null;
   ownershipPct: number;
+  upcomingFixtures: ReturnType<typeof upcomingFixturesForClub>;
 }
 
 export interface MarketMatchup {
@@ -433,6 +434,7 @@ function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMat
     projPts,
     actualPts: finished ? fantasyRepo.pointsAtRound(clubId, round) : null,
     ownershipPct: marketRepo.getOwnershipPct(clubId),
+    upcomingFixtures: club ? upcomingFixturesForClub(club, 3) : [],
   };
 }
 

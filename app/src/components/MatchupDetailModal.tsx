@@ -4,6 +4,7 @@ import { BlurView } from "expo-blur";
 import { useThemeStore } from "../store/themeStore";
 import type { MarketMatchup } from "../api/types";
 import { ClubBadge } from "./ClubBadge";
+import { FixturePill } from "./FixturePill";
 import { CloseIcon } from "./icons";
 import { FONT_SERIF, GREEN, RED, ThemeTokens } from "../theme/theme";
 
@@ -94,15 +95,6 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
             </View>
 
             <MatchupBar label="Projected Points" homeValue={home.projPts ?? 0} awayValue={away.projPts ?? 0} homeColor={home.color} awayColor={away.color} formatValue={(v) => v.toFixed(1)} T={T} />
-            <MatchupBar
-              label="Ownership %"
-              homeValue={home.ownershipPct}
-              awayValue={away.ownershipPct}
-              homeColor={home.color}
-              awayColor={away.color}
-              formatValue={(v) => `${v.toFixed(1)}%`}
-              T={T}
-            />
             {hasActual ? (
               <MatchupBar
                 label="Actual Points"
@@ -116,6 +108,29 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
             ) : (
               <Text style={{ marginTop: 22, textAlign: "center", fontSize: 12, color: T.textSecondary }}>Actual points land once this match finishes.</Text>
             )}
+            <MatchupBar
+              label="Ownership %"
+              homeValue={home.ownershipPct}
+              awayValue={away.ownershipPct}
+              homeColor={home.color}
+              awayColor={away.color}
+              formatValue={(v) => `${v.toFixed(1)}%`}
+              T={T}
+            />
+
+            <Text style={{ marginTop: 26, marginBottom: 10, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Next 3 Fixtures</Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
+                {[0, 1, 2].map((i) => (
+                  <FixturePill key={i} index={i} fixture={home.upcomingFixtures[i]} T={T} size="compact" />
+                ))}
+              </View>
+              <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
+                {[0, 1, 2].map((i) => (
+                  <FixturePill key={i} index={i} fixture={away.upcomingFixtures[i]} T={T} size="compact" />
+                ))}
+              </View>
+            </View>
           </ScrollView>
         </Pressable>
       </View>

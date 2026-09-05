@@ -84,6 +84,7 @@ export interface MarketMatchupSide {
   projPts: number | null;
   actualPts: number | null;
   ownershipPct: number;
+  upcomingFixtures: ClubFixture[];
 }
 
 export interface MarketMatchup {
