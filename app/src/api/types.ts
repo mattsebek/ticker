@@ -83,6 +83,7 @@ export interface MarketMatchupSide {
   color: string;
   projPts: number | null;
   actualPts: number | null;
+  ownershipPct: number;
 }
 
 export interface MarketMatchup {

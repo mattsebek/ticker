@@ -16,6 +16,7 @@ import { SearchIcon, ClearIcon, ChevronRightIcon } from "../../components/icons"
 import { ClubBadge } from "../../components/ClubBadge";
 import { PillRow, Pill } from "../../components/Pill";
 import { LiveDot } from "../../components/GameweekWidget";
+import { MatchupDetailModal } from "../../components/MatchupDetailModal";
 import { GREEN, RED, colorForPct } from "../../theme/theme";
 import type { ThemeTokens } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
@@ -27,7 +28,7 @@ function matchupKickoffLabel(kickoff: string): string {
   return new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
 }
 
-/** Once a fixture's finished, the badge's own code text is redundant (the circle already shows it) — so that space instead reports whether the club beat its projection: a colored arrow, then "actual / proj". Before finish, there's nothing to compare yet, so it just shows the projection. */
+/** Once a fixture's finished, the badge's own code text is redundant (the circle already shows it) — so that space instead reports the final score (with a colored beat/missed-projection arrow right after it) on top, and the projection it's being measured against below. Before finish, there's nothing to compare yet, so it just shows the projection. */
 function MatchupSideView({ side, T, align }: { side: MarketMatchupSide; T: ThemeTokens; align: "left" | "right" }) {
   const finished = side.actualPts != null;
   const beat = finished && side.actualPts! >= (side.projPts ?? 0);
@@ -37,10 +38,11 @@ function MatchupSideView({ side, T, align }: { side: MarketMatchupSide; T: Theme
       <View style={{ alignItems: align === "right" ? "flex-end" : "flex-start" }}>
         {finished ? (
           <>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: beat ? GREEN : RED }}>{beat ? "▲" : "▼"}</Text>
-            <Text style={{ fontSize: 11, color: T.textSecondary }}>
-              {side.actualPts!.toFixed(1)} / {(side.projPts ?? 0).toFixed(1)}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: T.text }}>{side.actualPts!.toFixed(1)}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: beat ? GREEN : RED }}>{beat ? "▲" : "▼"}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: T.textSecondary }}>{(side.projPts ?? 0).toFixed(1)} proj</Text>
           </>
         ) : (
           side.projPts != null && <Text style={{ fontSize: 11, color: T.textSecondary }}>{side.projPts.toFixed(1)} proj</Text>
@@ -51,11 +53,11 @@ function MatchupSideView({ side, T, align }: { side: MarketMatchupSide; T: Theme
 }
 
 /** ESPN/FPL-style scoreboard grid, two per row — every fixture in the active round, live ones first. Web port: ticker-website/src/routes/MarketPage.tsx's MatchupsStrip. */
-function MatchupsStrip({ matchups, T }: { matchups: MarketMatchup[]; T: ThemeTokens }) {
+function MatchupsStrip({ matchups, T, onOpen }: { matchups: MarketMatchup[]; T: ThemeTokens; onOpen: (m: MarketMatchup) => void }) {
   return (
     <View style={matchupStyles.grid}>
       {matchups.map((m) => (
-        <View key={m.fixtureId} style={[matchupStyles.card, { backgroundColor: T.card, borderColor: T.border }]}>
+        <Pressable key={m.fixtureId} onPress={() => onOpen(m)} style={[matchupStyles.card, { backgroundColor: T.card, borderColor: T.border }]}>
           <MatchupSideView side={m.home} T={T} align="left" />
           <View style={{ alignItems: "center", minWidth: 36 }}>
             {m.status === "live" ? (
@@ -73,7 +75,7 @@ function MatchupsStrip({ matchups, T }: { matchups: MarketMatchup[]; T: ThemeTok
             )}
           </View>
           <MatchupSideView side={m.away} T={T} align="right" />
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -222,6 +224,7 @@ export function MarketScreen() {
   const [search, setSearch] = useState("");
   const [news, setNews] = useState<{ id: string; code: string | null; color: string | null; headline: string; source: string; timeStr: string; link: string; thumbnail: string | null }[]>([]);
   const [matchups, setMatchups] = useState<MarketMatchup[]>([]);
+  const [selectedMatchup, setSelectedMatchup] = useState<MarketMatchup | null>(null);
 
   useEffect(() => {
     api.clubs.news().then((r) => setNews(r.news));
@@ -240,7 +243,7 @@ export function MarketScreen() {
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <ScreenTitle style={{ marginBottom: 18 }}>Market</ScreenTitle>
 
-        {matchups.length > 0 && <MatchupsStrip matchups={matchups} T={T} />}
+        {matchups.length > 0 && <MatchupsStrip matchups={matchups} T={T} onOpen={setSelectedMatchup} />}
 
         <View style={{ position: "relative", marginBottom: 24 }}>
           <View style={{ position: "absolute", left: 13, top: 0, bottom: 0, justifyContent: "center", zIndex: 1 }}>
@@ -302,6 +305,7 @@ export function MarketScreen() {
           </View>
         </View>
       </ScrollView>
+      <MatchupDetailModal matchup={selectedMatchup} onClose={() => setSelectedMatchup(null)} />
     </SafeAreaView>
   );
 }

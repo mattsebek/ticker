@@ -387,6 +387,7 @@ export interface MarketMatchupSide {
   color: string;
   projPts: number | null;
   actualPts: number | null;
+  ownershipPct: number;
 }
 
 export interface MarketMatchup {
@@ -431,6 +432,7 @@ function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMat
     color: club?.color ?? "#888",
     projPts,
     actualPts: finished ? fantasyRepo.pointsAtRound(clubId, round) : null,
+    ownershipPct: marketRepo.getOwnershipPct(clubId),
   };
 }
 
