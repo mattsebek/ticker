@@ -82,8 +82,8 @@ function MatchupsStrip({ matchups, T, onOpen }: { matchups: MarketMatchup[]; T: 
 }
 
 const matchupStyles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 20 },
-  card: { width: "48.5%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6, borderWidth: 1, borderRadius: 14, padding: 12 },
+  grid: { gap: 12, marginBottom: 20 },
+  card: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6, borderWidth: 1, borderRadius: 14, padding: 12 },
 });
 
 type SortKey = "name" | "opening" | "current" | "owned" | "projPts";

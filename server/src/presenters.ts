@@ -401,6 +401,9 @@ export interface MarketMatchup {
   away: MarketMatchupSide;
 }
 
+/** A brand-new round's scoreboard doesn't appear until its first kickoff is this close — see activeMatchupRound's doc comment. */
+const MATCHUP_LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Which round's fixtures the Market page's live scoreboard should show.
  * Deliberately NOT gameweekService.currentRound() (= max(1, maxScoredRound()))
@@ -408,15 +411,28 @@ export interface MarketMatchup {
  * FINISHED, so if this round's fixtures have gone live but none has
  * finished yet, currentRound() would still point at the previous, fully-
  * finished round and miss exactly the live action a scoreboard exists to
- * surface. Prefers any round with a live fixture; else the nearest round
- * with a still-scheduled fixture; else falls back to the schedule's last
- * round (season over, nothing upcoming).
+ * surface. Prefers any round with a live fixture (always shown, regardless
+ * of timing); else the nearest round with a still-scheduled fixture, but
+ * only once that round's first kickoff is within MATCHUP_LOOKAHEAD_MS —
+ * showing next week's fixtures days early, with nothing to see yet, isn't
+ * useful, so until then this keeps surfacing the last completed round's
+ * results instead of jumping ahead prematurely; else falls back to the
+ * schedule's last round (season over, nothing upcoming).
  */
 export function activeMatchupRound(): number {
   const live = footballRepo.listFixturesByStatus("live");
   if (live.length > 0) return Math.min(...live.map((f) => f.round));
+
   const scheduled = footballRepo.listFixturesByStatus("scheduled");
-  if (scheduled.length > 0) return Math.min(...scheduled.map((f) => f.round));
+  if (scheduled.length > 0) {
+    const nextRound = Math.min(...scheduled.map((f) => f.round));
+    const earliestKickoff = Math.min(...scheduled.filter((f) => f.round === nextRound).map((f) => new Date(f.kickoff).getTime()));
+    if (earliestKickoff - Date.now() <= MATCHUP_LOOKAHEAD_MS) return nextRound;
+    const finished = footballRepo.listFixturesByStatus("finished");
+    if (finished.length > 0) return Math.max(...finished.map((f) => f.round));
+    return nextRound;
+  }
+
   return footballRepo.maxRound();
 }
 
@@ -438,7 +454,7 @@ function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMat
   };
 }
 
-/** Live fixtures first (the score most likely to still be changing), otherwise the fixture list's own order. */
+/** Live fixtures first (the score most likely to still be changing), then everything else by kickoff DESCENDING — the newest kickoff (including one still to come) sits at the top, the oldest (the round's earliest, most-likely-already-finished match) sinks to the bottom. */
 export function marketMatchups(round: number): MarketMatchup[] {
   const fixtures = footballRepo.listFixturesByRound(round);
   const rows: MarketMatchup[] = fixtures.map((f) => ({
@@ -450,5 +466,9 @@ export function marketMatchups(round: number): MarketMatchup[] {
     home: matchupSide(f, f.homeClubId, round),
     away: matchupSide(f, f.awayClubId, round),
   }));
-  return rows.sort((a, b) => Number(b.status === "live") - Number(a.status === "live"));
+  return rows.sort((a, b) => {
+    const liveDiff = Number(b.status === "live") - Number(a.status === "live");
+    if (liveDiff !== 0) return liveDiff;
+    return new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime();
+  });
 }
