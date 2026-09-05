@@ -129,7 +129,13 @@ export function TradeScreen({ route, navigation }: Props) {
               <>
                 <Row label="Price" value={(shortPreview as ShortPreviewResponse).priceStr} T={T} />
                 <Row label="Buying power" value={(shortPreview as ShortPreviewResponse).buyingPowerStr} T={T} />
-                <Row label="Buying power after" value={(shortPreview as ShortPreviewResponse).buyingPowerAfterStr} T={T} bold />
+                <Row
+                  label="Buying power after"
+                  value={(shortPreview as ShortPreviewResponse).buyingPowerAfterStr}
+                  valueColor={(shortPreview as ShortPreviewResponse).buyingPowerAfter < 0 ? "#E0393E" : undefined}
+                  T={T}
+                  bold
+                />
               </>
             )}
             {mode === "cover" && (

@@ -12,7 +12,7 @@ import { round2 } from "../shared/rng";
 export const tradesRouter = Router();
 
 function fmtMoney(v: number) {
-  return "$" + v.toFixed(2);
+  return v < 0 ? "-$" + Math.abs(v).toFixed(2) : "$" + v.toFixed(2);
 }
 
 // BUY and SELL are independent — no more paired "options" candidate pool
@@ -103,7 +103,18 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
     alreadyOwned,
     alreadyShorted,
     canShort,
-    confirmLabel: alreadyOwned ? "Sell your position first" : alreadyShorted ? "Already shorted" : exceedsExposure ? "Exceeds short limit" : price > buyingPower ? "Insufficient buying power" : `Short ${club.name}`,
+    // Insufficient buying power is the more fundamental blocker — check it
+    // before the exposure cap so a user who can't afford the short at all
+    // never sees "Exceeds short limit" instead of the real reason.
+    confirmLabel: alreadyOwned
+      ? "Sell your position first"
+      : alreadyShorted
+        ? "Already shorted"
+        : price > buyingPower
+          ? "Insufficient buying power"
+          : exceedsExposure
+            ? "Exceeds short limit"
+            : `Short ${club.name}`,
   });
 });
 
