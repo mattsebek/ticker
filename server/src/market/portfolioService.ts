@@ -78,6 +78,20 @@ export const portfolioService = {
     return round2(holdings.reduce((a, h) => a + h.currentPrice, 0) + shorts.reduce((a, s) => a + s.unrealizedPnl, 0) + cash);
   },
 
+  /**
+   * Where this manager's portfolio value ranks among EVERY manager with a
+   * market account — human and synthetic alike, no filtering — expressed as
+   * "top N%" (rank 1 of 500 -> 0.2, i.e. top 0.2%). Ties share the same rank
+   * (count of strictly-greater values + 1), so two managers tied for best
+   * both read "top 0.2%" rather than one reading "top 0.4%".
+   */
+  getPortfolioValuePercentileRank(userId: string): number {
+    const myValue = portfolioService.getPortfolioValue(userId);
+    const allValues = marketRepo.listAccountIds().map((id) => (id === userId ? myValue : portfolioService.getPortfolioValue(id)));
+    const rank = allValues.filter((v) => v > myValue).length + 1;
+    return round2((rank / allValues.length) * 100);
+  },
+
   isHeld(userId: string, clubId: string): boolean {
     return marketRepo.getHoldings(userId).some((h) => h.club_id === clubId);
   },

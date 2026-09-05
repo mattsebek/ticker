@@ -87,6 +87,9 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
   const currentValue = portfolioService.getPortfolioValue(member.member_id);
   const firstValue = portfolioSeries[0]?.v ?? currentValue;
   const ytdPct = firstValue ? round2(((currentValue - firstValue) / firstValue) * 100) : 0;
+  // Across ALL managers with a market account (human + synthetic) — a
+  // deliberately unfiltered population, matching the ask "amongst ALL managers".
+  const topPct = portfolioService.getPortfolioValuePercentileRank(member.member_id);
 
   const lastLockedRound = gameweekService.firstUnlockedRound(member.member_id) - 1;
   const hasLockedRound = lastLockedRound >= 1;
@@ -120,6 +123,8 @@ leaguesRouter.get("/:id/members/:memberId", requireAuth, (req: AuthedRequest, re
     currentValueStr: fmtMoney(currentValue),
     portfolioSeries: portfolioSeries.map((p) => ({ t: p.t, v: p.v })),
     ytdPct,
+    topPct,
+    isTopFivePct: topPct <= 5,
     lastLockedRound: hasLockedRound ? lastLockedRound : null,
     round,
     canPrev: round != null && round > 1,

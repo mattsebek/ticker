@@ -212,6 +212,9 @@ export interface ManagerSummary {
   currentValueStr: string;
   portfolioSeries: { t: number; v: number }[];
   ytdPct: number;
+  /** Rank among EVERY manager with a market account (human + synthetic), as "top N%" — rank 1 of 500 is 0.2. */
+  topPct: number;
+  isTopFivePct: boolean;
   /** Null if this manager has never had a round lock yet. */
   lastLockedRound: number | null;
   /** The round this response's starters/bench/points are actually for — defaults to lastLockedRound, but can be any earlier round via the `round` param. Null alongside lastLockedRound when nothing's locked yet. */

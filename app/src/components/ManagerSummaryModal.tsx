@@ -70,7 +70,12 @@ export function ManagerSummaryModal({ leagueId, memberId, onClose }: { leagueId:
             </View>
           ) : (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 6, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
-              <Text style={{ fontFamily: FONT_SERIF, fontSize: 20, fontWeight: "600", color: T.text, marginBottom: 6 }}>{summary.name}</Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                <Text style={{ fontFamily: FONT_SERIF, fontSize: 20, fontWeight: "600", color: T.text }}>{summary.name}</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: T.textSecondary }}>
+                  Top {fmtTopPct(summary.topPct)}%{summary.isTopFivePct ? " 🚀" : ""}
+                </Text>
+              </View>
               <Text style={{ fontFamily: FONT_SERIF, fontSize: 32, fontWeight: "500", color: T.text, letterSpacing: -0.3 }}>{summary.currentValueStr}</Text>
               <Text style={{ fontSize: 14, fontWeight: "600", color: colorForPct(summary.ytdPct), marginTop: 4 }}>{fmtPct(summary.ytdPct)} YTD</Text>
 
@@ -169,6 +174,11 @@ function ClubRow({
       <Text style={{ fontSize: 14, fontWeight: "600", color: trailingColor }}>{trailing}</Text>
     </View>
   );
+}
+
+/** "Top 0.2%" not "Top 0.20000000000000004%" — one decimal, trimmed when it's a whole number. */
+function fmtTopPct(topPct: number): string {
+  return topPct < 10 ? String(Math.round(topPct * 10) / 10) : String(Math.round(topPct));
 }
 
 function PurchasePriceLine({ T, purchasePrice, currentPrice }: { T: ThemeTokens; purchasePrice: number; currentPrice: number }) {
