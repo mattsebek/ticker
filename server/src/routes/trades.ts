@@ -29,7 +29,8 @@ tradesRouter.get("/buy-preview", requireAuth, (req: AuthedRequest, res) => {
   const cash = marketRepo.getCash(userId);
   const alreadyOwned = marketRepo.getHoldings(userId).some((h) => h.club_id === clubId);
   const cashAfter = round2(cash - price);
-  const canAfford = !alreadyOwned && price <= cash;
+  const marginCallActive = marketRepo.isInMarginCall(userId);
+  const canAfford = !alreadyOwned && !marginCallActive && price <= cash;
 
   res.json({
     clubName: club.name,
@@ -40,8 +41,9 @@ tradesRouter.get("/buy-preview", requireAuth, (req: AuthedRequest, res) => {
     cashAfter,
     cashAfterStr: fmtMoney(cashAfter),
     alreadyOwned,
+    marginCallActive,
     canAfford,
-    confirmLabel: alreadyOwned ? "Already owned" : !canAfford ? "Insufficient funds" : `Buy ${club.name}`,
+    confirmLabel: alreadyOwned ? "Already owned" : marginCallActive ? "Margin call active" : !canAfford ? "Insufficient funds" : `Buy ${club.name}`,
   });
 });
 
@@ -90,7 +92,8 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
   const portfolioValue = portfolioService.getPortfolioValue(userId);
   const projectedExposure = marketRepo.getTotalShortMarketValue(userId) + price;
   const exceedsExposure = projectedExposure > portfolioValue * shortingConfig.MAX_SHORT_EXPOSURE_PCT;
-  const canShort = !alreadyOwned && !alreadyShorted && price <= buyingPower && !exceedsExposure;
+  const marginCallActive = marketRepo.isInMarginCall(userId);
+  const canShort = !alreadyOwned && !alreadyShorted && !marginCallActive && price <= buyingPower && !exceedsExposure;
 
   res.json({
     clubName: club.name,
@@ -102,19 +105,22 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
     buyingPowerAfterStr: fmtMoney(buyingPowerAfter),
     alreadyOwned,
     alreadyShorted,
+    marginCallActive,
     canShort,
-    // Insufficient buying power is the more fundamental blocker — check it
-    // before the exposure cap so a user who can't afford the short at all
-    // never sees "Exceeds short limit" instead of the real reason.
+    // Margin call is checked before insufficient buying power, which is
+    // checked before the exposure cap — each is a more fundamental blocker
+    // than the next, so the label always names the real reason.
     confirmLabel: alreadyOwned
       ? "Sell your position first"
       : alreadyShorted
         ? "Already shorted"
-        : price > buyingPower
-          ? "Insufficient buying power"
-          : exceedsExposure
-            ? "Exceeds short limit"
-            : `Short ${club.name}`,
+        : marginCallActive
+          ? "Margin call active"
+          : price > buyingPower
+            ? "Insufficient buying power"
+            : exceedsExposure
+              ? "Exceeds short limit"
+              : `Short ${club.name}`,
   });
 });
 

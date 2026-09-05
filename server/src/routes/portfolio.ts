@@ -96,6 +96,11 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
   const STARTING_CASH = 100;
   const seasonPct = round2(((heroValue - STARTING_CASH) / STARTING_CASH) * 100);
 
+  const marginCallInfo = marketRepo.getMarginCallInfo(user.id);
+  const marginCall = marginCallInfo
+    ? { active: true, since: new Date(marginCallInfo.since).toISOString(), shortfall: marginCallInfo.shortfall }
+    : { active: false, since: null, shortfall: 0 };
+
   res.json({
     cash,
     buyingPower,
@@ -106,6 +111,7 @@ portfolioRouter.get("/", requireAuth, (req: AuthedRequest, res) => {
     briefDismissed: isBriefCurrentlyDismissed(user),
     holdings,
     shorts,
+    marginCall,
   });
 });
 

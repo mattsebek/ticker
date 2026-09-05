@@ -23,6 +23,8 @@ export interface AdminUserDetail {
   /** Sum of every SELL's and COVER's realized P&L — unrealized gains/losses on still-open positions aren't included. */
   realizedPnl: number;
   ledger: AdminUserLedgerRow[]; // newest first
+  /** Null when the account isn't currently in margin call. */
+  marginCall: { since: number; shortfall: number } | null;
 }
 
 function fmt(n: number): string {
@@ -86,6 +88,7 @@ export function renderAdminUserDetailPage(d: AdminUserDetail): string {
       ${statCard("Buys", String(buyCount))}
       ${statCard("Sells", String(sellCount))}
       ${statCard("Realized P&L", `${d.realizedPnl >= 0 ? "+" : ""}${fmt(d.realizedPnl)}`, d.realizedPnl > 0 ? T.accent : d.realizedPnl < 0 ? T.red : T.textSecondary)}
+      ${d.marginCall ? statCard("Margin Call", `Active — short ${fmt(d.marginCall.shortfall)}`, T.red) : statCard("Margin Call", "None", T.textSecondary)}
     </div>
 
     <h1 style="font-size:16px;">Transaction Activity</h1>

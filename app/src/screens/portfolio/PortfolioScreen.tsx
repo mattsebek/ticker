@@ -285,6 +285,9 @@ export function PortfolioScreen() {
     );
   }
 
+  const longValue = portfolio.holdings.reduce((a, h) => a + h.price, 0);
+  const shortPnl = portfolio.shorts.reduce((a, s) => a + s.unrealizedPnl, 0);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
@@ -301,6 +304,34 @@ export function PortfolioScreen() {
         <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 10 }}>
           Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.buyingPower)}</Text>
         </Text>
+        <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 4 }}>
+          Cash {fmtMoney(portfolio.cash)} · Clubs {fmtMoney(longValue)}
+          {portfolio.shorts.length > 0 && (
+            <>
+              {" "}
+              · Shorts <Text style={{ color: colorForPct(shortPnl) }}>{shortPnl >= 0 ? "+" : "-"}{fmtMoney(Math.abs(shortPnl))}</Text>
+            </>
+          )}
+        </Text>
+
+        {portfolio.marginCall.active && (
+          <View
+            style={{
+              marginTop: 14,
+              padding: 14,
+              borderRadius: 12,
+              backgroundColor: T.redTint,
+              borderWidth: 1,
+              borderColor: "#E0393E",
+            }}
+          >
+            <Text style={{ fontSize: 13, lineHeight: 19, color: T.text }}>
+              <Text style={{ fontWeight: "700", color: "#E0393E" }}>Margin call — </Text>
+              your cash can't cover your open shorts at current prices (short by {fmtMoney(portfolio.marginCall.shortfall)}). Sell a holding or cover a short to
+              restore buying power — buying, shorting, and lineup changes are paused until then.
+            </Text>
+          </View>
+        )}
 
         {hasMovement && (
           <View style={{ marginTop: 15 }}>

@@ -12,6 +12,9 @@ export type SetLineupResult = { ok: true; clubIds: string[] } | { ok: false; err
  * every club) rather than a parallel, potentially-drifting check.
  */
 export function setLineup(userId: string, clubIdsInput: string[]): SetLineupResult {
+  if (marketRepo.isInMarginCall(userId)) {
+    return { ok: false, error: "Your account is in margin call. Sell a holding or cover a short to restore buying power before changing your lineup." };
+  }
   const clubIds = Array.from(new Set(clubIdsInput));
   if (clubIds.length > fantasyConfig.MAX_STARTERS) {
     return { ok: false, error: `You can start at most ${fantasyConfig.MAX_STARTERS} clubs.` };

@@ -18,6 +18,7 @@ import { DEFAULT_AUTO_JOIN_LEAGUE_IDS } from "../fantasy/leagueService";
 import { JWT_SECRET, parseCookies, isHttps } from "../shared/auth";
 import { computePricePressure, priceDirection, ppsDirection } from "../market/pricePressure";
 import { renderAdminSyntheticPage, AdminSyntheticUserRow } from "../admin/adminSyntheticPage";
+import { renderAdminMarginCallsPage } from "../admin/adminMarginCallsPage";
 import { syntheticRepo } from "../synthetic/syntheticRepo";
 import { forceEvaluateUser } from "../synthetic/orchestrator";
 import { renderAdminProjectionsPage, AdminProjectionRow } from "../admin/adminProjectionsPage";
@@ -217,6 +218,7 @@ adminRouter.get("/users/:id", (req, res) => {
       holdingsCount: marketRepo.getHoldings(user.id).length,
       realizedPnl,
       ledger,
+      marginCall: marketRepo.getMarginCallInfo(user.id),
     })
   );
 });
@@ -350,6 +352,12 @@ adminRouter.get("/clubs/:id", (req, res) => {
       },
     })
   );
+});
+
+// --- Margin calls ---
+
+adminRouter.get("/margin-calls", (req, res) => {
+  res.type("html").send(renderAdminMarginCallsPage(marketRepo.listActiveMarginCalls()));
 });
 
 // --- Synthetic ecosystem ---

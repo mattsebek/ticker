@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "../db";
+import { round2 } from "../shared/rng";
 
 db.exec(`
 -- Market domain owns every dollar in the game. "cash" lives here, not on the
@@ -141,7 +142,31 @@ CREATE TABLE IF NOT EXISTS short_positions (
   PRIMARY KEY (user_id, club_id)
 );
 CREATE INDEX IF NOT EXISTS idx_short_positions_club ON short_positions(club_id);
+
+-- Margin calls: one row per episode, resolved_at NULL while active. The
+-- "currently in margin call" flag itself lives on market_accounts (see the
+-- guarded ALTER below) — this table is the audit trail/admin diagnostic.
+CREATE TABLE IF NOT EXISTS margin_calls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  triggered_at INTEGER NOT NULL,
+  resolved_at INTEGER,
+  cash_at_trigger REAL NOT NULL,
+  short_value_at_trigger REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_margin_calls_user ON margin_calls(user_id, triggered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_margin_calls_active ON margin_calls(resolved_at);
 `);
+
+// Shorting V1 margin calls: set while a user's cash can't cover their open
+// shorts at current prices (see market/marginCallService.ts). Lives on
+// market_accounts, not users — this is financial account state, same
+// domain as cash itself.
+try {
+  db.exec("ALTER TABLE market_accounts ADD COLUMN margin_call_at INTEGER");
+} catch {
+  // already applied
+}
 
 export interface HoldingRow {
   user_id: string;
@@ -610,6 +635,45 @@ export const marketRepo = {
   getTotalShortMarketValue(userId: string): number {
     const rows = db.prepare("SELECT club_id FROM short_positions WHERE user_id = ?").all(userId) as { club_id: string }[];
     return rows.reduce((sum, r) => sum + (marketRepo.getPrice(r.club_id) ?? 0), 0);
+  },
+  /** Every distinct user with at least one open short — the margin-call sweep job's candidate set. */
+  getUserIdsWithOpenShorts(): string[] {
+    return (db.prepare("SELECT DISTINCT user_id FROM short_positions").all() as { user_id: string }[]).map((r) => r.user_id);
+  },
+
+  // --- margin calls ---
+  isInMarginCall(userId: string): boolean {
+    const row = db.prepare("SELECT margin_call_at FROM market_accounts WHERE user_id = ?").get(userId) as { margin_call_at: number | null } | undefined;
+    return !!row?.margin_call_at;
+  },
+  /** Active-episode details for the portfolio route's margin-call banner — null when not currently in one. */
+  getMarginCallInfo(userId: string): { since: number; shortfall: number } | null {
+    const account = db.prepare("SELECT margin_call_at FROM market_accounts WHERE user_id = ?").get(userId) as { margin_call_at: number | null } | undefined;
+    if (!account?.margin_call_at) return null;
+    const cash = marketRepo.getCash(userId);
+    const shortValue = marketRepo.getTotalShortMarketValue(userId);
+    return { since: account.margin_call_at, shortfall: round2(shortValue - cash) };
+  },
+  /** Opens a new margin-call episode: sets the account flag and inserts the audit row. */
+  setMarginCall(userId: string, triggeredAt: number, cash: number, shortValue: number) {
+    db.prepare("UPDATE market_accounts SET margin_call_at = ? WHERE user_id = ?").run(triggeredAt, userId);
+    db.prepare("INSERT INTO margin_calls (user_id, triggered_at, cash_at_trigger, short_value_at_trigger) VALUES (?,?,?,?)").run(userId, triggeredAt, cash, shortValue);
+  },
+  /** Closes the account's currently-open episode (the most recent unresolved row) and clears the account flag. */
+  clearMarginCall(userId: string, resolvedAt: number) {
+    db.prepare("UPDATE market_accounts SET margin_call_at = NULL WHERE user_id = ?").run(userId);
+    db.prepare("UPDATE margin_calls SET resolved_at = ? WHERE user_id = ? AND resolved_at IS NULL").run(resolvedAt, userId);
+  },
+  /** Every account currently in margin call — the admin diagnostics list. */
+  listActiveMarginCalls(): { userId: string; name: string; email: string; since: number; cash: number; shortValue: number }[] {
+    const rows = db
+      .prepare(
+        `SELECT u.id as userId, u.name, u.email, ma.margin_call_at as since, ma.cash as cash
+         FROM market_accounts ma JOIN users u ON u.id = ma.user_id
+         WHERE ma.margin_call_at IS NOT NULL ORDER BY ma.margin_call_at ASC`
+      )
+      .all() as { userId: string; name: string; email: string; since: number; cash: number }[];
+    return rows.map((r) => ({ ...r, shortValue: marketRepo.getTotalShortMarketValue(r.userId) }));
   },
 
   // --- transactions / ledger ---

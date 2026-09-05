@@ -130,6 +130,8 @@ export interface PortfolioResponse {
   briefDismissed: boolean;
   holdings: HoldingView[];
   shorts: ShortPositionView[];
+  /** Active while cash can't cover open shorts at current prices — blocks Buy/Short/lineup changes until cured by selling or covering (Shorting V1 margin calls). */
+  marginCall: { active: boolean; since: string | null; shortfall: number };
 }
 
 export interface GameweekResponse {
@@ -264,6 +266,7 @@ export interface BuyPreviewResponse {
   cashAfter: number;
   cashAfterStr: string;
   alreadyOwned: boolean;
+  marginCallActive: boolean;
   canAfford: boolean;
   confirmLabel: string;
 }
@@ -307,6 +310,7 @@ export interface ShortPreviewResponse {
   buyingPowerAfterStr: string;
   alreadyOwned: boolean;
   alreadyShorted: boolean;
+  marginCallActive: boolean;
   canShort: boolean;
   confirmLabel: string;
 }

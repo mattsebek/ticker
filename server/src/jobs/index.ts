@@ -16,6 +16,7 @@ import * as syntheticLeagueManager from "./syntheticLeagueManager";
 import * as refreshOddsAndReproject from "./refreshOddsAndReproject";
 import * as lockAndSettleProjections from "./lockAndSettleProjections";
 import * as detectMarketSignals from "./detectMarketSignals";
+import * as sweepMarginCalls from "./sweepMarginCalls";
 import { pricingConfig } from "../market/pricingConfig";
 import { projectionConfig } from "../projection/projectionConfig";
 import { intelligenceConfig } from "../intelligence/intelligenceConfig";
@@ -60,6 +61,7 @@ export function registerJobs() {
     initialDelayMs: 90_000, // let bootstrap's opening-price seeding settle first
   });
   scheduler.register({ name: "recalculateLeagueStandings", intervalMs: 3 * MINUTE, run: recalculateLeagueStandings.run });
+  scheduler.register({ name: "sweepMarginCalls", intervalMs: intervalFromEnv("JOB_MARGIN_CALL_SWEEP_MS", 2 * MINUTE), run: sweepMarginCalls.run });
   scheduler.register({
     name: "gameweekDeadlineReminder",
     intervalMs: intervalFromEnv("JOB_DEADLINE_REMINDER_MS", 30 * MINUTE),

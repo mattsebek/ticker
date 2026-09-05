@@ -15,6 +15,7 @@ import { gameweekDetail } from "../presenters";
 import { reseedAllOpeningPrices, resetAllUsers, resetToPreGameweek1, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
 import { runMarketTick } from "../market/marketDemandService";
+import { checkAndUpdateMarginCall } from "../market/marginCallService";
 import { ensureSyntheticPopulation } from "../synthetic/syntheticSeedService";
 import { syntheticRepo } from "../synthetic/syntheticRepo";
 import { runOrchestratorBatch, forceEvaluateUser } from "../synthetic/orchestrator";
@@ -264,6 +265,13 @@ internalRouter.post("/run-market-tick", (req, res) => {
   } catch (err: any) {
     res.status(502).json({ ok: false, error: err?.message || String(err) });
   }
+});
+
+/** Dev/ops only: fires the margin-call sweep on demand instead of waiting for its interval. */
+internalRouter.post("/sweep-margin-calls", (req, res) => {
+  const userIds = marketRepo.getUserIdsWithOpenShorts();
+  const results = userIds.map((userId) => ({ userId, inMarginCall: checkAndUpdateMarginCall(userId) }));
+  res.json({ ok: true, checked: userIds.length, marginCalls: results.filter((r) => r.inMarginCall) });
 });
 
 /**

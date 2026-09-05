@@ -21,6 +21,7 @@ const ICON_USERS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ICON_LEAGUES = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>`;
 const ICON_CLUBS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8l3 2.2-1.1 3.6h-3.8L9 10.2 12 8z"/><path d="M12 3v5M4.7 8.7l4.3 1.5M19.3 8.7L15 10.2M6.3 17.5l3.9-3.7M17.7 17.5l-3.9-3.7"/></svg>`;
 const ICON_SYNTHETIC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M8 3v4M16 3v4"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 16.5c1 .8 5 .8 6 0"/></svg>`;
+const ICON_MARGIN_CALLS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 19H3L12 3.5z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="16.7" r="0.9" fill="currentColor" stroke="none"/></svg>`;
 const ICON_PROJECTIONS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg>`;
 const ICON_INTELLIGENCE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3z"/></svg>`;
 const ICON_PREVIEW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5z"/><path d="M4 9h16M8 13h8M8 16.5h5"/></svg>`;
@@ -30,6 +31,7 @@ const NAV_ITEMS: { key: string; label: string; href: string; icon: string }[] = 
   { key: "leagues", label: "Leagues", href: "/admin/leagues", icon: ICON_LEAGUES },
   { key: "clubs", label: "Clubs", href: "/admin/clubs", icon: ICON_CLUBS },
   { key: "synthetic", label: "Synthetic", href: "/admin/synthetic", icon: ICON_SYNTHETIC },
+  { key: "margin-calls", label: "Margin Calls", href: "/admin/margin-calls", icon: ICON_MARGIN_CALLS },
   { key: "projections", label: "Projections", href: "/admin/projections", icon: ICON_PROJECTIONS },
   { key: "intelligence", label: "Intelligence", href: "/admin/intelligence", icon: ICON_INTELLIGENCE },
   { key: "gameweek-preview", label: "Gameweek Preview", href: "/admin/gameweek-preview", icon: ICON_PREVIEW },
@@ -53,7 +55,7 @@ const LOGO_HTML = `
  * shared page reload between sections is a non-issue for an internal tool.
  * `active` highlights the current section in the sidebar.
  */
-export function renderAdminShell(opts: { active: "users" | "leagues" | "clubs" | "synthetic" | "projections" | "intelligence" | "gameweek-preview"; title: string; bodyHtml: string; headExtra?: string }): string {
+export function renderAdminShell(opts: { active: "users" | "leagues" | "clubs" | "synthetic" | "projections" | "intelligence" | "gameweek-preview" | "margin-calls"; title: string; bodyHtml: string; headExtra?: string }): string {
   const navLinks = NAV_ITEMS.map(
     (item) => `
       <a href="${item.href}" style="

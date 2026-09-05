@@ -169,6 +169,7 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
   const T = useThemeStore((s) => s.tokens);
   const insets = useSafeAreaInsets();
   const refreshPortfolio = useDataStore((s) => s.refreshPortfolio);
+  const portfolio = useDataStore((s) => s.portfolio);
   const [offset, setOffset] = useState(route.params?.initialOffset ?? 0);
   const [data, setData] = useState<GameweekDetailResponse | null>(null);
   const [selected, setSelected] = useState<string[] | null>(null);
@@ -377,7 +378,10 @@ export function GameweekDetailScreen({ navigation, route }: Props) {
       {data?.isPending && !pendingExpired && selected && (
         <View style={[styles.footer, { borderTopColor: T.border, backgroundColor: T.bg }]}>
           {error && <Text style={{ color: "#E0393E", fontSize: 13, marginBottom: 10 }}>{error}</Text>}
-          <Button label={`Save Lineup (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} />
+          {portfolio?.marginCall.active && (
+            <Text style={{ color: T.textSecondary, fontSize: 13, marginBottom: 10 }}>Lineup changes are paused — margin call active.</Text>
+          )}
+          <Button label={`Save Lineup (${selected.length}/${data.maxStarters})`} onPress={save} loading={saving} disabled={portfolio?.marginCall.active} />
         </View>
       )}
 

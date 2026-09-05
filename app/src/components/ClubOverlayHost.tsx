@@ -285,8 +285,11 @@ export function ClubOverlayHost() {
               </View>
               {detail.shortPct > 0 && <Text style={{ color: T.textSecondary, fontSize: 12, marginTop: 4 }}>{detail.shortPct.toFixed(2)}% short</Text>}
             </View>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              {position === "NONE" && (
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+              {position === "NONE" && portfolio?.marginCall.active && (
+                <Text style={{ fontSize: 12, color: T.textSecondary, maxWidth: 140, textAlign: "right" }}>Buying and shorting are paused — margin call active</Text>
+              )}
+              {position === "NONE" && !portfolio?.marginCall.active && (
                 <>
                   <Button label="Short" onPress={short} variant="danger" fullWidth={false} style={{ paddingHorizontal: 24, paddingVertical: 18 }} />
                   <Button label="Buy" onPress={buy} fullWidth={false} style={{ paddingHorizontal: 30, paddingVertical: 18 }} />

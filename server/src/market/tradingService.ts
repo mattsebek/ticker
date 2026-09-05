@@ -3,7 +3,10 @@ import { fantasyRepo } from "../fantasy/repo";
 import { applyLedgerTransaction } from "./ledger";
 import { portfolioService } from "./portfolioService";
 import { shortingConfig } from "./shortingConfig";
+import { checkAndUpdateMarginCall } from "./marginCallService";
 import { round2 } from "../shared/rng";
+
+const MARGIN_CALL_MESSAGE = "Your account is in margin call. Sell a holding or cover a short to restore buying power before buying or shorting.";
 
 export class TradingError extends Error {}
 
@@ -28,6 +31,7 @@ export const tradingService = {
   },
 
   buy(userId: string, clubId: string, round: number): { cash: number } {
+    if (marketRepo.isInMarginCall(userId)) throw new TradingError(MARGIN_CALL_MESSAGE);
     const holdingIds = marketRepo.getHoldings(userId).map((h) => h.club_id);
     if (holdingIds.includes(clubId)) throw new TradingError("You already own that club.");
     if (marketRepo.getShortPosition(userId, clubId)) throw new TradingError("You have a short position in that club. Cover it before buying.");
@@ -51,6 +55,10 @@ export const tradingService = {
     // Starting Four intent if it was there. Already-locked Gameweek
     // history is untouched; this only affects future (unlocked) rounds.
     fantasyRepo.removeFromStarterSelection(userId, clubId);
+    // Selling is one of the two escape valves from a margin call (the other
+    // is cover()) — re-check immediately so a cure unlocks the account
+    // right away instead of waiting for the next sweep.
+    checkAndUpdateMarginCall(userId);
     return { cash: newCash };
   },
 
@@ -61,6 +69,7 @@ export const tradingService = {
    * a short ever produces is realized at cover() time.
    */
   short(userId: string, clubId: string, round: number): { cash: number } {
+    if (marketRepo.isInMarginCall(userId)) throw new TradingError(MARGIN_CALL_MESSAGE);
     if (marketRepo.getHoldings(userId).some((h) => h.club_id === clubId)) {
       throw new TradingError("You currently own this club. Sell your position before opening a short.");
     }
@@ -89,6 +98,8 @@ export const tradingService = {
     const cashDelta = round2(position.entry_price - price);
     const { newCash } = applyLedgerTransaction(userId, "COVER", [{ entryType: "COVER", clubId, amount: price, cashDelta }]);
     marketRepo.removeShortPosition(userId, clubId);
+    // The other escape valve from a margin call — see sell()'s identical comment.
+    checkAndUpdateMarginCall(userId);
     return { cash: newCash };
   },
 };
