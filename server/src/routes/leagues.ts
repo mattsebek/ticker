@@ -55,6 +55,10 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
   const round = gameweekService.currentRound();
   const sort = req.query.sort === "portfolio" ? "portfolio" : "points";
   const standings = leagueService.standings(lg.id, round, sort);
+  // Computed once per request, then looked up per row — ranking every member
+  // against the full population (human + synthetic) without recomputing
+  // everyone's portfolio value once per standings row.
+  const allValues = portfolioService.getAllPortfolioValues();
   res.json({
     league: {
       id: lg.id,
@@ -64,7 +68,20 @@ leaguesRouter.get("/:id", requireAuth, (req: AuthedRequest, res) => {
       code: lg.code,
       createdStr: new Date(lg.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
     },
-    standings: standings.map((r) => ({ memberId: r.memberId, rank: r.rank, name: r.name, you: r.memberId === req.userId, portfolio: r.portfolio, portfolioStr: fmtMoney(r.portfolio), points: r.points })),
+    standings: standings.map((r) => {
+      const topPct = portfolioService.percentileFromValue(allValues, r.portfolio);
+      return {
+        memberId: r.memberId,
+        rank: r.rank,
+        name: r.name,
+        you: r.memberId === req.userId,
+        portfolio: r.portfolio,
+        portfolioStr: fmtMoney(r.portfolio),
+        points: r.points,
+        topPct,
+        isTopFivePct: topPct <= 5,
+      };
+    }),
   });
 });
 

@@ -6,7 +6,7 @@ export type AppStackParamList = {
   Rules: undefined;
   AiBriefing: undefined;
   GameweekDetail: { initialOffset?: number } | undefined;
-  GameweekPreview: undefined;
+  GameweekPreview: { slug?: string } | undefined;
 };
 
 export type MainTabParamList = {

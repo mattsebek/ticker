@@ -47,6 +47,32 @@ function pctColor(pct: number, T: Tokens): string {
   return RED;
 }
 
+/** True once a finished match's actual points are at or above what was projected — the same >=100% threshold pctColor already uses for the breakdown row, just collapsed to a plain boolean for the FINAL badge / point-total color. */
+function beatExpectations(club: GameweekClubDetail): boolean {
+  return club.pctOfProjected != null ? club.pctOfProjected >= 100 : (club.actualPoints ?? 0) >= club.projectedPoints;
+}
+
+/** Small pill mirroring ShortRow's SHORT badge exactly (fontSize 10/700, 4px radius, 5/1 padding) — LIVE pulses green, FINAL is green/red on whether the club beat its projection. */
+function StatusBadge({ club, T }: { club: GameweekClubDetail; T: Tokens }) {
+  if (club.status === "live") {
+    return (
+      <View style={[styles.statusBadge, { backgroundColor: T.accentTint, flexDirection: "row", alignItems: "center", gap: 4 }]}>
+        <LiveDot />
+        <Text style={{ fontSize: 10, fontWeight: "700", color: T.accent }}>LIVE</Text>
+      </View>
+    );
+  }
+  if (club.status === "finished" && club.breakdown) {
+    const beat = beatExpectations(club);
+    return (
+      <View style={[styles.statusBadge, { backgroundColor: beat ? T.accentTint : T.redTint }]}>
+        <Text style={{ fontSize: 10, fontWeight: "700", color: beat ? GREEN : RED }}>FINAL</Text>
+      </View>
+    );
+  }
+  return null;
+}
+
 /** Clubs whose match is live right now float to the top — that's the score most likely to still be changing. Stable otherwise (everything else keeps its existing order). */
 function sortLiveFirst(clubs: GameweekClubDetail[]): GameweekClubDetail[] {
   return [...clubs].sort((a, b) => Number(b.status === "live") - Number(a.status === "live"));
@@ -63,16 +89,16 @@ function ResultRow({ label, points, T }: { label: string; points: number; T: Tok
 
 function ClubCard({ club, isStarter, T }: { club: GameweekClubDetail; isStarter: boolean; T: Tokens }) {
   const finished = club.status === "finished" && club.breakdown;
-  const live = club.status === "live";
+  const beat = finished ? beatExpectations(club) : null;
 
   return (
     <View style={[styles.card, { backgroundColor: T.card, borderColor: T.border, ...T.elevatedShadow }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <ClubBadge code={club.code} color={club.color} size={40} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            {live && <LiveDot />}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text style={{ fontSize: 15, fontWeight: "600", color: T.text }}>{club.name}</Text>
+            <StatusBadge club={club} T={T} />
           </View>
           <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>
             {club.isHome ? "vs" : "@"} {club.opponent}
@@ -80,9 +106,9 @@ function ClubCard({ club, isStarter, T }: { club: GameweekClubDetail; isStarter:
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          {/* Green only once a starter's points are actually committed — a live or not-yet-played match still shows its number in light gray, never green, since it can still change. */}
-          <Text style={{ fontSize: 20, fontWeight: "700", color: isStarter ? (finished ? GREEN : T.textSecondary) : T.text }}>{finished ? club.actualPoints : club.projectedPoints}</Text>
-          <Text style={{ fontSize: 11, color: isStarter ? (finished ? GREEN : T.textSecondary) : T.textSecondary, marginTop: 2 }}>{finished ? "points" : "projected"}</Text>
+          {/* Committed (finished) starter points are green if they beat projection, red if they fell short — a live or not-yet-played match still shows its number in light gray, never colored, since it can still change. */}
+          <Text style={{ fontSize: 20, fontWeight: "700", color: isStarter ? (finished ? (beat ? GREEN : RED) : T.textSecondary) : T.text }}>{finished ? club.actualPoints : club.projectedPoints}</Text>
+          <Text style={{ fontSize: 11, color: isStarter ? (finished ? (beat ? GREEN : RED) : T.textSecondary) : T.textSecondary, marginTop: 2 }}>{finished ? "points" : "projected"}</Text>
         </View>
       </View>
 
@@ -395,6 +421,7 @@ const styles = StyleSheet.create({
   closeBtn: { position: "absolute", top: 16, right: 20, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 },
   arrowBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
   card: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 14 },
+  statusBadge: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
   selectableCard: { borderWidth: 2 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5 },
   plainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8 },

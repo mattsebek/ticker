@@ -79,17 +79,31 @@ export const portfolioService = {
   },
 
   /**
-   * Where this manager's portfolio value ranks among EVERY manager with a
-   * market account — human and synthetic alike, no filtering — expressed as
-   * "top N%" (rank 1 of 500 -> 0.2, i.e. top 0.2%). Ties share the same rank
-   * (count of strictly-greater values + 1), so two managers tied for best
-   * both read "top 0.2%" rather than one reading "top 0.4%".
+   * Every manager with a market account's portfolio value — human and
+   * synthetic alike, no filtering — computed once so a caller ranking many
+   * users (e.g. an entire league's standings) doesn't recompute the whole
+   * population's values per row. Unsorted; percentileFromValue does the
+   * comparison work.
    */
+  getAllPortfolioValues(): number[] {
+    return marketRepo.listAccountIds().map((id) => portfolioService.getPortfolioValue(id));
+  },
+
+  /**
+   * Where a value ranks among a population of values, expressed as "top N%"
+   * (rank 1 of 500 -> 0.2, i.e. top 0.2%). Ties share the same rank (count
+   * of strictly-greater values + 1), so two managers tied for best both read
+   * "top 0.2%" rather than one reading "top 0.4%".
+   */
+  percentileFromValue(allValues: number[], value: number): number {
+    const rank = allValues.filter((v) => v > value).length + 1;
+    return round2((rank / allValues.length) * 100);
+  },
+
+  /** Convenience single-user wrapper around getAllPortfolioValues/percentileFromValue — see those for the ranking rules. */
   getPortfolioValuePercentileRank(userId: string): number {
     const myValue = portfolioService.getPortfolioValue(userId);
-    const allValues = marketRepo.listAccountIds().map((id) => (id === userId ? myValue : portfolioService.getPortfolioValue(id)));
-    const rank = allValues.filter((v) => v > myValue).length + 1;
-    return round2((rank / allValues.length) * 100);
+    return portfolioService.percentileFromValue(portfolioService.getAllPortfolioValues(), myValue);
   },
 
   isHeld(userId: string, clubId: string): boolean {

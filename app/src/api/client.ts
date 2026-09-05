@@ -19,6 +19,7 @@ import type {
   CoverPreviewResponse,
   User,
   GameweekPreview,
+  PastColumn,
 } from "./types";
 
 export class ApiError extends Error {
@@ -107,5 +108,8 @@ export const api = {
   },
   gameweekPreview: {
     latest: () => request<{ preview: GameweekPreview | null }>("/gameweek-preview/latest"),
+    bySlug: (slug: string) => request<{ preview: GameweekPreview | null }>(`/gameweek-preview/by-slug/${encodeURIComponent(slug)}`),
+    past: (excludeSlug: string, limit = 5) =>
+      request<{ columns: PastColumn[] }>(`/gameweek-preview/past?excludeSlug=${encodeURIComponent(excludeSlug)}&limit=${limit}`),
   },
 };

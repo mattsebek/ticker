@@ -285,9 +285,6 @@ export function PortfolioScreen() {
     );
   }
 
-  const longValue = portfolio.holdings.reduce((a, h) => a + h.price, 0);
-  const shortPnl = portfolio.shorts.reduce((a, s) => a + s.unrealizedPnl, 0);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
@@ -303,15 +300,6 @@ export function PortfolioScreen() {
         </View>
         <Text style={{ fontSize: 13, color: T.textSecondary, marginTop: 10 }}>
           Buying power <Text style={{ color: T.text, fontWeight: "600" }}>{fmtMoney(portfolio.buyingPower)}</Text>
-        </Text>
-        <Text style={{ fontSize: 12, color: T.textSecondary, marginTop: 4 }}>
-          Cash {fmtMoney(portfolio.cash)} · Clubs {fmtMoney(longValue)}
-          {portfolio.shorts.length > 0 && (
-            <>
-              {" "}
-              · Shorts <Text style={{ color: colorForPct(shortPnl) }}>{shortPnl >= 0 ? "+" : "-"}{fmtMoney(Math.abs(shortPnl))}</Text>
-            </>
-          )}
         </Text>
 
         {portfolio.marginCall.active && (

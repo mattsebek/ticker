@@ -240,6 +240,9 @@ export interface StandingsRow {
   portfolio: number;
   portfolioStr: string;
   points: number;
+  /** Rank among EVERY manager with a market account (human + synthetic), as "top N%". */
+  topPct: number;
+  isTopFivePct: boolean;
 }
 
 export interface BriefSegment {
@@ -285,6 +288,14 @@ export interface GameweekPreview {
   badge: "none" | "trending";
   background: "diagonal" | "vertical" | "radial" | "card";
   color: "ink" | "white";
+}
+
+/** One entry in an article page's "Past Columns" footer — everything but the body. */
+export interface PastColumn {
+  slug: string;
+  round: number;
+  headline: string;
+  publishedAt: string;
 }
 
 export interface SellPreviewResponse {

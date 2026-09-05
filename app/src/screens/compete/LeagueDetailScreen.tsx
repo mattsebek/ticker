@@ -13,6 +13,11 @@ import { PillRow, Pill } from "../../components/Pill";
 
 type Props = NativeStackScreenProps<AppStackParamList, "LeagueDetail">;
 
+/** "Top 0.2%" not "Top 0.20000000000000004%" — one decimal, trimmed when it's a whole number. */
+function fmtTopPct(topPct: number): string {
+  return topPct < 10 ? String(Math.round(topPct * 10) / 10) : String(Math.round(topPct));
+}
+
 export function LeagueDetailScreen({ route, navigation }: Props) {
   const { leagueId, name } = route.params;
   const T = useThemeStore((s) => s.tokens);
@@ -51,6 +56,9 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
     }
   }
 
+  const me = standings.find((r) => r.you);
+  const maxPoints = standings.length > 0 ? Math.max(...standings.map((r) => r.points)) : 0;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
       <View style={styles.backRow}>
@@ -59,6 +67,11 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
           <Text style={{ fontSize: 17, color: T.accent }}>Compete</Text>
         </Pressable>
         <View style={{ flex: 1 }} />
+        {me && (
+          <Text style={{ fontSize: 13, fontWeight: "600", color: T.textSecondary, marginRight: 12 }}>
+            Top {fmtTopPct(me.topPct)}%{me.isTopFivePct ? " 🚀" : ""}
+          </Text>
+        )}
         <Pressable onPress={shareLeague} disabled={!code} style={[styles.shareBtn, { backgroundColor: T.card }]} accessibilityLabel="Share league" accessibilityRole="button">
           <ShareIcon color={T.text} />
         </Pressable>
@@ -88,7 +101,11 @@ export function LeagueDetailScreen({ route, navigation }: Props) {
               style={[styles.row, { borderBottomColor: T.borderLight, borderBottomWidth: i === standings.length - 1 ? 0 : 1, backgroundColor: r.you ? T.accentTint : "transparent" }]}
             >
               <Text style={{ width: 28, fontSize: 13, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.rank}</Text>
-              <Text style={{ flex: 1, fontSize: 15, fontWeight: r.you ? "700" : "400", color: T.text }}>{r.name}</Text>
+              <Text style={{ flex: 1, fontSize: 15, fontWeight: r.you ? "700" : "400", color: T.text }} numberOfLines={1}>
+                {r.name}
+                {maxPoints > 0 && r.points === maxPoints ? " 🏆" : ""}
+                {r.isTopFivePct ? " 🚀" : ""}
+              </Text>
               <Text style={{ width: 80, textAlign: "center", fontSize: 13, fontWeight: sort === "portfolio" ? "700" : "500", color: sort === "portfolio" ? T.text : T.textSecondary }}>{r.portfolioStr}</Text>
               <Text style={{ width: 64, textAlign: "center", fontSize: 13, fontWeight: "700", color: T.text }}>{r.points}</Text>
             </Pressable>

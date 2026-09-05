@@ -4,16 +4,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useThemeStore } from "../../store/themeStore";
 import { FONT_SERIF } from "../../theme/theme";
-import { useGameweekPreview } from "../../hooks/useGameweekPreview";
+import { useGameweekPreview, useGameweekPreviewBySlug, usePastColumns } from "../../hooks/useGameweekPreview";
 import { GameweekPreviewArt } from "../../components/GameweekPreviewArt";
 import { renderBoldSegments } from "../../utils/richText";
 import type { AppStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<AppStackParamList, "GameweekPreview">;
 
-export function GameweekPreviewScreen({ navigation }: Props) {
+export function GameweekPreviewScreen({ navigation, route }: Props) {
   const T = useThemeStore((s) => s.tokens);
-  const preview = useGameweekPreview();
+  const slug = route.params?.slug;
+  // Both fire regardless of which one the screen actually needs — the
+  // unused fetch is cheap and this keeps hook-call order unconditional
+  // (mirrors the two distinct hooks ticker-website's GameweekPreviewPage.tsx
+  // uses, just picked between here instead of by route).
+  const latest = useGameweekPreview();
+  const bySlug = useGameweekPreviewBySlug(slug);
+  const preview = slug ? bySlug : latest;
+  const pastColumns = usePastColumns(preview?.slug);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -49,6 +57,21 @@ export function GameweekPreviewScreen({ navigation }: Props) {
                 {renderBoldSegments(paragraph, { color: T.text })}
               </Text>
             ))}
+          {pastColumns && pastColumns.length > 0 && (
+            <View style={[styles.pastWrap, { borderTopColor: T.border }]}>
+              <Text style={{ fontSize: 12, color: T.textSecondary, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 12 }}>Past Columns</Text>
+              {pastColumns.map((c) => (
+                <Pressable
+                  key={c.slug}
+                  onPress={() => navigation.push("GameweekPreview", { slug: c.slug })}
+                  style={[styles.pastRow, { borderBottomColor: T.border }]}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.textSecondary }}>GW{c.round}</Text>
+                  <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: T.text }}>{renderBoldSegments(c.headline, { color: T.text })}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -58,4 +81,6 @@ export function GameweekPreviewScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   backRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
+  pastWrap: { marginTop: 8, paddingTop: 20, borderTopWidth: 1 },
+  pastRow: { flexDirection: "row", alignItems: "baseline", gap: 10, paddingVertical: 10, borderBottomWidth: 1 },
 });

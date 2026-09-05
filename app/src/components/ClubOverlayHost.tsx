@@ -30,6 +30,30 @@ function splitMatchText(matchText: string): { opponent: string; date: string | n
   return { opponent: matchText.slice(0, i), date: matchText.slice(i + 3) };
 }
 
+// Real demand_signal readings rarely approach the theoretical ±1 extremes
+// (confidence-dampened by participant counts, then blended with the
+// ownership-velocity signal) — the same reason marketSentimentFromSignal's
+// own "Bullish"/"Bearish" thresholds sit at ±0.15, not ±0.5. A bar scaled
+// linearly against ±1 barely moves for exactly those realistic values, so
+// this rescales against SENTIMENT_FULL_SCALE (the "Very Bullish/Bearish"
+// threshold) instead — a signal that just crosses into "Bullish" territory
+// (0.15) already visibly shifts the bar, and anything past "Very Bullish"
+// (0.5) hits the full 90/10 swing rather than sitting near dead center.
+// Mirrors ticker-website's ClubDetailOverlay.tsx exactly.
+const SENTIMENT_FULL_SCALE = 0.5;
+
+/** A single red/green bar visualizing market sentiment (Shorting V1 BR-18). Score null (no tick yet) renders as an even 50/50 split. */
+function SentimentBar({ score }: { score: number | null }) {
+  const scaled = Math.max(-1, Math.min(1, (score ?? 0) / SENTIMENT_FULL_SCALE));
+  const greenPct = 50 + scaled * 40;
+  return (
+    <View style={{ flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden", marginTop: 8 }}>
+      <View style={{ width: `${100 - greenPct}%`, backgroundColor: RED }} />
+      <View style={{ width: `${greenPct}%`, backgroundColor: GREEN }} />
+    </View>
+  );
+}
+
 export function ClubOverlayHost() {
   const clubId = useClubOverlayStore((s) => s.clubId);
   const openOverlay = useClubOverlayStore((s) => s.open);
@@ -275,7 +299,7 @@ export function ClubOverlayHost() {
           </ScrollView>
 
           <View style={[styles.footer, { borderTopColor: T.border }]}>
-            <View>
+            <View style={{ width: 150 }}>
               <Text style={{ color: T.textSecondary, fontSize: 14 }}>Ownership</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <Text style={{ color: T.text, fontSize: 24, fontWeight: "600" }}>{detail.ownershipPct.toFixed(2)}%</Text>
@@ -284,6 +308,10 @@ export function ClubOverlayHost() {
                 )}
               </View>
               {detail.shortPct > 0 && <Text style={{ color: T.textSecondary, fontSize: 12, marginTop: 4 }}>{detail.shortPct.toFixed(2)}% short</Text>}
+              <SentimentBar score={detail.marketSentimentScore} />
+              {detail.marketSentiment !== "Neutral" && (
+                <Text style={{ fontSize: 11, fontWeight: "700", color: detail.marketSentiment.includes("Bullish") ? GREEN : RED, marginTop: 6 }}>{detail.marketSentiment.toUpperCase()}</Text>
+              )}
             </View>
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
               {position === "NONE" && portfolio?.marginCall.active && (
