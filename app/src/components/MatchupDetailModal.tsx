@@ -8,10 +8,14 @@ import { FixturePill } from "./FixturePill";
 import { CloseIcon } from "./icons";
 import { FONT_SERIF, GREEN, RED, ThemeTokens } from "../theme/theme";
 
-function matchupKickoffLabel(kickoff: string): string {
+/** Day of week on one line, start time on the next — matches the compact scoreboard card's own two-line kickoff label. */
+function matchupKickoffParts(kickoff: string): { day: string; time: string } | null {
   const d = new Date(kickoff);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }).format(d);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    day: new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(d),
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(d),
+  };
 }
 
 /** A single metric split between the two sides, weighted proportionally — e.g. home 2.7 proj / away 5.8 proj renders as a ~32/68 bar in each club's own color. Falls back to an even 50/50 split when both sides are 0 (nothing to weigh yet). */
@@ -84,9 +88,21 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
               </View>
               <View style={{ minWidth: 64, alignItems: "center" }}>
                 <Text style={{ fontFamily: FONT_SERIF, fontSize: 22, fontWeight: "600", color: T.text }}>{matchup.scoreStr ?? "vs"}</Text>
-                <Text style={{ marginTop: 4, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>
-                  {matchup.status === "live" ? "Live now" : matchup.status === "finished" ? "Final" : matchupKickoffLabel(matchup.kickoff)}
-                </Text>
+                {matchup.status === "live" ? (
+                  <Text style={{ marginTop: 4, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Live now</Text>
+                ) : matchup.status === "finished" ? (
+                  <Text style={{ marginTop: 4, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Final</Text>
+                ) : (
+                  (() => {
+                    const parts = matchupKickoffParts(matchup.kickoff);
+                    return parts ? (
+                      <View style={{ marginTop: 4, alignItems: "center" }}>
+                        <Text style={{ fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>{parts.day}</Text>
+                        <Text style={{ fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>{parts.time}</Text>
+                      </View>
+                    ) : null;
+                  })()
+                )}
               </View>
               <View style={{ flex: 1, alignItems: "center" }}>
                 <ClubBadge code={away.code} color={away.color} size={44} />
@@ -120,12 +136,12 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
 
             <Text style={{ marginTop: 26, marginBottom: 10, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Next 3 Fixtures</Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
+              <View style={{ flex: 1, gap: 8 }}>
                 {[0, 1, 2].map((i) => (
                   <FixturePill key={i} index={i} fixture={home.upcomingFixtures[i]} T={T} size="compact" />
                 ))}
               </View>
-              <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
+              <View style={{ flex: 1, gap: 8 }}>
                 {[0, 1, 2].map((i) => (
                   <FixturePill key={i} index={i} fixture={away.upcomingFixtures[i]} T={T} size="compact" />
                 ))}

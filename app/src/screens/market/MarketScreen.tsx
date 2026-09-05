@@ -22,10 +22,25 @@ import type { ThemeTokens } from "../../theme/theme";
 import { fmtMoney } from "../../utils/format";
 import { api } from "../../api/client";
 
-function matchupKickoffLabel(kickoff: string): string {
+/** Day of week on one line, start time on the next — a scheduled fixture's own two-line kickoff label. */
+function matchupKickoffParts(kickoff: string): { day: string; time: string } | null {
   const d = new Date(kickoff);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(d);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    day: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(d),
+  };
+}
+
+function KickoffLabel({ kickoff, T }: { kickoff: string; T: ThemeTokens }) {
+  const parts = matchupKickoffParts(kickoff);
+  if (!parts) return null;
+  return (
+    <View style={{ alignItems: "center" }}>
+      <Text style={{ fontSize: 11, color: T.textSecondary, lineHeight: 14 }}>{parts.day}</Text>
+      <Text style={{ fontSize: 11, color: T.textSecondary, lineHeight: 14 }}>{parts.time}</Text>
+    </View>
+  );
 }
 
 /** Once a fixture's finished, the badge's own code text is redundant (the circle already shows it) — so that space instead reports the final score (with a colored beat/missed-projection arrow right after it) on top, and the projection it's being measured against below. Before finish, there's nothing to compare yet, so it just shows the projection. */
@@ -71,7 +86,7 @@ function MatchupsStrip({ matchups, T, onOpen }: { matchups: MarketMatchup[]; T: 
                 <Text style={{ fontSize: 10, color: T.textSecondary, textTransform: "uppercase" }}>Final</Text>
               </>
             ) : (
-              <Text style={{ fontSize: 11, color: T.textSecondary }}>{matchupKickoffLabel(m.kickoff)}</Text>
+              <KickoffLabel kickoff={m.kickoff} T={T} />
             )}
           </View>
           <MatchupSideView side={m.away} T={T} align="right" />
@@ -233,17 +248,17 @@ export function MarketScreen() {
 
   const q = search.trim().toLowerCase();
   const isSearching = q.length > 0;
-  const filteredClubs = useMemo(
-    () => (isSearching ? clubs.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : clubs),
-    [clubs, q, isSearching]
+  const matchesClub = (name: string, code: string) => name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+  const filteredClubs = useMemo(() => (isSearching ? clubs.filter((c) => matchesClub(c.name, c.code)) : clubs), [clubs, q, isSearching]);
+  const filteredMatchups = useMemo(
+    () => (isSearching ? matchups.filter((m) => matchesClub(m.home.name, m.home.code) || matchesClub(m.away.name, m.away.code)) : matchups),
+    [matchups, q, isSearching]
   );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <ScreenTitle style={{ marginBottom: 18 }}>Market</ScreenTitle>
-
-        {matchups.length > 0 && <MatchupsStrip matchups={matchups} T={T} onOpen={setSelectedMatchup} />}
 
         <View style={{ position: "relative", marginBottom: 24 }}>
           <View style={{ position: "absolute", left: 13, top: 0, bottom: 0, justifyContent: "center", zIndex: 1 }}>
@@ -262,6 +277,8 @@ export function MarketScreen() {
             </Pressable>
           )}
         </View>
+
+        {filteredMatchups.length > 0 && <MatchupsStrip matchups={filteredMatchups} T={T} onOpen={setSelectedMatchup} />}
 
         <View>
           <ClubTable clubs={filteredClubs} heldClubIds={heldClubIds} T={T} onOpen={open} />
