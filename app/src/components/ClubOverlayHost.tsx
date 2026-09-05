@@ -276,7 +276,7 @@ export function ClubOverlayHost() {
 
           <View style={[styles.footer, { borderTopColor: T.border }]}>
             <View>
-              <Text style={{ color: T.textSecondary, fontSize: 14 }}>League Ownership</Text>
+              <Text style={{ color: T.textSecondary, fontSize: 14 }}>Ownership</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <Text style={{ color: T.text, fontSize: 24, fontWeight: "600" }}>{detail.ownershipPct.toFixed(2)}%</Text>
                 {detail.netDemand !== "flat" && (
