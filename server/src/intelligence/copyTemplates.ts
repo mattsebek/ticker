@@ -11,6 +11,14 @@ export interface GeneratedCopy {
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 const round1 = (n: number) => n.toFixed(1);
 
+/** A side's share of a two-sided buy/sell split, as a percentage — e.g. netBuyers=9, netSellers=3 -> buyShare "75.0%". Never a raw headcount, which reads as trivially small no matter how skewed the split actually is. */
+function buyShare(netBuyers: number, netSellers: number): string {
+  return pct(netBuyers / Math.max(1, netBuyers + netSellers));
+}
+function sellShare(netBuyers: number, netSellers: number): string {
+  return pct(netSellers / Math.max(1, netBuyers + netSellers));
+}
+
 /**
  * Deterministic, per-signal-type sentence templates — same "generated FROM
  * real data, never fixed flavor text" approach as the existing
@@ -35,8 +43,8 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         headline: "Heating Up",
         body:
           v === 0
-            ? `${club}'s buying volume is ${pct((f.ratio as number) - 1)} above its trailing average — ${f.count} buys in the last 24 hours.`
-            : `Buyers are piling into ${club}: ${f.count} buys today, ${round1(f.ratio as number)}x its normal pace.`,
+            ? `${club}'s buying volume is ${pct((f.ratio as number) - 1)} above its trailing average today.`
+            : `Buyers are piling into ${club}: volume is running ${round1(f.ratio as number)}x its normal pace.`,
         ctaClubId,
       };
     case "SELL_VOLUME_SPIKE":
@@ -46,7 +54,7 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         headline: "Paper Hands",
         body:
           v === 0
-            ? `${club} is seeing its heaviest sell-off in a while — ${f.count} sells in the last 24 hours, ${round1(f.ratio as number)}x the norm.`
+            ? `${club} is seeing its heaviest sell-off in a while — volume is running ${round1(f.ratio as number)}x the norm.`
             : `Sellers are moving fast on ${club}: sell volume is ${pct((f.ratio as number) - 1)} above its trailing average.`,
         ctaClubId,
       };
@@ -57,8 +65,8 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         headline: "Heating Up",
         body:
           v === 0
-            ? `${club} saw ${f.netBuyers} net buyers against just ${f.netSellers} sellers in the last 24 hours — a lopsided vote of confidence.`
-            : `The crowd is one-sided on ${club} right now: ${f.netBuyers} buyers to ${f.netSellers} sellers.`,
+            ? `${buyShare(f.netBuyers as number, f.netSellers as number)} of ${club}'s trading activity today has been buying — a lopsided vote of confidence.`
+            : `The crowd is one-sided on ${club} right now: ${buyShare(f.netBuyers as number, f.netSellers as number)} of today's activity is on the buy side.`,
         ctaClubId,
       };
     case "NET_SELLING_SPIKE":
@@ -68,8 +76,8 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         headline: "Paper Hands",
         body:
           v === 0
-            ? `${club} saw ${f.netSellers} net sellers against just ${f.netBuyers} buyers in the last 24 hours.`
-            : `Exits are piling up on ${club}: ${f.netSellers} sellers to only ${f.netBuyers} buyers in the last day.`,
+            ? `${sellShare(f.netBuyers as number, f.netSellers as number)} of ${club}'s trading activity today has been selling.`
+            : `Exits are piling up on ${club}: ${sellShare(f.netBuyers as number, f.netSellers as number)} of today's activity is on the sell side.`,
         ctaClubId,
       };
     case "PRICE_GAIN":
@@ -206,7 +214,7 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         category: "BUYING_THE_DIP",
         emoji: "🤔",
         headline: "Buying the Dip?",
-        body: `Managers kept buying ${club} even after its result — ${f.netBuyersPreMatch} net buyers since the final whistle.`,
+        body: `Managers kept buying ${club} even after its result — ${buyShare(f.netBuyersPreMatch as number, f.netSellersPreMatch as number)} of trading since the final whistle has been buying.`,
         ctaClubId,
       };
     case "SELLING_THE_RALLY":
@@ -214,7 +222,7 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         category: "SELLING_THE_RALLY",
         emoji: "📤",
         headline: "Selling the Rally",
-        body: `${club} won, but managers are heading for the exit — ${f.netSellersPreMatch} net sellers since the result.`,
+        body: `${club} won, but managers are heading for the exit — ${sellShare(f.netBuyersPreMatch as number, f.netSellersPreMatch as number)} of trading since the result has been selling.`,
         ctaClubId,
       };
     case "CROWDED_TRADE":
