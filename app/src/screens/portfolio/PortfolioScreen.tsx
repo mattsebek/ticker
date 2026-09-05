@@ -341,7 +341,7 @@ export function PortfolioScreen() {
         <CardStack cards={brief.cards} dismissed={portfolio.briefDismissed} />
 
         <View style={styles.sectionHeader}>
-          <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text }}>My Clubs</Text>
+          <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text }}>My Investments</Text>
           <PillRow>
             <Pill label="GW" active={clubsRange === "gw"} onPress={() => setClubsRange("gw")} />
             <Pill label="YTD" active={clubsRange === "year"} onPress={() => setClubsRange("year")} />
@@ -351,14 +351,9 @@ export function PortfolioScreen() {
           <ClubRow key={h.id} club={h} isYear={clubsRange === "year"} />
         ))}
 
-        {portfolio.shorts.length > 0 && (
-          <>
-            <Text style={{ fontFamily: FONT_SERIF, fontSize: 19, fontWeight: "600", color: T.text, marginTop: 28, marginBottom: 14 }}>My Shorts</Text>
-            {portfolio.shorts.map((s) => (
-              <ShortRow key={s.clubId} short={s} />
-            ))}
-          </>
-        )}
+        {portfolio.shorts.map((s) => (
+          <ShortRow key={s.clubId} short={s} />
+        ))}
 
         {portfolio.holdings.some((h) => h.upcomingFixtures?.length) && (
           <>
