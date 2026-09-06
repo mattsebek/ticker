@@ -241,6 +241,28 @@ export function generateCopy(signal: Pick<CandidateSignal, "signalType" | "clubI
         body: `${club} delivered, but barely anyone was holding it — just ${pct(f.ownershipPctPreMatch as number)} ownership going in.`,
         ctaClubId,
       };
+    case "PROJECTION_OVERPERFORMER":
+      return {
+        category: "OVERDELIVERING",
+        emoji: "🎯",
+        headline: "Overdelivering",
+        body:
+          v === 0
+            ? `${club} has beaten its pre-match projection in ${f.beats} of ${f.fixturesCounted} matches, averaging ${round1(Math.abs(f.avgSurprise as number))} points above the market's number.`
+            : `The market keeps underrating ${club} — ${f.beats} of its ${f.fixturesCounted} matches have finished above projection, by ${round1(Math.abs(f.avgSurprise as number))} points on average.`,
+        ctaClubId,
+      };
+    case "PROJECTION_UNDERPERFORMER":
+      return {
+        category: "UNDERDELIVERING",
+        emoji: "🪫",
+        headline: "Falling Short",
+        body:
+          v === 0
+            ? `${club} has come up short of its pre-match projection in ${f.misses} of ${f.fixturesCounted} matches, averaging ${round1(Math.abs(f.avgSurprise as number))} points below the market's number.`
+            : `${club} keeps being priced for more than it delivers — ${f.misses} of its ${f.fixturesCounted} matches have finished below projection, by ${round1(Math.abs(f.avgSurprise as number))} points on average.`,
+        ctaClubId,
+      };
     default:
       return {
         category: "MARKET_MOVER",

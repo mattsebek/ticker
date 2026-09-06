@@ -30,6 +30,13 @@ const SIGNAL_EXPIRATION_CLASS: Record<string, ExpirationClass> = {
   SELLING_THE_RALLY: "MATCHWEEK_ACTIVITY",
   CROWDED_TRADE: "MATCHWEEK_ACTIVITY",
   UNPOPULAR_WINNER: "MATCHWEEK_ACTIVITY",
+  // Cumulative season records, but MATCHWEEK rather than SEASON_MILESTONE:
+  // the record genuinely changes every time the club plays, so a 14-day
+  // milestone cooldown would suppress the update that makes it interesting.
+  // Expiring at the next deadline is also the honest lifetime — after that
+  // round the numbers in the copy are stale.
+  PROJECTION_OVERPERFORMER: "MATCHWEEK_ACTIVITY",
+  PROJECTION_UNDERPERFORMER: "MATCHWEEK_ACTIVITY",
   MANUAL: "DAILY_MARKET_SIGNAL",
 };
 

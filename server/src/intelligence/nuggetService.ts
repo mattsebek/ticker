@@ -12,6 +12,7 @@ import { detectPricePressureSignals } from "./detectors/pricePressureSignals";
 import { detectTradingActivity } from "./detectors/tradingActivity";
 import { detectOwnershipSignals } from "./detectors/ownership";
 import { detectPerformanceDivergence } from "./detectors/performanceDivergence";
+import { detectProjectionTrackRecord } from "./detectors/projectionTrackRecord";
 
 export interface SweepResult {
   candidatesEvaluated: number;
@@ -30,6 +31,7 @@ function runAllDetectors(): CandidateSignal[] {
     ...detectTradingActivity(),
     ...detectOwnershipSignals(),
     ...detectPerformanceDivergence(),
+    ...detectProjectionTrackRecord(),
   ];
 }
 

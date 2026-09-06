@@ -61,11 +61,33 @@ export const intelligenceConfig = {
   /** How long a nugget stays visible (public widget/API + admin's non-"Expired" filters) once PUBLISHED, measured from the moment it was published — not from when it was generated. Overrides whatever expires_at a signal's own expiration CLASS (expiration.ts) set at generation time; that value only matters while the nugget is still an unreviewed CANDIDATE. */
   PUBLISHED_LIFETIME_MS: floatFromEnv("INTELLIGENCE_PUBLISHED_LIFETIME_HOURS", 48) * 60 * 60 * 1000,
 
+  /**
+   * PROJECTION_OVERPERFORMER / PROJECTION_UNDERPERFORMER sample floor. A
+   * club's record against its own Official Fixture Projections is only a
+   * story once there are enough settled matches for it to mean anything —
+   * at 1-2 matches "beats its projection every time" is noise wearing a
+   * trend's clothing. Three weeks into a season this floor is doing real
+   * work, so it is deliberately a config value rather than a constant.
+   */
+  TRACK_RECORD_MIN_FIXTURES: floatFromEnv("INTELLIGENCE_TRACK_RECORD_MIN_FIXTURES", 3),
+
+  /** Share of a club's settled fixtures that must fall on the same side of projection (0..1) before it reads as a pattern rather than a coin flip. */
+  TRACK_RECORD_HIT_RATE: floatFromEnv("INTELLIGENCE_TRACK_RECORD_HIT_RATE", 0.67),
+
+  /**
+   * Mean performance surprise (points) required alongside the hit rate.
+   * Both gates must clear: a club that beat its projection three times by
+   * 0.1 points is technically perfect and completely uninteresting, so
+   * consistency alone never carries a nugget.
+   */
+  TRACK_RECORD_MIN_AVG_SURPRISE: floatFromEnv("INTELLIGENCE_TRACK_RECORD_MIN_AVG_SURPRISE", 0.75),
+
   /** Full-scale references for normalizing "market magnitude" in the interest score (section 16) — each signal's raw magnitude divided by its own reference, capped at 1. */
   MAGNITUDE_SCALE: {
     volumeRatio: 4, // e.g. a 4x-average spike reads as "maximum" magnitude
     pricePct: 0.2, // a 20% price move reads as "maximum"
     ppsDelta: 50, // a 50-point PPS swing reads as "maximum"
     ownershipSignal: 1, // already -1..1 normalized
+    avgSurprise: 3, // a 3-point average gap to projection reads as "maximum"
   },
 };
