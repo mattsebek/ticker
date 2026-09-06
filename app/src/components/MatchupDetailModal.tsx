@@ -135,12 +135,14 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
             />
 
             <Text style={{ marginTop: 26, marginBottom: 10, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Next 3 Fixtures</Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flexDirection: "row", gap: 14 }}>
               <View style={{ flex: 1, gap: 8 }}>
                 {[0, 1, 2].map((i) => (
                   <FixturePill key={i} index={i} fixture={home.upcomingFixtures[i]} T={T} size="compact" />
                 ))}
               </View>
+              {/* A thin divider down the middle — with two columns of same-styled pills sitting close together, gap alone didn't make it obvious which 3 belonged to which club. */}
+              <View style={{ width: 1, backgroundColor: T.border }} />
               <View style={{ flex: 1, gap: 8 }}>
                 {[0, 1, 2].map((i) => (
                   <FixturePill key={i} index={i} fixture={away.upcomingFixtures[i]} T={T} size="compact" />
