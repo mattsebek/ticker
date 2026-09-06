@@ -18,6 +18,15 @@ const provider = createFootballDataProvider();
 const ODDS_IMPORT_CAP = 100;
 
 /**
+ * How far past kickoff a fixture must still be "live" before
+ * reconcileStaleLiveFixtures() treats it as stuck rather than in progress.
+ * A football match runs ~2h wall-clock including half time and stoppage;
+ * 3.5h clears that plus a long delay without waiting so long that a stuck
+ * fixture blocks settlement for a whole evening.
+ */
+const STALE_LIVE_AFTER_MS = 3.5 * 60 * 60 * 1000;
+
+/**
  * Unlike fetchOddsBestEffort/fetchPriorSeasonStandings below, there's no
  * reasonable way to degrade gracefully when the season import's own
  * competitions/seasons lookup fails — there's no fixture data at all
@@ -123,22 +132,27 @@ export const footballService = {
     const tickerSeasonId = footballRepo.getMapping(provider.name, "season", seasonProviderId);
     if (!tickerSeasonId) return { updated: 0 };
 
-    // maxFinishedRound() (not maxRound()) — the schedule's LAST round is
-    // pinned at the season length the instant importSeasonSchedule() bulk-
-    // imports all 38 rounds up front, so anchoring here to maxRound() meant
-    // this window permanently excluded early rounds (GW1 included) the
-    // moment the season was imported, no matter how long ago they actually
-    // finished in real life. Anchoring to genuine progress instead means
-    // an early round that's still stuck "scheduled" keeps getting rechecked
-    // every cycle until it actually syncs.
-    const sinceRound = Math.max(1, footballRepo.maxFinishedRound() - 1);
+    // minUnfinishedRound() (not maxFinishedRound() - 1) — see that method's
+    // doc comment. The one-round lookback this replaces could only heal a
+    // gap less than one round old: the moment any fixture two rounds ahead
+    // finished, an earlier still-unfinished fixture was filtered out of
+    // every subsequent refresh, permanently. Anchoring to the oldest
+    // unfinished round means a stuck fixture keeps its own round inside the
+    // window until it actually syncs.
+    //
+    // Widening costs nothing in provider quota: fetchResults makes exactly
+    // ONE request for the whole season and applies `sinceRound` client-side
+    // to the response it already has.
+    const sinceRound = Math.max(1, footballRepo.minUnfinishedRound());
     const results = await provider.fetchResults(seasonProviderId, sinceRound);
-    // Same one-request-per-fixture cost as importSeasonSchedule() — only
-    // spend odds budget on fixtures that haven't kicked off yet.
-    const notYetPlayed = results.filter((f) => f.status === "NS").slice(0, ODDS_IMPORT_CAP);
-    const odds = await fetchOddsBestEffort(notYetPlayed.map((f) => f.providerId));
-    const oddsByFixture = new Map<string, RawOddsDTO>(odds.map((o) => [o.fixtureProviderId, o]));
-    for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId, oddsByFixture.get(f.providerId));
+    // No odds fetch here. fetchResults queries the provider with
+    // status:"FT", so every row it returns is already played — the
+    // `status === "NS"` filter this used to run could never match, and the
+    // odds call under it fetched an empty list on every run since the day
+    // it was written. Pre-kickoff odds come from refreshOdds()/the
+    // projection engine's own cycle, which are the paths that actually see
+    // not-yet-played fixtures.
+    for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId);
     return { updated: results.length };
   },
 
@@ -158,6 +172,54 @@ export const footballService = {
     const results = await provider.fetchLiveFixtures(seasonProviderId);
     for (const f of results) normalizeFixture(provider.name, f, tickerSeasonId);
     return { updated: results.length };
+  },
+
+  /**
+   * Repairs fixtures whose status got stuck at "live".
+   *
+   * A fixture only ever becomes "live" because monitorLiveMatches() saw it
+   * in the provider's live feed. When the match ends it simply DROPS OUT of
+   * that feed — and a fixture's absence from a response writes nothing, so
+   * "live" is a one-way state. Clearing it depends entirely on some other
+   * call reporting the same fixture as finished, and both feeds that could
+   * are filtered: refreshFixtures() asks only for status:"FT" and only
+   * within a round window, and fetchLiveFixtures() by definition only
+   * returns what is in progress right now. A fixture those filters exclude
+   * stays "live" indefinitely, with real consequences — settlementService
+   * only iterates finished fixtures, so its fantasy points and price impact
+   * never land, and benchmarkLockService leaves its projection on "Locked"
+   * forever.
+   *
+   * This is the unfiltered path that closes that hole: anything still
+   * "live" well past kickoff is re-fetched BY ID, so whatever state the
+   * fixture is genuinely in now lands regardless of round or status
+   * filters. Costs zero provider requests on a quiet cycle (the common
+   * case) and one request per 20 stale fixtures otherwise.
+   */
+  async reconcileStaleLiveFixtures(): Promise<{ checked: number; updated: number }> {
+    const live = footballRepo.listFixturesByStatus("live");
+    if (live.length === 0) return { checked: 0, updated: 0 };
+
+    const staleBefore = Date.now() - STALE_LIVE_AFTER_MS;
+    const stale = live.filter((f) => {
+      const kickoffMs = Date.parse(f.kickoff);
+      // An unparseable kickoff (Ticker's mock fixtures carry them) is not
+      // evidence the match is still being played, so reconcile rather than
+      // skip — the by-id fetch is authoritative either way.
+      return !Number.isFinite(kickoffMs) || kickoffMs <= staleBefore;
+    });
+    if (stale.length === 0) return { checked: 0, updated: 0 };
+
+    const seasonProviderId = await this.currentSeasonProviderId();
+    const tickerSeasonId = footballRepo.getMapping(provider.name, "season", seasonProviderId);
+    if (!tickerSeasonId) return { checked: stale.length, updated: 0 };
+
+    const providerIds = stale.map((f) => footballRepo.getProviderId(provider.name, "fixture", f.id)).filter((id): id is string => !!id);
+    if (providerIds.length === 0) return { checked: stale.length, updated: 0 };
+
+    const raw = await provider.fetchFixturesByProviderIds(seasonProviderId, providerIds);
+    for (const f of raw) normalizeFixture(provider.name, f, tickerSeasonId);
+    return { checked: stale.length, updated: raw.length };
   },
 
   /**

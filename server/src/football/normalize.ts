@@ -42,18 +42,42 @@ export function normalizeClub(provider: string, raw: RawTeamRef): Club {
   return club;
 }
 
+/**
+ * Every status the provider can send maps explicitly, because the fallback
+ * here is "scheduled" — the one value that reads as "this match has not
+ * happened yet". An unmapped in-progress or finished code silently rewound
+ * a fixture to un-played, which un-does settlement gating downstream.
+ */
 function toFixtureStatus(raw: RawFixtureStatus): FixtureStatus {
   switch (raw) {
+    // AET/PEN are finals reached the long way; AWD/WO are decided off the
+    // pitch but still carry a real scoreline and still settle.
     case "FT":
+    case "AET":
+    case "PEN":
+    case "AWD":
+    case "WO":
       return "finished";
+    // SUSP/INT are stoppages, not conclusions — the match is still open, so
+    // it stays "live" and reconcileStaleLiveFixtures keeps re-checking it
+    // until the provider settles it either way.
     case "1H":
     case "HT":
     case "2H":
+    case "ET":
+    case "BT":
+    case "P":
+    case "SUSP":
+    case "INT":
+    case "LIVE":
       return "live";
     case "PST":
     case "ABD":
     case "CANC":
       return "postponed";
+    case "TBD":
+    case "NS":
+      return "scheduled";
     default:
       return "scheduled";
   }

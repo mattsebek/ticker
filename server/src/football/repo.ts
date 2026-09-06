@@ -210,6 +210,23 @@ export const footballRepo = {
   },
 
   /** Highest round with at least one finished fixture — genuine season progress, unlike maxRound() (the schedule's last round, pinned at the season length the moment the full fixture list is imported). */
+  /**
+   * Lowest round that still holds a fixture in any non-finished state
+   * ("scheduled", "live" or "postponed"), or 0 when the whole season is
+   * settled. This is the correct floor for the results-refresh window:
+   * anchoring that window to maxFinishedRound() assumed rounds complete in
+   * order, so one fixture that failed to reach "finished" fell out of the
+   * window as soon as two LATER rounds finished — and could then never be
+   * corrected, because the window that would have corrected it was itself
+   * keyed off finished rounds. Anchoring to the oldest unfinished round
+   * instead makes the stuck fixture the very thing that holds the window
+   * open over itself.
+   */
+  minUnfinishedRound(): number {
+    const row = db.prepare("SELECT MIN(round) as m FROM ticker_fixtures WHERE status != 'finished'").get() as { m: number | null };
+    return row.m ?? 0;
+  },
+
   maxFinishedRound(): number {
     const row = db.prepare("SELECT MAX(round) as m FROM ticker_fixtures WHERE status = 'finished'").get() as { m: number | null };
     return row.m ?? 0;

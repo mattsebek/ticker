@@ -4,6 +4,7 @@ import * as refreshFixtures from "./refreshFixtures";
 import * as refreshStandings from "./refreshStandings";
 import * as refreshOdds from "./refreshOdds";
 import * as monitorLiveMatches from "./monitorLiveMatches";
+import * as reconcileStaleLiveFixtures from "./reconcileStaleLiveFixtures";
 import * as settleCompletedMatches from "./settleCompletedMatches";
 import * as lockGameweekLineups from "./lockGameweekLineups";
 import * as updateClubPrices from "./updateClubPrices";
@@ -50,6 +51,18 @@ export function registerJobs() {
   scheduler.register({ name: "refreshStandings", intervalMs: intervalFromEnv("JOB_REFRESH_STANDINGS_MS", 6 * HOUR), run: refreshStandings.run, initialDelayMs: 30_000 });
   scheduler.register({ name: "refreshOdds", intervalMs: intervalFromEnv("JOB_REFRESH_ODDS_MS", 6 * HOUR), run: refreshOdds.run, initialDelayMs: 45_000 });
   scheduler.register({ name: "monitorLiveMatches", intervalMs: intervalFromEnv("JOB_MONITOR_LIVE_MS", 10 * MINUTE), run: monitorLiveMatches.run, initialDelayMs: 60_000 });
+  // Paired with monitorLiveMatches above: that job is the only writer of
+  // "live", and nothing in its feed can ever write the matching "finished"
+  // (an ended match just vanishes from the live feed). This is the other
+  // half — it re-fetches anything still "live" long past kickoff. Costs no
+  // provider request unless something is actually stuck, so the interval is
+  // set for how fast a stuck fixture should be repaired, not for quota.
+  scheduler.register({
+    name: "reconcileStaleLiveFixtures",
+    intervalMs: intervalFromEnv("JOB_RECONCILE_STALE_LIVE_MS", 15 * MINUTE),
+    run: reconcileStaleLiveFixtures.run,
+    initialDelayMs: 75_000,
+  });
   scheduler.register({ name: "settleCompletedMatches", intervalMs: 2 * MINUTE, run: settleCompletedMatches.run });
   scheduler.register({ name: "lockGameweekLineups", intervalMs: 2 * MINUTE, run: lockGameweekLineups.run });
   scheduler.register({ name: "updateClubPrices", intervalMs: 2 * MINUTE, run: updateClubPrices.run });

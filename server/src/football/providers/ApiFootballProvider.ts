@@ -13,6 +13,17 @@ import {
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
+/** API-Football caps the `ids` parameter at 20 fixtures per request. */
+const FIXTURE_IDS_PER_REQUEST = 20;
+
+/**
+ * Statuses that mean "this match has a final scoreline". Shared by
+ * mapFixture's clean-sheet derivation and normalize.ts's status mapping so
+ * the two can't drift — a fixture recorded as finished with its clean
+ * sheets silently left false would score wrong, not just display wrong.
+ */
+const FINISHED_STATUSES: ReadonlySet<RawFixtureStatus> = new Set<RawFixtureStatus>(["FT", "AET", "PEN", "AWD", "WO"]);
+
 /**
  * Real implementation of FootballDataProvider against API-Football v3
  * (https://www.api-football.com/documentation-v3).
@@ -94,6 +105,28 @@ export class ApiFootballProvider implements FootballDataProvider {
     const [leagueId] = seasonProviderId.split(":");
     const rows = await this.get<any[]>("/fixtures", { live: "all" });
     return rows.filter((r) => String(r.league?.id) === leagueId).map((r) => this.mapFixture(r, seasonProviderId));
+  }
+
+  /**
+   * Unfiltered lookup by fixture id — see the interface doc. Chunked to the
+   * provider's 20-ids-per-request cap, and each chunk is caught on its own
+   * (same precedent as fetchOdds): one rate-limited chunk must not discard
+   * the repairs the other chunks already returned.
+   */
+  async fetchFixturesByProviderIds(seasonProviderId: string, fixtureProviderIds: string[]): Promise<RawFixtureDTO[]> {
+    const out: RawFixtureDTO[] = [];
+    for (let i = 0; i < fixtureProviderIds.length; i += FIXTURE_IDS_PER_REQUEST) {
+      const chunk = fixtureProviderIds.slice(i, i + FIXTURE_IDS_PER_REQUEST);
+      let rows: any[];
+      try {
+        rows = await this.get<any[]>("/fixtures", { ids: chunk.join("-") });
+      } catch (err: any) {
+        console.error(`[api-football] by-id fixture fetch failed for ${chunk.length} fixture(s), skipping chunk:`, err?.message || err);
+        continue;
+      }
+      for (const r of rows) out.push(this.mapFixture(r, seasonProviderId));
+    }
+    return out;
   }
 
   async fetchStandings(seasonProviderId: string): Promise<RawStandingsRowDTO[]> {
@@ -184,8 +217,8 @@ export class ApiFootballProvider implements FootballDataProvider {
       away: { providerId: String(r.teams.away.id), name: r.teams.away.name, code: (r.teams.away.name as string).slice(0, 3).toUpperCase() },
       homeGoals: homeGoals ?? null,
       awayGoals: awayGoals ?? null,
-      homeCleanSheet: statusShort === "FT" && awayGoals === 0,
-      awayCleanSheet: statusShort === "FT" && homeGoals === 0,
+      homeCleanSheet: FINISHED_STATUSES.has(statusShort) && awayGoals === 0,
+      awayCleanSheet: FINISHED_STATUSES.has(statusShort) && homeGoals === 0,
     };
   }
 }
