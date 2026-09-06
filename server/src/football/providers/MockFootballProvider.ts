@@ -132,6 +132,11 @@ export class MockFootballProvider implements FootballDataProvider {
     return [];
   }
 
+  async fetchFixturesByProviderIds(_seasonProviderId: string, fixtureProviderIds: string[]): Promise<RawFixtureDTO[]> {
+    const wanted = new Set(fixtureProviderIds);
+    return this.fixtures.filter((f) => wanted.has(f.providerId));
+  }
+
   async fetchStandings(_seasonProviderId: string): Promise<RawStandingsRowDTO[]> {
     const table = new Map<string, RawStandingsRowDTO>();
     for (const c of MOCK_CLUB_ROSTER) {

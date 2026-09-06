@@ -7,7 +7,38 @@
 // and the provider implementations should ever see these types — the rest
 // of the app only ever sees Ticker's own domain models (`football/types.ts`).
 
-export type RawFixtureStatus = "NS" | "1H" | "HT" | "2H" | "FT" | "PST" | "ABD" | "CANC";
+/**
+ * API-Football v3's full `fixture.status.short` vocabulary, grouped by what
+ * the status actually MEANS for us. The previous union listed only 8 of
+ * these, which made every other code the provider can legitimately send
+ * fall through normalize.ts's `default:` and land as "scheduled" — so a
+ * suspended or abandoned-then-awarded match read as "not yet kicked off".
+ */
+export type RawFixtureStatus =
+  // Not started.
+  | "TBD"
+  | "NS"
+  // In progress (including breaks — the match has not been decided yet).
+  | "1H"
+  | "HT"
+  | "2H"
+  | "ET"
+  | "BT"
+  | "P"
+  | "SUSP"
+  | "INT"
+  | "LIVE"
+  // Played to a final result.
+  | "FT"
+  | "AET"
+  | "PEN"
+  // Decided off the pitch, but still a final result with a scoreline.
+  | "AWD"
+  | "WO"
+  // Will not be played as scheduled.
+  | "PST"
+  | "ABD"
+  | "CANC";
 
 export interface RawTeamRef {
   providerId: string;
@@ -91,6 +122,16 @@ export interface FootballDataProvider {
   /** Every fixture currently in progress (1H/HT/2H/...) for this season's competition, right now — not filtered by round/date. */
   fetchLiveFixtures(seasonProviderId: string): Promise<RawFixtureDTO[]>;
   fetchStandings(seasonProviderId: string): Promise<RawStandingsRowDTO[]>;
+  /**
+   * Fixtures looked up by their OWN provider ids, with no round window and
+   * no status filter — whatever state each one is genuinely in right now.
+   * Every other fixture feed here is filtered (fetchResults asks only for
+   * finished matches within a round window; fetchLiveFixtures only returns
+   * what is in progress this second), so this is the only call that can see
+   * a fixture those filters exclude. That is what makes it possible to
+   * repair a fixture whose status got stuck.
+   */
+  fetchFixturesByProviderIds(seasonProviderId: string, fixtureProviderIds: string[]): Promise<RawFixtureDTO[]>;
   fetchOdds(fixtureProviderIds: string[]): Promise<RawOddsDTO[]>;
   fetchInjuries(seasonProviderId: string): Promise<RawInjuryDTO[]>;
   fetchLineups(fixtureProviderId: string): Promise<RawLineupDTO[]>;
