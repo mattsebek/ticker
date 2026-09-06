@@ -134,7 +134,7 @@ export function MatchupDetailModal({ matchup, onClose }: { matchup: MarketMatchu
               T={T}
             />
 
-            <Text style={{ marginTop: 26, marginBottom: 10, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3 }}>Next 3 Fixtures</Text>
+            <Text style={{ marginTop: 26, marginBottom: 10, fontSize: 11, color: T.textSecondary, textTransform: "uppercase", letterSpacing: 0.3, textAlign: "center" }}>Next 3 Fixtures</Text>
             <View style={{ flexDirection: "row", gap: 14 }}>
               <View style={{ flex: 1, gap: 8 }}>
                 {[0, 1, 2].map((i) => (
