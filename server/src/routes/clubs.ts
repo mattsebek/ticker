@@ -1,19 +1,26 @@
 import { Router } from "express";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
-import { clubSummary, clubDetail, upcomingFixturesForClub, activeGameweekPoints, activeMatchupRound, marketMatchups } from "../presenters";
+import { clubSummary, clubDetail, upcomingFixturesForClub, activeGameweekPoints, activeMarketRound, marketMatchups } from "../presenters";
 import { newsService } from "../briefing/newsService";
 
 export const clubsRouter = Router();
 
 clubsRouter.get("/", (req, res) => {
-  const round = gameweekService.currentRound();
+  // Two different rounds, deliberately. gwPts inside clubSummary is a
+  // SCORED stat and belongs to the last round that actually produced
+  // points — rolling it forward would just read 0 for every club. The
+  // Market table's projection column is the opposite: it should move to
+  // the next gameweek once the current one is done and settled, which is
+  // what activeMarketRound tracks.
+  const scoredRound = gameweekService.currentRound();
+  const marketRound = activeMarketRound();
   // fixtures=1 is opt-in — the plain summary is on the hot path (dataStore
   // polls it constantly); the 3-fixture-per-club projection lookup is only
   // worth paying for on the onboarding club picker, which asks explicitly.
   const withFixtures = req.query.fixtures === "1";
   const clubs = footballService.listClubs().map((c) => {
-    const summary = { ...clubSummary(c, round), ...activeGameweekPoints(c.id, round) };
+    const summary = { ...clubSummary(c, scoredRound), ...activeGameweekPoints(c.id, marketRound) };
     return withFixtures ? { ...summary, upcomingFixtures: upcomingFixturesForClub(c, 3) } : summary;
   });
   res.json({ clubs });
@@ -43,7 +50,7 @@ clubsRouter.get("/top-earners", (req, res) => {
 });
 
 clubsRouter.get("/matchups", (req, res) => {
-  const round = activeMatchupRound();
+  const round = activeMarketRound();
   res.json({ round, matchups: marketMatchups(round) });
 });
 

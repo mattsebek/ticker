@@ -401,39 +401,82 @@ export interface MarketMatchup {
   away: MarketMatchupSide;
 }
 
-/** A brand-new round's scoreboard doesn't appear until its first kickoff is this close — see activeMatchupRound's doc comment. */
-const MATCHUP_LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
+/**
+ * A match's wall-clock length, kickoff to final whistle — 90 minutes plus
+ * half time and stoppage, rounded up. Fixtures carry a kickoff but no
+ * finish timestamp, so "when did this round actually end" is derived from
+ * its last kickoff rather than read directly. Deliberately not the
+ * settlement time either: that depends on when a background job happened to
+ * run, which would make the rollover below jitter by hours.
+ */
+const MATCH_DURATION_MS = 2 * 60 * 60 * 1000;
+
+/** How long a completed round stays on the Market page before it rolls over to the next one. */
+const ROUND_ROLLOVER_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Which round's fixtures the Market page's live scoreboard should show.
- * Deliberately NOT gameweekService.currentRound() (= max(1, maxScoredRound()))
- * — that only advances once a fixture in the NEXT round has actually
- * FINISHED, so if this round's fixtures have gone live but none has
- * finished yet, currentRound() would still point at the previous, fully-
- * finished round and miss exactly the live action a scoreboard exists to
- * surface. Prefers any round with a live fixture (always shown, regardless
- * of timing); else the nearest round with a still-scheduled fixture, but
- * only once that round's first kickoff is within MATCHUP_LOOKAHEAD_MS —
- * showing next week's fixtures days early, with nothing to see yet, isn't
- * useful, so until then this keeps surfacing the last completed round's
- * results instead of jumping ahead prematurely; else falls back to the
- * schedule's last round (season over, nothing upcoming).
+ * When `round`'s last match ended, or null if the round isn't over yet.
+ *
+ * "Over" means nothing in it can still be played — no scheduled fixture and
+ * no live one. A POSTPONED fixture deliberately does NOT hold the round
+ * open: it gets replayed on some later date, and letting it block would pin
+ * the Market page to a round that is, for every practical purpose, finished.
  */
-export function activeMatchupRound(): number {
+function roundCompletedAt(round: number): number | null {
+  const fixtures = footballRepo.listFixturesByRound(round);
+  if (fixtures.length === 0) return null;
+  if (fixtures.some((f) => f.status === "scheduled" || f.status === "live")) return null;
+
+  const kickoffs = fixtures
+    .filter((f) => f.status === "finished")
+    .map((f) => Date.parse(f.kickoff))
+    .filter((t) => Number.isFinite(t));
+  if (kickoffs.length === 0) return null;
+
+  return Math.max(...kickoffs) + MATCH_DURATION_MS;
+}
+
+/**
+ * Which round the Market page is "on" — both the scoreboard strip above the
+ * table and the table's own projection column.
+ *
+ * Deliberately NOT gameweekService.currentRound() (= max(1,
+ * maxScoredRound())): that only advances once a fixture in the NEXT round
+ * has actually finished, so it can never show a round before it is played,
+ * which is exactly what a projection column needs to do.
+ *
+ * The rule, in order:
+ *  1. Any live fixture wins outright, whatever the calendar says — a
+ *     scoreboard exists to surface exactly that.
+ *  2. Otherwise stay on the last played round until ROUND_ROLLOVER_MS after
+ *     its final whistle, so the morning after a gameweek still shows how it
+ *     actually went.
+ *  3. After that, roll forward to the next round with fixtures. This is the
+ *     change from the previous behavior, which instead waited until the
+ *     NEXT round's first kickoff was within 24h — leaving the page showing
+ *     a stale, fully-settled gameweek for most of the week in between.
+ */
+export function activeMarketRound(): number {
   const live = footballRepo.listFixturesByStatus("live");
   if (live.length > 0) return Math.min(...live.map((f) => f.round));
 
+  const finished = footballRepo.listFixturesByStatus("finished");
   const scheduled = footballRepo.listFixturesByStatus("scheduled");
-  if (scheduled.length > 0) {
-    const nextRound = Math.min(...scheduled.map((f) => f.round));
-    const earliestKickoff = Math.min(...scheduled.filter((f) => f.round === nextRound).map((f) => new Date(f.kickoff).getTime()));
-    if (earliestKickoff - Date.now() <= MATCHUP_LOOKAHEAD_MS) return nextRound;
-    const finished = footballRepo.listFixturesByStatus("finished");
-    if (finished.length > 0) return Math.max(...finished.map((f) => f.round));
-    return nextRound;
+
+  // Nothing played yet (season opening, or a fresh reset) — show what's next.
+  if (finished.length === 0) {
+    return scheduled.length > 0 ? Math.min(...scheduled.map((f) => f.round)) : footballRepo.maxRound();
   }
 
-  return footballRepo.maxRound();
+  const lastPlayedRound = Math.max(...finished.map((f) => f.round));
+  const completedAt = roundCompletedAt(lastPlayedRound);
+
+  // Mid-round: some of it has been played, some hasn't. Stay put.
+  if (completedAt == null) return lastPlayedRound;
+  if (Date.now() - completedAt < ROUND_ROLLOVER_MS) return lastPlayedRound;
+
+  const upcoming = scheduled.filter((f) => f.round > lastPlayedRound).map((f) => f.round);
+  return upcoming.length > 0 ? Math.min(...upcoming) : lastPlayedRound;
 }
 
 function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMatchupSide {
