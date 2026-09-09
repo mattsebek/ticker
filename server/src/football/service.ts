@@ -27,6 +27,14 @@ const ODDS_IMPORT_CAP = 100;
 const STALE_LIVE_AFTER_MS = 3.5 * 60 * 60 * 1000;
 
 /**
+ * How long a resolved season provider id stays good. The current season
+ * changes about once a year, so a day is conservative — and the cache is
+ * per-process anyway, so a deploy or restart re-derives it regardless.
+ */
+const SEASON_ID_TTL_MS = 24 * 60 * 60 * 1000;
+let seasonIdCache: { value: string; fetchedAt: number } | null = null;
+
+/**
  * Unlike fetchOddsBestEffort/fetchPriorSeasonStandings below, there's no
  * reasonable way to degrade gracefully when the season import's own
  * competitions/seasons lookup fails — there's no fixture data at all
@@ -249,10 +257,35 @@ export const footballService = {
     return { updated, unmatched };
   },
 
+  /**
+   * Cached — see SEASON_ID_TTL_MS. This is two provider requests
+   * (competitions + seasons) and it used to be re-issued on EVERY run of
+   * every job that needs a season id: refreshFixtures, refreshLiveFixtures,
+   * refreshStandings and reconcileStaleLiveFixtures. At default intervals
+   * that was ~470 requests/day spent re-deriving a value that changes about
+   * once a year, and monitorLiveMatches alone spent two thirds of its
+   * entire budget on it.
+   */
   async currentSeasonProviderId(): Promise<string> {
+    const now = Date.now();
+    if (seasonIdCache && now - seasonIdCache.fetchedAt < SEASON_ID_TTL_MS) return seasonIdCache.value;
+
     const [competitionRaw] = await provider.fetchCompetitions();
     const seasonRaw = pickSeason(await provider.fetchSeasons(competitionRaw.providerId));
+    // Only cached on success: a throw above leaves any previous entry in
+    // place rather than poisoning the cache, and simply re-tries next call.
+    seasonIdCache = { value: seasonRaw.providerId, fetchedAt: now };
     return seasonRaw.providerId;
+  },
+
+  /**
+   * Ops escape hatch for the season-id cache — a season rollover, or an
+   * operator changing FOOTBALL_SEASON_YEAR, otherwise waits out the TTL.
+   * Cheap and side-effect-free: the next caller just pays the two requests
+   * again.
+   */
+  clearSeasonIdCache(): void {
+    seasonIdCache = null;
   },
 
   /**

@@ -59,7 +59,7 @@ export function registerJobs() {
   // set for how fast a stuck fixture should be repaired, not for quota.
   scheduler.register({
     name: "reconcileStaleLiveFixtures",
-    intervalMs: intervalFromEnv("JOB_RECONCILE_STALE_LIVE_MS", 15 * MINUTE),
+    intervalMs: intervalFromEnv("JOB_RECONCILE_STALE_LIVE_MS", 30 * MINUTE),
     run: reconcileStaleLiveFixtures.run,
     initialDelayMs: 75_000,
   });
