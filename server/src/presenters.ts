@@ -497,7 +497,19 @@ function matchupSide(fixture: Fixture, clubId: string, round: number): MarketMat
   };
 }
 
-/** Live fixtures first (the score most likely to still be changing), then everything else by kickoff DESCENDING — the newest kickoff (including one still to come) sits at the top, the oldest (the round's earliest, most-likely-already-finished match) sinks to the bottom. */
+/**
+ * Live fixtures first (the score most likely to still be changing), then by
+ * kickoff DESCENDING — the freshest result sits at the top and the round's
+ * earliest, longest-settled match sinks to the bottom.
+ *
+ * A round where NOTHING has been played yet inverts that. With no results
+ * for "newest first" to surface, descending would put the last match of the
+ * gameweek at the top and the one kicking off next at the very bottom —
+ * exactly backwards for a fixture list. So an unplayed round sorts
+ * ASCENDING: next to kick off first. This case became reachable when
+ * activeMarketRound started rolling the page forward to the upcoming
+ * gameweek 24h after the previous one finished.
+ */
 export function marketMatchups(round: number): MarketMatchup[] {
   const fixtures = footballRepo.listFixturesByRound(round);
   const rows: MarketMatchup[] = fixtures.map((f) => ({
@@ -509,9 +521,15 @@ export function marketMatchups(round: number): MarketMatchup[] {
     home: matchupSide(f, f.homeClubId, round),
     away: matchupSide(f, f.awayClubId, round),
   }));
+  // "Played" is finished OR live — a postponed fixture has not been played,
+  // so a round holding only scheduled/postponed fixtures still counts as
+  // untouched and sorts ascending.
+  const anyPlayed = rows.some((r) => r.status === "finished" || r.status === "live");
   return rows.sort((a, b) => {
     const liveDiff = Number(b.status === "live") - Number(a.status === "live");
     if (liveDiff !== 0) return liveDiff;
-    return new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime();
+    const aKickoff = new Date(a.kickoff).getTime();
+    const bKickoff = new Date(b.kickoff).getTime();
+    return anyPlayed ? bKickoff - aKickoff : aKickoff - bKickoff;
   });
 }
