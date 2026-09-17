@@ -61,10 +61,10 @@ export function renderAdminUsersPage(): string {
         // "Never" rather than a blank cell so it reads as a real state and
         // not a rendering failure.
         function fmtDateTime(ms) {
-          if (ms == null) return "<span style=\"color:${T.textSecondary};\">Never</span>";
+          if (ms == null) return "<span style=\\"color:${T.textSecondary};\\">Never</span>";
           var d = new Date(ms);
           return esc(d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })) +
-            " <span style=\"color:${T.textSecondary};\">" +
+            " <span style=\\"color:${T.textSecondary};\\">" +
             esc(d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })) + "</span>";
         }
         function typeBadge(t) {
