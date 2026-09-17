@@ -32,7 +32,7 @@ export function renderAdminUsersPage(): string {
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Name</th><th>Type</th><th>Email</th><th>Birthday</th><th>Joined</th><th>Onboarded</th><th>Cash</th><th>Holdings</th><th></th></tr>
+          <tr><th>Name</th><th>Type</th><th>Email</th><th>Birthday</th><th>Joined</th><th>Last login</th><th>Cash</th><th>Holdings</th><th></th></tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -56,6 +56,17 @@ export function renderAdminUsersPage(): string {
         function fmtDate(ms) {
           return new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
         }
+        // Null means the account has not signed in since last_login_at
+        // shipped — including every account created before it. Rendered as
+        // "Never" rather than a blank cell so it reads as a real state and
+        // not a rendering failure.
+        function fmtDateTime(ms) {
+          if (ms == null) return "<span style=\"color:${T.textSecondary};\">Never</span>";
+          var d = new Date(ms);
+          return esc(d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })) +
+            " <span style=\"color:${T.textSecondary};\">" +
+            esc(d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })) + "</span>";
+        }
         function typeBadge(t) {
           var color = t === "synthetic" ? "${T.accent}" : t === "admin" || t === "system" ? "${T.textSecondary}" : "${T.text}";
           return "<span style=\\"color:" + color + ";font-size:12px;\\">" + esc(t) + "</span>";
@@ -67,7 +78,7 @@ export function renderAdminUsersPage(): string {
             "<td>" + esc(u.email) + "</td>" +
             "<td>" + esc(u.birthday) + "</td>" +
             "<td>" + fmtDate(u.createdAt) + "</td>" +
-            "<td>" + (u.onboarded ? "Yes" : "No") + "</td>" +
+            "<td>" + fmtDateTime(u.lastLoginAt) + "</td>" +
             "<td>$" + u.cash.toFixed(2) + "</td>" +
             "<td>" + u.holdingsCount + "</td>" +
             "<td><button class=\\"del-btn\\" data-id=\\"" + esc(u.id) + "\\" data-name=\\"" + esc(u.name) + "\\" style=\\"background:none;border:1px solid ${T.red};color:${T.red};border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;\\">Delete</button></td>" +

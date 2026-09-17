@@ -142,7 +142,7 @@ adminRouter.get("/api/users", (req, res) => {
     email: u.email,
     birthday: u.birthday,
     createdAt: u.created_at,
-    onboarded: !!u.onboarded,
+    lastLoginAt: u.last_login_at,
     accountType: u.account_type,
     cash: marketRepo.getCash(u.id),
     holdingsCount: marketRepo.getHoldings(u.id).length,

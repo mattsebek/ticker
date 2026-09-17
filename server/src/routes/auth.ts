@@ -139,6 +139,11 @@ authRouter.post("/verify", (req, res) => {
   }
   if (!user) return res.status(404).json({ error: "No account found for that email." });
 
+  // The one place a session is ever issued, so the one place a login is
+  // recorded — registration included, since verifying is how a new account
+  // first signs in too.
+  usersRepo.markLoggedIn(user.id);
+
   const token = signToken(user.id);
   setSessionCookie(req, res, token);
   res.json({ token, user: publicUser(user) });

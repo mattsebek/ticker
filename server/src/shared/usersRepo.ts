@@ -40,6 +40,17 @@ try {
 }
 db.exec("CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type)");
 
+// Last successful authentication, as an epoch ms. Null for every account
+// that has not signed in since this column shipped — including accounts
+// created before it, which is why it is nullable rather than defaulting to
+// created_at: back-filling a signup date would read as a real login that
+// never happened. The admin Users page renders null as "Never".
+try {
+  db.exec("ALTER TABLE users ADD COLUMN last_login_at INTEGER");
+} catch {
+  // already applied
+}
+
 const DAY_MS = 86_400_000;
 const FIRST_WEEK_MS = 7 * DAY_MS;
 
@@ -58,6 +69,7 @@ export interface UserRow {
   brief_dismissed_date: string | null;
   created_at: number;
   account_type: AccountType;
+  last_login_at: number | null;
 }
 
 /**
@@ -96,6 +108,18 @@ export const usersRepo = {
   },
   markOnboarded(id: string) {
     db.prepare("UPDATE users SET onboarded = 1 WHERE id = ?").run(id);
+  },
+  /**
+   * Stamps a successful authentication. Called from routes/auth.ts's
+   * /verify, which is the single point where a session is ever issued —
+   * both the register and login paths converge on it.
+   *
+   * Note this records a genuine sign-in, not activity: sessions last 90
+   * days (see shared/auth.ts), so a user who opens the app daily on a live
+   * cookie keeps the timestamp of whenever they last entered an OTP.
+   */
+  markLoggedIn(id: string, atMs = Date.now()) {
+    db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(atMs, id);
   },
   setBriefDismissed(id: string, dismissed: boolean) {
     db.prepare("UPDATE users SET brief_dismissed = ?, brief_dismissed_date = ? WHERE id = ?").run(dismissed ? 1 : 0, dismissed ? todayStr() : null, id);
