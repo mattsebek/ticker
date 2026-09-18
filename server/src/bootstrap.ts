@@ -242,6 +242,10 @@ export async function reseedAllOpeningPrices(): Promise<{ priced: number; skippe
   if (clubs.length === 0) return { priced: 0, skipped: all.length };
   const prices = await computeOpeningPrices(clubs.map((c) => c.id));
   marketRepo.clearAllMarketTicks();
+  // Reset the demand guardrail's own memory too, so the next tick re-anchors
+  // at the freshly seeded opening price instead of carrying a window built
+  // against prices that no longer exist.
+  marketRepo.clearAllDemandWindows();
   for (const [clubId, price] of prices) {
     marketRepo.clearAllPriceHistory(clubId);
     marketRepo.setOpeningPrice(clubId, price);

@@ -27,6 +27,17 @@ CREATE TABLE IF NOT EXISTS price_history (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_price_history_club_round ON price_history(club_id, round);
+
+-- The rolling 24h demand budget's own memory. Deliberately NOT derived from
+-- price_history: that table is wiped per club by clearAllPriceHistory()
+-- during a reseed, which silently blinded the 24h guardrail and let demand
+-- ticks compound without limit. This survives that, and a reseed resets it
+-- explicitly (clearAllDemandWindows) rather than as a side effect.
+CREATE TABLE IF NOT EXISTS club_demand_windows (
+  club_id TEXT PRIMARY KEY,
+  window_started_at INTEGER NOT NULL,
+  cumulative_multiplier REAL NOT NULL
+);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_price_history_fixture_club ON price_history(fixture_id, club_id);
 
 CREATE TABLE IF NOT EXISTS holdings (
@@ -526,6 +537,24 @@ export const marketRepo = {
    * stopped updating even though the reseed had reset it. Call this right
    * before setOpeningPrice() when the intent is a genuine fresh restart.
    */
+  /** Current rolling demand window for a club, or null if it has never ticked. */
+  getDemandWindow(clubId: string): { windowStartedAt: number; cumulativeMultiplier: number } | null {
+    const row = db.prepare("SELECT window_started_at, cumulative_multiplier FROM club_demand_windows WHERE club_id = ?").get(clubId) as
+      | { window_started_at: number; cumulative_multiplier: number }
+      | undefined;
+    return row ? { windowStartedAt: row.window_started_at, cumulativeMultiplier: row.cumulative_multiplier } : null;
+  },
+  setDemandWindow(clubId: string, windowStartedAt: number, cumulativeMultiplier: number) {
+    db.prepare(
+      `INSERT INTO club_demand_windows (club_id, window_started_at, cumulative_multiplier) VALUES (?,?,?)
+       ON CONFLICT(club_id) DO UPDATE SET window_started_at = excluded.window_started_at, cumulative_multiplier = excluded.cumulative_multiplier`
+    ).run(clubId, windowStartedAt, cumulativeMultiplier);
+  },
+  /** Paired with clearAllPriceHistory/clearAllMarketTicks in a full reseed — the next tick re-anchors at the freshly seeded opening price. */
+  clearAllDemandWindows() {
+    db.prepare("DELETE FROM club_demand_windows").run();
+  },
+
   clearAllPriceHistory(clubId: string) {
     db.prepare("DELETE FROM price_history WHERE club_id = ?").run(clubId);
   },

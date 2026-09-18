@@ -56,6 +56,34 @@ export function computeDemandTickImpact(demandSignal: number, alreadyUsed24hPct:
 }
 
 /**
+ * Hard backstop on compounded demand movement inside a rolling 24h window,
+ * independent of price_history.
+ *
+ * computeDemandTickImpact above is the first line of defence, but its only
+ * memory is the sum of DEMAND rows in price_history — a table
+ * clearAllPriceHistory() wipes during a reseed, and which is also where
+ * getPriceAtOrBefore/getPriceSeries read from. Once that table is empty the
+ * 24h budget reads 0 on every tick, so the ONLY surviving limit is the
+ * per-tick 0.5%, which compounds to roughly 36x a day. That is how a $5
+ * club reached $4807: not one bad move, thousands of individually legal
+ * ones against a guardrail that had forgotten them.
+ *
+ * `cumulativeMultiplier` is the club's demand-only price multiple so far in
+ * the current window (1.0 at window start), carried in its own table rather
+ * than re-derived from history. A tick that would push the window's total
+ * past DEMAND_24H_CAP_PCT is trimmed to land exactly on the bound; once
+ * there it returns 0. A tick moving back toward 1.0 is never restricted —
+ * the guardrail limits runaway one-directional drift, not reversals.
+ */
+export function boundDemandTickToWindow(proposedPct: number, cumulativeMultiplier: number): number {
+  if (!(cumulativeMultiplier > 0)) return proposedPct; // no usable anchor — leave the per-tick cap in charge
+  const cap = pricingConfig.DEMAND_24H_CAP_PCT;
+  const target = cumulativeMultiplier * (1 + proposedPct);
+  const bounded = clamp(target, 1 - cap, 1 + cap);
+  return round4Pct(bounded / cumulativeMultiplier - 1);
+}
+
+/**
  * Applies a price-change percentage and clamps into the configured trading
  * band. Shared by performance settlement and demand ticks — each computes
  * its own pct via its own cap logic (computePerformanceChangePct /

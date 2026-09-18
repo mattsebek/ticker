@@ -1,10 +1,13 @@
 import { db } from "../db";
 import { marketRepo } from "./repo";
 import { pricingConfig } from "./pricingConfig";
-import { applyImpact, computeDemandTickImpact } from "./priceEngine";
+import { applyImpact, boundDemandTickToWindow, computeDemandTickImpact } from "./priceEngine";
 import { isBotId } from "../shared/bots";
 import { clamp } from "../shared/rng";
 import { gameweekService } from "../fantasy/gameweekService";
+
+/** Rolling window the demand budget is measured over — matches DEMAND_24H_CAP_PCT's "24h" wording. */
+const DEMAND_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const MINUTE_MS = 60_000;
 
@@ -96,12 +99,27 @@ function applyDemandTickToClub(clubId: string, tickId: number, windowStart: numb
 
     const demandSignal = pricingConfig.DEMAND_PARTICIPANT_WEIGHT * adjustedParticipantSignal + pricingConfig.DEMAND_OWNERSHIP_WEIGHT * ownershipSignal;
 
+    // First line of defence: the per-tick cap plus the 24h budget derived
+    // from price_history.
     const alreadyUsed24h = marketRepo.getRolling24hDemandImpactPct(clubId);
-    const impactPct = computeDemandTickImpact(demandSignal, alreadyUsed24h);
+    const requestedPct = computeDemandTickImpact(demandSignal, alreadyUsed24h);
+
+    // Backstop: the same 24h bound, enforced against this club's own demand
+    // window instead of price_history — which a reseed wipes, and which is
+    // how that budget could read 0 on every tick while demand compounded
+    // roughly 36x a day. See boundDemandTickToWindow.
+    const now = Date.now();
+    const stored = marketRepo.getDemandWindow(clubId);
+    const windowExpired = !stored || now - stored.windowStartedAt >= DEMAND_WINDOW_MS;
+    const windowStartedAt = windowExpired ? now : stored.windowStartedAt;
+    const cumulativeBefore = windowExpired ? 1 : stored.cumulativeMultiplier;
+
+    const impactPct = boundDemandTickToWindow(requestedPct, cumulativeBefore);
 
     const currentPrice = marketRepo.getPrice(clubId) ?? pricingConfig.MIN_PRICE;
     const newPrice = applyImpact(currentPrice, impactPct);
 
+    marketRepo.setDemandWindow(clubId, windowStartedAt, cumulativeBefore * (1 + impactPct));
     marketRepo.setPrice(clubId, newPrice);
     marketRepo.insertPriceHistoryEvent({
       clubId,
