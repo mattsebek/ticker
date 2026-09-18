@@ -366,6 +366,14 @@ adminRouter.get("/clubs/:id", (req, res) => {
   );
 });
 
+/** Raw price_history rows beyond the club detail page's own 100-row timeline cap — for incident diagnosis (tracing a price anomaly back past the visible window). Read-only, same requireAdminSession gate as the rest of this router. */
+adminRouter.get("/clubs/:id/price-history.json", (req, res) => {
+  const club = footballRepo.listClubs().find((c) => c.id === req.params.id);
+  if (!club) return res.status(404).json({ error: "Club not found." });
+  const limit = Math.min(Number(req.query.limit) || 500, 5000);
+  res.json({ rows: marketRepo.getPriceHistoryTimeline(club.id, limit) });
+});
+
 // --- Margin calls ---
 
 adminRouter.get("/margin-calls", (req, res) => {
