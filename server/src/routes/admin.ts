@@ -374,6 +374,20 @@ adminRouter.get("/clubs/:id/price-history.json", (req, res) => {
   res.json({ rows: marketRepo.getPriceHistoryTimeline(club.id, limit) });
 });
 
+/** Every ledger row for one club in a time window, with the trading user's name/email attached — incident diagnosis (who traded during a bad-price window, and the exact cash effect). Read-only. */
+adminRouter.get("/clubs/:id/ledger.json", (req, res) => {
+  const club = footballRepo.listClubs().find((c) => c.id === req.params.id);
+  if (!club) return res.status(404).json({ error: "Club not found." });
+  const since = Number(req.query.since) || 0;
+  const until = Number(req.query.until) || Date.now();
+  const rows = marketRepo.getLedgerEntriesForClub(club.id, since, until);
+  const enriched = rows.map((r) => {
+    const user = usersRepo.getById(r.user_id);
+    return { ...r, userName: user?.name ?? null, userEmail: user?.email ?? null, accountType: user?.account_type ?? null };
+  });
+  res.json({ rows: enriched });
+});
+
 // --- Margin calls ---
 
 adminRouter.get("/margin-calls", (req, res) => {

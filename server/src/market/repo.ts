@@ -577,6 +577,12 @@ export const marketRepo = {
     }
     return out;
   },
+  /** Every ledger row for one club in a time window, newest first — incident diagnosis (which users traded during a bad-price window, and what it cost/gained them). */
+  getLedgerEntriesForClub(clubId: string, sinceMs: number, untilMs: number) {
+    return db
+      .prepare("SELECT id, transaction_id, user_id, entry_type, amount, cash_delta, balance_after, created_at FROM ledger_entries WHERE club_id = ? AND created_at >= ? AND created_at <= ? ORDER BY id DESC")
+      .all(clubId, sinceMs, untilMs) as { id: number; transaction_id: string; user_id: string; entry_type: string; amount: number; cash_delta: number; balance_after: number; created_at: number }[];
+  },
   /** Season-to-date price extremes — used by the Intelligence Engine's PRICE_SEASON_HIGH/LOW detectors. Excludes seedHistoricalPrice's round=-999 demo rows (see its own doc comment) since those are backdated screenshot flavor, not real season history. */
   getSeasonPriceExtremes(clubId: string): { min: number; max: number } | null {
     const row = db.prepare("SELECT MIN(price) as min, MAX(price) as max FROM price_history WHERE club_id = ? AND round != -999").get(clubId) as
