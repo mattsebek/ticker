@@ -550,6 +550,10 @@ export const marketRepo = {
        ON CONFLICT(club_id) DO UPDATE SET window_started_at = excluded.window_started_at, cumulative_multiplier = excluded.cumulative_multiplier`
     ).run(clubId, windowStartedAt, cumulativeMultiplier);
   },
+  /** Drops one club's demand window so the next tick re-anchors at whatever its price is then — used after an operator corrects a price by hand. */
+  clearDemandWindow(clubId: string) {
+    db.prepare("DELETE FROM club_demand_windows WHERE club_id = ?").run(clubId);
+  },
   /** Paired with clearAllPriceHistory/clearAllMarketTicks in a full reseed — the next tick re-anchors at the freshly seeded opening price. */
   clearAllDemandWindows() {
     db.prepare("DELETE FROM club_demand_windows").run();

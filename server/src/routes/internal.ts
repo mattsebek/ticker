@@ -11,6 +11,7 @@ import { leagueService } from "../fantasy/leagueService";
 import { gameweekService } from "../fantasy/gameweekService";
 import { settlementService } from "../fantasy/settlementService";
 import { round2, clamp } from "../shared/rng";
+import { pricingConfig } from "../market/pricingConfig";
 import { gameweekDetail } from "../presenters";
 import { reseedAllOpeningPrices, resetAllUsers, resetToPreGameweek1, bootstrap } from "../bootstrap";
 import * as gameweekDeadlineReminder from "../jobs/gameweekDeadlineReminder";
@@ -479,6 +480,71 @@ internalRouter.post("/refresh-odds", async (req, res) => {
  * exactly like it would for a real price move. Not authenticated — local/ops
  * use only, same contract as the rest of this router.
  */
+/**
+ * Ops repair: corrects ONE club's price to an exact value.
+ *
+ * Distinct from /simulate (which applies a percentage, capped at -90% per
+ * call, so unwinding a runaway needs several chained calls and lands on an
+ * approximate number) and from /reseed-prices (which re-prices every club
+ * and wipes all price history). This is the surgical tool for "one club's
+ * price is wrong, put it back".
+ *
+ * What it does NOT do, deliberately: touch the ledger. Completed trades
+ * recorded real cash at the price in force at the time, and changing the
+ * current price does not and should not rewrite them. Cash anyone banked
+ * selling into a bad price stays banked — that damage is not repairable
+ * from here, and pretending otherwise by fiddling the price would just
+ * hide it.
+ *
+ * Margin calls are left to the periodic sweep (jobs/sweepMarginCalls, every
+ * 2 minutes), which re-evaluates every account against current prices and
+ * clears anyone no longer underwater — see marginCallService.
+ */
+const setClubPriceSchema = z.object({
+  club: z.string().trim(), // club code (e.g. "COV") or id (e.g. "club_cov")
+  price: z.number().min(pricingConfig.MIN_PRICE).max(pricingConfig.MAX_PRICE),
+});
+
+internalRouter.post("/set-club-price", (req, res) => {
+  const parsed = setClubPriceSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return res.status(400).json({ error: `club and price required (price between ${pricingConfig.MIN_PRICE} and ${pricingConfig.MAX_PRICE}).` });
+  const { club, price } = parsed.data;
+
+  const target = footballService.listClubs().find((c) => c.id === club || c.code.toLowerCase() === club.toLowerCase());
+  if (!target) return res.status(404).json({ error: `No club matches "${club}".` });
+
+  const previousPrice = marketRepo.getPrice(target.id) ?? 0;
+  const newPrice = round2(price);
+  // Stored as a FRACTION, matching DEMAND/PERFORMANCE rows and what the
+  // admin timeline renders (it multiplies impact_pct by 100).
+  const impactPct = previousPrice > 0 ? Math.round(((newPrice - previousPrice) / previousPrice) * 10000) / 10000 : 0;
+
+  marketRepo.setPrice(target.id, newPrice);
+  marketRepo.insertPriceHistoryEvent({
+    clubId: target.id,
+    eventType: "ADMIN",
+    round: gameweekService.currentRound(),
+    previousPrice,
+    price: newPrice,
+    impactPct,
+    fixtureId: null,
+  });
+  // The demand guardrail's window was accumulated against the old, wrong
+  // price — drop it so the next tick re-anchors here instead of measuring
+  // drift from a level that no longer exists.
+  marketRepo.clearDemandWindow(target.id);
+
+  res.json({
+    ok: true,
+    club: { id: target.id, code: target.code, name: target.name },
+    previousPrice,
+    newPrice,
+    owners: marketRepo.getOwnershipCount(target.id),
+    shortHolders: marketRepo.getShortHoldersCount(target.id),
+    note: "Ledger untouched. Margin calls re-evaluate on the next sweepMarginCalls run (<=2 min).",
+  });
+});
+
 const simulateSchema = z.object({
   club: z.string().trim().optional(), // club code (e.g. "ARS") or id (e.g. "club_ars"); omit to move every club
   pct: z.number().min(-90).max(500).optional(), // omit for a random jitter
