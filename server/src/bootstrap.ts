@@ -78,7 +78,7 @@ export async function bootstrap(): Promise<void> {
 // (pricingConfig.MIN_PRICE/MAX_PRICE) so a club never opens already outside
 // the range settlement is allowed to move it within.
 const OPENING_PRICE_FLOOR = pricingConfig.MIN_PRICE;
-const OPENING_PRICE_CEIL = pricingConfig.MAX_PRICE;
+const OPENING_PRICE_CEIL = pricingConfig.OPENING_PRICE_CEILING;
 
 /**
  * A club's in-season "form" signal for opening-price purposes: the average

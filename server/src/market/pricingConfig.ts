@@ -37,6 +37,21 @@ export const pricingConfig = {
    * DEMAND_24H_CAP_PCT — all unchanged) could plausibly reach.
    */
   MAX_PRICE: floatFromEnv("PRICING_MAX_PRICE", 10000),
+  /**
+   * Ceiling for a club's SEASON-OPENING price — the $50 this game was
+   * designed around, and deliberately its own value rather than an alias of
+   * MAX_PRICE.
+   *
+   * MAX_PRICE is a technical trading limit that Shorting V1 raised from $50
+   * to $10,000 so a short keeps real uncapped upside risk. bootstrap.ts's
+   * OPENING_PRICE_CEIL pointed at MAX_PRICE, so that change silently
+   * widened the opening-price band 200x too: clubs seeded across $5-$10,000
+   * instead of $5-$50, and any club sitting at the floor got "healed" into
+   * four figures on the next boot by healStaleOpeningPrices(). The two
+   * ceilings answer different questions — how expensive may a club START,
+   * versus how far may trading ever take it — and must move independently.
+   */
+  OPENING_PRICE_CEILING: floatFromEnv("PRICING_OPENING_PRICE_CEILING", 50),
 
   // --- Market Pricing V2: demand, decoupled from fixture settlement ---
 
