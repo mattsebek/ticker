@@ -1,8 +1,6 @@
 import { marketRepo } from "./repo";
 import { fantasyRepo } from "../fantasy/repo";
 import { applyLedgerTransaction } from "./ledger";
-import { portfolioService } from "./portfolioService";
-import { shortingConfig } from "./shortingConfig";
 import { checkAndUpdateMarginCall } from "./marginCallService";
 import { round2 } from "../shared/rng";
 
@@ -77,12 +75,6 @@ export const tradingService = {
 
     const price = marketRepo.getPrice(clubId) ?? 0;
     if (price > tradingService.buyingPower(userId)) throw new TradingError("Insufficient buying power.");
-
-    const portfolioValue = portfolioService.getPortfolioValue(userId);
-    const projectedExposure = marketRepo.getTotalShortMarketValue(userId) + price;
-    if (projectedExposure > portfolioValue * shortingConfig.MAX_SHORT_EXPOSURE_PCT) {
-      throw new TradingError("That would exceed your maximum short exposure.");
-    }
 
     const { newCash } = applyLedgerTransaction(userId, "SHORT", [{ entryType: "SHORT", clubId, amount: price, cashDelta: 0 }]);
     marketRepo.addShortPosition(userId, clubId, price, round);

@@ -2,8 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, AuthedRequest } from "../shared/auth";
 import { marketRepo } from "../market/repo";
-import { portfolioService } from "../market/portfolioService";
-import { shortingConfig } from "../market/shortingConfig";
 import { tradingService, TradingError } from "../market/tradingService";
 import { footballService } from "../football/service";
 import { gameweekService } from "../fantasy/gameweekService";
@@ -89,11 +87,8 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
   const alreadyOwned = marketRepo.getHoldings(userId).some((h) => h.club_id === clubId);
   const alreadyShorted = !!marketRepo.getShortPosition(userId, clubId);
   const buyingPowerAfter = round2(buyingPower - price);
-  const portfolioValue = portfolioService.getPortfolioValue(userId);
-  const projectedExposure = marketRepo.getTotalShortMarketValue(userId) + price;
-  const exceedsExposure = projectedExposure > portfolioValue * shortingConfig.MAX_SHORT_EXPOSURE_PCT;
   const marginCallActive = marketRepo.isInMarginCall(userId);
-  const canShort = !alreadyOwned && !alreadyShorted && !marginCallActive && price <= buyingPower && !exceedsExposure;
+  const canShort = !alreadyOwned && !alreadyShorted && !marginCallActive && price <= buyingPower;
 
   res.json({
     clubName: club.name,
@@ -107,9 +102,9 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
     alreadyShorted,
     marginCallActive,
     canShort,
-    // Margin call is checked before insufficient buying power, which is
-    // checked before the exposure cap — each is a more fundamental blocker
-    // than the next, so the label always names the real reason.
+    // Margin call is checked before insufficient buying power — each is a
+    // more fundamental blocker than the next, so the label always names
+    // the real reason.
     confirmLabel: alreadyOwned
       ? "Sell your position first"
       : alreadyShorted
@@ -118,9 +113,7 @@ tradesRouter.get("/short-preview", requireAuth, (req: AuthedRequest, res) => {
           ? "Margin call active"
           : price > buyingPower
             ? "Insufficient buying power"
-            : exceedsExposure
-              ? "Exceeds short limit"
-              : `Short ${club.name}`,
+            : `Short ${club.name}`,
   });
 });
 
